@@ -33,9 +33,13 @@ class GlobalsManager:
     Monster_to_hit_int = tk.IntVar()
     Monster_dmg1_n_dice_int = tk.IntVar()
     Monster_dmg1_dice_type_str = tk.StringVar()
+    Monster_dmg1_dmg_type_str = tk.StringVar()
+    Monster_dmg1_flat_int = tk.IntVar()
+    Monster_dmg2_n_dice_int = tk.IntVar()
+    Monster_dmg2_dice_type_str = tk.StringVar()
+    Monster_dmg2_dmg_type_str = tk.StringVar()
 
-
-    World_size:        int = 23     #how big (box) do you want the world to be1
-    Simulation_Length: int = 150     #how many turns in simulation
-
-    Num_dandelion: List[int] = [0]
+    #Mass save variables
+    Mass_save_mod_int = tk.IntVar()
+    Mass_save_DC_int = tk.IntVar()
+    Mass_save_n_monsters_int = tk.IntVar()

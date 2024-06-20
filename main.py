@@ -4,6 +4,10 @@ import pyperclip
 import random
 import GlobalStateManager
 
+#label - just text to display
+#entry - type in something
+#dropdown - pick one from a menu
+#space - just a placeholder to move down by X amount
 
 class Row_track():
     def __init__(self):
@@ -174,7 +178,7 @@ def CreateMonster() -> None:
     GSM.Monster_to_hit_int.set(6)
     monster_to_hit_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Monster_to_hit_int, width=3)
     monster_to_hit_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
-
+    #TODO: add tenacity, reroll 1s and 2s, brutal critical etc, saving throw on hit
     #Dmg 1
     monster_dmg1_text_label = tk.Label(GSM.root, text="Damage type 1:")
     monster_dmg1_text_label.grid(row=Row.increase(), column=0, sticky="w")
@@ -184,70 +188,69 @@ def CreateMonster() -> None:
 
 
     GSM.Monster_dmg1_dice_type_str.set("d6")
-    Dmg1_dice_type_dropdown = tk.OptionMenu(GSM.root, GSM.Monster_dmg1_dice_type_str, *GSM.Dice_types)
-    Dmg1_dice_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=120)
-    Dmg1_dmg_type = tk.StringVar()
-    Dmg1_dmg_type.set("bludgeoning")
-    def UpdateDmg1ExtraText(selected_dmg_type) -> None: #Because python says so this needs to be called here
-        dmg1_extra_row
-        dmg1_extra_text_label2 = tk.Label(GSM.root, text=selected_dmg_type + "                ")
-        dmg1_extra_text_label2.grid(row=dmg1_extra_row, column=0, sticky="w", padx=120)
-    dmg1_extra_row = Row.same() + 1
-    Dmg1_dmg_type_dropdown = tk.OptionMenu(GSM.root, Dmg1_dmg_type, *GSM.Dmg_types, command=UpdateDmg1ExtraText)
-    Dmg1_dmg_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=180)
+    monster_dmg1_dice_type_dropdown = tk.OptionMenu(GSM.root, GSM.Monster_dmg1_dice_type_str, *GSM.Dice_types)
+    monster_dmg1_dice_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    GSM.Monster_dmg1_dmg_type_str.set("bludgeoning")
+    def UpdateMonsterDmg1FlatText(selected_dmg_type) -> None: #Because python says so this needs to be called here
+        #This just displays the user selected dmg type in next line (right next to flat number)
+        #monster_dmg1_flat_row
+        monster_dmg1_extra_text_label2 = tk.Label(GSM.root, text=selected_dmg_type + "                ")
+        monster_dmg1_extra_text_label2.grid(row=monster_dmg1_flat_row, column=0, sticky="w", padx=120)
+    monster_dmg1_flat_row = Row.same() + 1 #This stores the row number where text of flat dmg is
+    monster_dmg1_dmg_type_dropdown = tk.OptionMenu(GSM.root, GSM.Monster_dmg1_dmg_type_str, *GSM.Dmg_types, command=UpdateMonsterDmg1FlatText)
+    monster_dmg1_dmg_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=180)
 
-    #Dmg 1 extra
-    UpdateDmg1ExtraText(Dmg1_dmg_type.get())
-    Dmg1_extra_text_label = tk.Label(GSM.root, text="Damage 1 flat:  +")
-    Dmg1_extra_text_label.grid(row=Row.increase(), column=0, sticky="w")
-    Dmg1_extra_int = tk.IntVar()
-    Dmg1_extra_int.set(2)
-    Dmg1_extra_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=Dmg1_extra_int, width=3)
-    Dmg1_extra_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+    #Dmg 1 flat
+    UpdateMonsterDmg1FlatText(GSM.Monster_dmg1_dmg_type_str.get())
+    monster_dmg1_flat_text_label = tk.Label(GSM.root, text="Damage 1 flat:  +")
+    monster_dmg1_flat_text_label.grid(row=Row.increase(), column=0, sticky="w")
+
+    GSM.Monster_dmg1_flat_int.set(2)
+    monster_dmg1_extra_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Monster_dmg1_flat_int, width=3)
+    monster_dmg1_extra_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
 
     #Dmg 2
-    Dmg2_text_label = tk.Label(GSM.root, text="Damage type 2:")
-    Dmg2_text_label.grid(row=Row.increase(), column=0, sticky="w")
-    Dmg2_number_dice_int = tk.IntVar()
-    Dmg2_number_dice_int.set(1)
-    Dmg2_number_dice_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=Dmg2_number_dice_int, width=3)
-    Dmg2_number_dice_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+    monster_dmg2_text_label = tk.Label(GSM.root, text="Damage type 2:")
+    monster_dmg2_text_label.grid(row=Row.increase(), column=0, sticky="w")
 
-    Dmg2_dice_type = tk.StringVar()
-    Dmg2_dice_type.set("d4")
-    Dmg2_dice_type_dropdown = tk.OptionMenu(GSM.root, Dmg2_dice_type, *Dice_types)
-    Dmg2_dice_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=120)
-    Dmg2_dmg_type = tk.StringVar()
-    Dmg2_dmg_type.set("fire")
-    Dmg2_dmg_type_dropdown = tk.OptionMenu(GSM.root, Dmg2_dmg_type, *Monster_dmg_types)
-    Dmg2_dmg_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=180)
+    GSM.Monster_dmg2_n_dice_int.set(1)
+    monster_dmg2_n_dice_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Monster_dmg2_n_dice_int, width=3)
+    monster_dmg2_n_dice_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+
+    GSM.Monster_dmg2_dice_type_str.set("d4")
+    monster_dmg2_dice_type_dropdown = tk.OptionMenu(GSM.root, GSM.Monster_dmg2_dice_type_str, *GSM.Dice_types)
+    monster_dmg2_dice_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=120)
+
+    GSM.Monster_dmg2_dmg_type_str.set("fire")
+    monster_dmg2_dmg_type_dropdown = tk.OptionMenu(GSM.root, GSM.Monster_dmg2_dmg_type_str, *GSM.Dmg_types)
+    monster_dmg2_dmg_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=180)
 
 CreateMonster()
 
 Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w", padx=0)
 
 def MassSavingThrow() -> None:
-    #Spell + to save
-    Spell_plus_text_label = tk.Label(GSM.root, text="Saving throw mod:  +")
-    Spell_plus_text_label.grid(row=Row.increase(), column=0, sticky="w")
-    Spell_plus_int = tk.IntVar()
-    Spell_plus_int.set(2)
-    Spell_plus_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=Spell_plus_int, width=3)
-    Spell_plus_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    #Saving throw modifier
+    mass_save_mod_text_label = tk.Label(GSM.root, text="Saving throw mod:  +")
+    mass_save_mod_text_label.grid(row=Row.increase(), column=0, sticky="w")
+
+    GSM.Mass_save_mod_int.set(2)
+    mass_save_mod_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Mass_save_mod_int, width=3)
+    mass_save_mod_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
     #Save DC
-    Save_DC_text_label = tk.Label(GSM.root, text="Spell save DC: ")
-    Save_DC_text_label.grid(row=Row.increase(), column=0, sticky="w")
-    Save_DC_int = tk.IntVar()
-    Save_DC_int.set(13)
-    Save_DC_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=Save_DC_int, width=3)
-    Save_DC_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    mass_save_DC_text_label = tk.Label(GSM.root, text="Saving throw DC: ")
+    mass_save_DC_text_label.grid(row=Row.increase(), column=0, sticky="w")
+
+    GSM.Mass_save_DC_int.set(13)
+    mass_save_DC_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Mass_save_DC_int, width=3)
+    mass_save_DC_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
     #How many monsters
-    Spell_n_monsters_text_label = tk.Label(GSM.root, text="How many monsters: ")
-    Spell_n_monsters_text_label.grid(row=Row.increase(), column=0, sticky="w")
-    Spell_n_monsters_int = tk.IntVar()
-    Spell_n_monsters_int.set(6)
-    Spell_n_monsters_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=Spell_n_monsters_int, width=3)
-    Spell_n_monsters_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    mass_save_n_monsters_text_label = tk.Label(GSM.root, text="How many monsters: ")
+    mass_save_n_monsters_text_label.grid(row=Row.increase(), column=0, sticky="w")
+
+    GSM.Mass_save_n_monsters_int.set(6)
+    mass_save_n_monsters_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Mass_save_n_monsters_int, width=3)
+    mass_save_n_monsters_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
 
 MassSavingThrow()
 def RollDice(die_type: str) -> int:
@@ -287,17 +290,17 @@ fumble_table = ["Get distracted: Disadvantage on next attack", "Overextended Swi
                 "Fire spells: Lit yourself on fire, 2 turns take 1d6 dmg or action to put it out", "Ranged weapons: Drop 10 pieces of ammunition, it scatters and needs action to collect",
                 "A random glass item/potion breaks and spills", "Coin pouch rips, you lose 5d8 GP", "If spell: Roll wild magic table", "Loud noise: You cause a very loud noise",
                 "Panic: Become frightened of whatever you just attacked", "Sand/Mud in eyes: Become blinded until your next turn", "Drop formation: Lose 2 AC until next turn",
-                "Instinct movement: You provoke instincts in enemy, they move 10ft immediately"]
+                "Instinct movement: You provoke instincts in enemy, they move 10ft immediately", "Nothing happens, lucky day"]
 TargetDmgWidgets = []
 
 def ROLL() -> None:
     n_dice1 = GSM.Monster_dmg1_n_dice_int.get()
     dice_type1 = GSM.Monster_dmg1_dice_type_str.get()
-    flat_dmg1 = Dmg1_extra_int.get()
-    dmg_type1 = Dmg1_dmg_type.get()
-    n_dice2 = Dmg2_number_dice_int.get()
-    dice_type2 = Dmg2_dice_type.get()
-    dmg_type2 = Dmg2_dmg_type.get()
+    flat_dmg1 = GSM.Monster_dmg1_flat_int.get()
+    dmg_type1 = GSM.Monster_dmg1_dmg_type_str.get()
+    n_dice2 = GSM.Monster_dmg2_n_dice_int.get()
+    dice_type2 = GSM.Monster_dmg2_dice_type_str.get()
+    dmg_type2 = GSM.Monster_dmg2_dmg_type_str.get()
     rolltype = GSM.Roll_type_str.get()
     print("----")
     for widget in TargetDmgWidgets:
@@ -409,14 +412,14 @@ ROLL_button = tk.Button(GSM.root, text="ROLL", state="normal", command=ROLL, fon
                                            padx=9, background="red")
 ROLL_button.grid(row=Row.increase(), column=0, sticky="w", padx=360)
 
-def RollSpellSave():
+def RollMassSaveButton():
     for widget in TargetDmgWidgets:
         widget.destroy()
     TargetDmgWidgets.clear()
     passes = 0
     rolls = []
     rolltype = GSM.Roll_type_str.get()
-    for i in range(Spell_n_monsters_int.get()):
+    for i in range(GSM.Mass_save_n_monsters_int.get()):
         if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
             roll = RollDice("d20")
         elif rolltype == "Advantage":
@@ -427,22 +430,22 @@ def RollSpellSave():
             roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
         elif rolltype == "Super Disadvantage":
             roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-        roll = roll + Spell_plus_int.get()
-        if (roll) >= (Save_DC_int.get()):
+        roll = roll + GSM.Mass_save_mod_int.get()
+        if (roll) >= (GSM.Mass_save_DC_int.get()):
             passes += 1
         rolls.append(roll)
 
     rolls.sort(reverse=True)
-    save_label = tk.Label(GSM.root, text=(f"Out of {Spell_n_monsters_int.get()} monsters, {passes} passed and {Spell_n_monsters_int.get()-passes} failed"))
-    save_label.grid(column=0, padx=360, row=_first_target3_row, sticky="w")
-    TargetDmgWidgets.append(save_label)
+    mass_save_results_label = tk.Label(GSM.root, text=(f"Out of {GSM.Mass_save_n_monsters_int.get()} monsters, {passes} passed and {GSM.Mass_save_n_monsters_int.get()-passes} failed"))
+    mass_save_results_label.grid(column=0, padx=360, row=_first_target3_row, sticky="w")
+    TargetDmgWidgets.append(mass_save_results_label)
 
-    save_label = tk.Label(GSM.root, text=(f"{rolltype} rolls with were: {rolls}"))
-    save_label.grid(column=0, padx=360, row=_first_target3_row+1, sticky="w")
-    TargetDmgWidgets.append(save_label)
+    mass_save_results_label = tk.Label(GSM.root, text=(f"Rolled with {rolltype} for: {rolls}"))
+    mass_save_results_label.grid(column=0, padx=360, row=_first_target3_row+1, sticky="w")
+    TargetDmgWidgets.append(mass_save_results_label)
 
 
-DC_button = tk.Button(GSM.root, text="Roll save", state="normal", command=RollSpellSave,
+DC_button = tk.Button(GSM.root, text="Roll save", state="normal", command=RollMassSaveButton,
                                            padx=9, background="grey")
 DC_button.grid(row=Row.same(), column=0, sticky="w", padx=450)
 
