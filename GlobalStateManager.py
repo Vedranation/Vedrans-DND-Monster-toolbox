@@ -27,6 +27,11 @@ class GlobalsManager:
 
     Target_names_classes_list: List[str] = []
     Target_names_list: List[str] = []
+    Target_related_widgets: List[str] = []
+
+    #Target related variables
+    Target_AC_int = tk.IntVar()
+    Target_n_monster_int = tk.IntVar()
 
     #Monster creation variables
     Monster_n_attacks_int = tk.IntVar()

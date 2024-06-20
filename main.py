@@ -8,6 +8,7 @@ import GlobalStateManager
 #entry - type in something
 #dropdown - pick one from a menu
 #space - just a placeholder to move down by X amount
+#n = number of something
 
 class Row_track():
     def __init__(self):
@@ -102,31 +103,31 @@ def Targets() -> None:
     _first_target_row = Row.same()+1
 
     DrawTargetNameBoxes(GSM.N_targets_int.get())
-    N_targets_dropdown = tk.OptionMenu(GSM.root, GSM.N_targets_int, *[1, 2, 3, 4, 5, 6, 7, 8], command=DrawTargetNameBoxes)
-    N_targets_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=110)
+    n_targets_dropdown = tk.OptionMenu(GSM.root, GSM.N_targets_int, *[1, 2, 3, 4, 5, 6, 7, 8], command=DrawTargetNameBoxes)
+    n_targets_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=110)
 
     #Make space for target names
-    Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
-    Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
-    Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
-    Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
+    space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
+    space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
+    space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
+    space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
 
     #Button to update targets
-    Target_names_list = []
-    Target_related_widgets = []
+    GSM.Target_names_list = []
+    GSM.Target_related_widgets = []
     def UpdateTargetsButton() -> None:
-        Target_names_list.clear()
-        for widget in Target_related_widgets:
+        GSM.Target_names_list.clear()
+        for widget in GSM.Target_related_widgets:
             widget.destroy()
-        Target_related_widgets.clear()
+        GSM.Target_related_widgets.clear()
 
         for i, name in enumerate(GSM.Target_names_classes_list): #renames them
             if name.get():  # string not empty
-                Target_names_list.append(name.get())
+                GSM.Target_names_list.append(name.get())
             else:
-                Target_names_list.append(f"Target {i + 1}")
+                GSM.Target_names_list.append(f"Target {i + 1}")
 
-        for i, target in enumerate(Target_names_list):
+        for i, target in enumerate(GSM.Target_names_list):
             if i > 3:
                 right_offset = 220
                 row = _first_target2_row + i - 4
@@ -134,24 +135,24 @@ def Targets() -> None:
                 right_offset = 0
                 row = _first_target2_row + i
 
-            target_label_text = tk.Label(GSM.root, text=f"{target}:")
-            target_label_text.grid(row=row, column=0, sticky="w", padx=right_offset+360)
-            AC_text_label = tk.Label(GSM.root, text="AC:")
-            AC_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+420)
-            AC_int = tk.IntVar()
-            AC_int.set(13)
-            AC_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=AC_int, width=2)
-            AC_entry.grid(row=row, column=0, sticky="w", padx=right_offset+450)
+            target_text_label = tk.Label(GSM.root, text=f"{target}:")
+            target_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+360)
+            target_ac_text_label = tk.Label(GSM.root, text="AC:")
+            target_ac_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+420)
 
-            n_monster_target_label_text = tk.Label(GSM.root, text="Monsters:")
-            n_monster_target_label_text.grid(row=row, column=0, sticky="w", padx=right_offset+480)
-            n_monster_int = tk.IntVar()
-            n_monster_int.set(1)
-            n_monster_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=n_monster_int, width=2)
-            n_monster_entry.grid(row=row, column=0, sticky="w", padx=right_offset+540)
+            GSM.Target_AC_int.set(13)
+            target_ac_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Target_AC_int, width=2)
+            target_ac_entry.grid(row=row, column=0, sticky="w", padx=right_offset+450)
 
-            for widget in (AC_entry, n_monster_entry, target_label_text, AC_text_label, n_monster_target_label_text):
-                Target_related_widgets.append(widget)
+            target_n_monsters_text_label = tk.Label(GSM.root, text="Monsters:")
+            target_n_monsters_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+480)
+
+            GSM.Target_n_monster_int.set(1)
+            target_n_monster_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Target_n_monster_int, width=2)
+            target_n_monster_entry.grid(row=row, column=0, sticky="w", padx=right_offset+540)
+
+            for widget in (target_ac_entry, target_n_monster_entry, target_text_label, target_ac_text_label, target_n_monsters_text_label):
+                GSM.Target_related_widgets.append(widget) #packs all Target Settings widgets (input and display) into one list
 
     update_target_names_button = tk.Button(GSM.root, text="Create targets", state="normal", command=UpdateTargetsButton,
                                            padx=6, pady=5)
@@ -342,7 +343,7 @@ def ROLL() -> None:
             for dice in range(n_dice2):
                 dmg2 = dmg2 + RollDice(dice_type2)
         else:
-            if Crits_double_dmg_bool.get():
+            if GSM.Crits_double_dmg_bool.get():
                 dmg1 = flat_dmg1
                 for dice in range(n_dice1):
                     dmg1 = dmg1 + RollDice(dice_type1)
@@ -359,18 +360,19 @@ def ROLL() -> None:
                 for dice in range(n_dice2*2):
                     dmg2 = dmg2 + RollDice(dice_type2)
         return dmg1, dmg2
+
     for i, target_name in enumerate(GSM.Target_names_list):
         print()
         print(target_name)
-        ac = int(Target_related_widgets[0 + i * 5].get())
-        n_monsters = int(Target_related_widgets[1 + i * 5].get())
+        ac = int(GSM.Target_related_widgets[0 + i * 5].get()) #TODO: Fix this way of retrieving AC and n_monsters from GSM and not list of widgets to display.....
+        n_monsters = int(GSM.Target_related_widgets[1 + i * 5].get())
 
         hits = []
         dmgs1 = []
         dmgs2 = []
         for monster in range(n_monsters):
-            for attack in range(N_attacks_int.get()):
-                tohit = To_hit_int.get()
+            for attack in range(GSM.Monster_n_attacks_int.get()):
+                tohit = GSM.Monster_to_hit_int.get()
                 if rolltype == "Normal": #"Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
                     roll = RollDice("d20")
                 elif rolltype == "Advantage":
@@ -406,6 +408,7 @@ def ROLL() -> None:
         print(f"Hits: {hits}, {dmgs1} {dmg_type1}, {dmgs2} {dmg_type2}")
         display(hits, dmgs1, dmgs2, target_name)
         print(f"Total: {sum(dmgs1)} {dmg_type1}, {sum(dmgs2)} {dmg_type2}")
+
 
 #3 Roll buttons
 ROLL_button = tk.Button(GSM.root, text="ROLL", state="normal", command=ROLL, font=GSM.Title_font,
@@ -449,7 +452,7 @@ DC_button = tk.Button(GSM.root, text="Roll save", state="normal", command=RollMa
                                            padx=9, background="grey")
 DC_button.grid(row=Row.same(), column=0, sticky="w", padx=450)
 
-def RollFumble():
+def RollFumbleButton():
     for widget in TargetDmgWidgets:
         widget.destroy()
     TargetDmgWidgets.clear()
@@ -457,7 +460,7 @@ def RollFumble():
     fumble_label.grid(column=0, padx=360, row=_first_target3_row, sticky="w")
 
     TargetDmgWidgets.append(fumble_label)
-nat1_button = tk.Button(GSM.root, text="Roll fumble", state="normal", command=RollFumble,
+nat1_button = tk.Button(GSM.root, text="Roll fumble", state="normal", command=RollFumbleButton,
                                            padx=9, background="grey")
 nat1_button.grid(row=Row.same(), column=0, sticky="w", padx=530)
 
