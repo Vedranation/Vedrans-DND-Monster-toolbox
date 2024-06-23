@@ -23,6 +23,22 @@ class Row_track():
         return self.row
 Row = Row_track()
 
+class PlayerStats():
+    def __init__(self):
+        #TODO: Make a setting to pick between PP and rolling percep for mass percep check
+        self.name_str: str = tk.StringVar()
+        self.ac_int = tk.IntVar()
+        self.ac_int.set(13)
+        #TODO: Make multiple monsters
+        self.n_monsters_int = tk.IntVar()
+        self.n_monsters_int.set(0)
+
+        self.pp: int = 10 #passive perception
+        self.percep_mod: int = 2
+        self.pi: int = 10 #passive investigation
+        self.arcana_mod: int = 0
+        self.adamantine: int = False #turn crits into normal attacks
+
 GSM = GlobalStateManager.GlobalsManager()
 
 def Settings() -> None:
@@ -62,6 +78,7 @@ def RollType() -> None:
 
 RollType()
 
+
 def Targets() -> None:
     #Number of targets
     n_targets_text_label = tk.Label(GSM.root, text="How many targets: ")
@@ -77,10 +94,11 @@ def Targets() -> None:
         for entry in _target_name_label_entry_list:
             entry.destroy()
         _target_name_label_entry_list.clear()
-        GSM.Target_names_classes_list.clear()
+        GSM.Target_obj_list.clear()
 
         for i in range(n_targets):
-            target_name = tk.StringVar()
+            TargetObj = PlayerStats()
+            #target_name = tk.StringVar()
 
             if i > 3:
                 right_offset = 165
@@ -92,11 +110,11 @@ def Targets() -> None:
             _target_name_label.grid(row=row, column=0, sticky="w", padx=right_offset)
             _target_name_label_list.append(_target_name_label)
 
-            _target_name_entry = tk.Entry(GSM.root, textvariable=target_name, width=11)
+            _target_name_entry = tk.Entry(GSM.root, textvariable=TargetObj.name_str, width=11)
             _target_name_entry.grid(row=row, column=0, sticky="w", padx=right_offset+90)
             _target_name_label_entry_list.append(_target_name_entry)
 
-            GSM.Target_names_classes_list.append(target_name)
+            GSM.Target_obj_list.append(TargetObj)
 
     _target_name_label_list = []
     _target_name_label_entry_list = []
@@ -113,21 +131,18 @@ def Targets() -> None:
     space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w")
 
     #Button to update targets
-    GSM.Target_names_list = []
     GSM.Target_related_widgets = []
     def UpdateTargetsButton() -> None:
-        GSM.Target_names_list.clear()
         for widget in GSM.Target_related_widgets:
             widget.destroy()
         GSM.Target_related_widgets.clear()
+        #FIXME: Changing how many targets creates new objects, which removes all progress in entering - can be annoying
+        for i, TargetObj in enumerate(GSM.Target_obj_list):
 
-        for i, name in enumerate(GSM.Target_names_classes_list): #renames them
-            if name.get():  # string not empty
-                GSM.Target_names_list.append(name.get())
+            if TargetObj.name_str.get():  # string not empty
+                pass
             else:
-                GSM.Target_names_list.append(f"Target {i + 1}")
-
-        for i, target in enumerate(GSM.Target_names_list):
+                TargetObj.name_str.set(f"Target {i + 1}")
             if i > 3:
                 right_offset = 220
                 row = _first_target2_row + i - 4
@@ -135,24 +150,22 @@ def Targets() -> None:
                 right_offset = 0
                 row = _first_target2_row + i
 
-            target_text_label = tk.Label(GSM.root, text=f"{target}:")
+            target_text_label = tk.Label(GSM.root, text=f"{TargetObj.name_str.get()}:")
             target_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+360)
             target_ac_text_label = tk.Label(GSM.root, text="AC:")
             target_ac_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+420)
 
-            GSM.Target_AC_int.set(13)
-            target_ac_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Target_AC_int, width=2)
+            target_ac_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=TargetObj.ac_int, width=2)
             target_ac_entry.grid(row=row, column=0, sticky="w", padx=right_offset+450)
 
             target_n_monsters_text_label = tk.Label(GSM.root, text="Monsters:")
             target_n_monsters_text_label.grid(row=row, column=0, sticky="w", padx=right_offset+480)
 
-            GSM.Target_n_monster_int.set(1)
-            target_n_monster_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=GSM.Target_n_monster_int, width=2)
+            target_n_monster_entry = tk.Entry(GSM.root, borderwidth=2, textvariable=TargetObj.n_monsters_int, width=2)
             target_n_monster_entry.grid(row=row, column=0, sticky="w", padx=right_offset+540)
 
             for widget in (target_ac_entry, target_n_monster_entry, target_text_label, target_ac_text_label, target_n_monsters_text_label):
-                GSM.Target_related_widgets.append(widget) #packs all Target Settings widgets (input and display) into one list
+                GSM.Target_related_widgets.append(widget) #packs all Target Settings widgets (input and display) into one list so it can be cleared from window
 
     update_target_names_button = tk.Button(GSM.root, text="Create targets", state="normal", command=UpdateTargetsButton,
                                            padx=6, pady=5)
@@ -361,11 +374,10 @@ def ROLL() -> None:
                     dmg2 = dmg2 + RollDice(dice_type2)
         return dmg1, dmg2
 
-    for i, target_name in enumerate(GSM.Target_names_list):
-        print()
-        print(target_name)
-        ac = int(GSM.Target_related_widgets[0 + i * 5].get()) #TODO: Fix this way of retrieving AC and n_monsters from GSM and not list of widgets to display.....
-        n_monsters = int(GSM.Target_related_widgets[1 + i * 5].get())
+    for i, TargetObj in enumerate(GSM.Target_obj_list):
+
+        ac = int(TargetObj.ac_int.get())
+        n_monsters = int(TargetObj.n_monsters_int.get())
 
         hits = []
         dmgs1 = []
@@ -406,7 +418,7 @@ def ROLL() -> None:
                         dmgs2.append(dmg2)
 
         print(f"Hits: {hits}, {dmgs1} {dmg_type1}, {dmgs2} {dmg_type2}")
-        display(hits, dmgs1, dmgs2, target_name)
+        display(hits, dmgs1, dmgs2, TargetObj.name_str.get())
         print(f"Total: {sum(dmgs1)} {dmg_type1}, {sum(dmgs2)} {dmg_type2}")
 
 
@@ -474,6 +486,7 @@ _first_target3_row = Row.increase()
 #TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc
 #TODO: Add automated rolling for random encounter table. Let players import a list, saying chance of each encounter,
 #   which happen per night and which per day, how often to check, and how long PC's travelled and then determine the outcome
+#TODO: Add a random store. Decide "quality" of store (distribution of item rarity), how many items, read an external list, and price range as inputs
 #Make space for target names
 Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w", padx=360)
 Space = tk.Label(GSM.root, text="").grid(row=Row.increase(), column=0, sticky="w", padx=360)
