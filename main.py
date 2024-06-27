@@ -76,11 +76,51 @@ class PlayerStats():
         self.monster_roll_type_against_str = "Normal"#tk.StringVar()
 
         self.pp: int = 10 #passive perception
-        self.percep_mod: int = 2
-        self.pi: int = 10 #passive investigation
-        self.arcana_mod: int = 0
+        self.percep_mod: int = 2 #for regular trap spotting
+        self.arcana_mod: int = 0 #for wards/magic trap spotting
+        self.insight_mod: int = 0 #Insight checks
         self.adamantine: int = False #turn crits into normal attacks
 
+class MonsterStats():
+    def __init__(self):
+        self.name_str: str = tk.StringVar()
+        #to hit modifiers and multiattack
+        self.n_attacks: int = tk.IntVar()
+        self.to_hit_mod: int = tk.IntVar()
+        self.roll_type: str = tk.StringVar()  # Normal
+        self.roll_type.set("Normal")
+        #dmg 1
+        self.dmg_type_1: str = tk.StringVar()
+        self.dmg_die_1: str = tk.StringVar()
+        self.dmg_n_die_1: int = tk.IntVar()
+        self.dmg_flat_1: int = tk.IntVar()
+        #dmg 2
+        self.dmg_type_2: str = tk.StringVar()
+        self.dmg_die_2: str = tk.StringVar()
+        self.dmg_n_die_2: int = tk.IntVar()
+        self.dmg_flat_2: int = tk.IntVar()
+        #force saving throw on hit
+        self.on_hit_force_saving_throw: bool = tk.BooleanVar() #False
+        self.on_hit_save_dc: int = tk.IntVar()
+        self.on_hit_save_type: str = tk.StringVar()
+        #extra abilities
+        self.reroll_1_on_hit: bool = tk.BooleanVar() #once rerolls a 1 TO HIT (halfing luck)
+        self.reroll_1_2_dmg: bool = tk.BooleanVar() #GW fighting style - reroll 1 or 2 on DMG once
+        self.brutal_critical: bool = tk.BooleanVar() #On crit, rolls an extra dmg die
+        self.crit_number: int = tk.IntVar() #Usually 20, in case you want crit on 19 or 18
+        self.savage_attacker: bool = tk.BooleanVar() #Once per turn, roll dmg twice and use higher number
+
+        # TODO: Add spellcasters
+        self.is_spell_caster: bool = tk.BooleanVar() #Usually no
+        self.lv_1_spell_slots: int = tk.IntVar()
+        self.lv_2_spell_slots: int = tk.IntVar()
+        self.lv_3_spell_slots: int = tk.IntVar()
+        self.lv_4_spell_slots: int = tk.IntVar()
+        self.lv_5_spell_slots: int = tk.IntVar()
+        self.lv_6_spell_slots: int = tk.IntVar()
+        self.lv_7_spell_slots: int = tk.IntVar()
+        self.lv_8_spell_slots: int = tk.IntVar()
+        self.lv_9_spell_slots: int = tk.IntVar()
 GSM = GlobalStateManager.GlobalsManager()
 
 def Settings() -> None:
@@ -225,6 +265,9 @@ def Targets() -> None:
 
 
 Targets()
+monster1 = MonsterStats()
+monster2 = MonsterStats()
+monster3 = MonsterStats()
 
 
 def CreateMonster() -> None:
@@ -244,14 +287,20 @@ def CreateMonster() -> None:
     GSM.Monster_to_hit_int.set(6)
     monster_to_hit_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_to_hit_int, width=3)
     monster_to_hit_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
-    #TODO: add savaga attacker, reroll 1s and 2s, brutal critical etc, saving throw on hit, extra damage on 1st hit per turn
+
+    # Roll type (normal, adv, disadv...)
+    monster_roll_type_text_label = tk.Label(GSM.Monsters_frame, text="Roll type: ")
+    monster_roll_type_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 30))
+
+    monster_roll_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.roll_type, *GSM.Roll_types)
+    monster_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 70), y=RelPosMonsters.increase("y", -4))
+
     'Dmg 1'
     monster_dmg1_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 1:")
-    monster_dmg1_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 25))
+    monster_dmg1_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
     GSM.Monster_dmg1_n_dice_int.set(1)
     monster_dmg1_number_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg1_n_dice_int, width=3)
     monster_dmg1_number_dice_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
-
 
     GSM.Monster_dmg1_dice_type_str.set("d6")
     monster_dmg1_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg1_dice_type_str, *GSM.Dice_types)
@@ -335,9 +384,9 @@ def MassSavingThrow() -> None:
     RollType()
 
     def RollMassSaveButton():
-        for widget in TargetDmgWidgets:
+        for widget in GSM.Results_random_gen_widgets_to_clear:
             widget.destroy()
-        TargetDmgWidgets.clear()
+        GSM.Results_random_gen_widgets_to_clear.clear()
         passes = 0
         rolls = []
         rolltype = GSM.Mass_save_roll_type_str.get()
@@ -357,10 +406,9 @@ def MassSavingThrow() -> None:
                 pass #nat 1 always fails with rule
             elif (roll_total) >= (GSM.Mass_save_DC_int.get()):
                 passes += 1
-            rolls.append(roll)
+            rolls.append(roll_total)
 
         rolls.sort(reverse=True)
-
         nonlocal mass_save_button
         current_button_xy = mass_save_button.place_info()
         current_button_x = int(current_button_xy["x"])
@@ -369,11 +417,11 @@ def MassSavingThrow() -> None:
         mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(
             f"Out of {GSM.Mass_save_n_monsters_int.get()} monsters, {passes} passed and {GSM.Mass_save_n_monsters_int.get() - passes} failed"))
         mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", current_button_y+30))
-        TargetDmgWidgets.append(mass_save_results_label)
+        GSM.Results_random_gen_widgets_to_clear.append(mass_save_results_label)
 
         mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Rolled with {rolltype} for: {rolls}"))
         mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
-        TargetDmgWidgets.append(mass_save_results_label)
+        GSM.Results_random_gen_widgets_to_clear.append(mass_save_results_label)
 
     mass_save_button = tk.Button(GSM.Mass_roll_frame, text="Roll save", state="normal", command=RollMassSaveButton,
                           padx=9, background="grey")

@@ -10,7 +10,7 @@ class GlobalsManager:
     Root.geometry("850x620")
     Notebook = ttk.Notebook(Root)
     Notebook.place(x=10, y=10)
-    _frame_width = 580
+    _frame_width = 825
     _frame_height = 575
     # Settings tab
     Settings_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)  # seems that only first frame defines the size of all frames
@@ -77,6 +77,7 @@ class GlobalsManager:
     Mass_save_DC_int = tk.IntVar()
     Mass_save_n_monsters_int = tk.IntVar()
     Mass_save_roll_type_str = tk.StringVar()
+    Results_random_gen_widgets_to_clear = []
 
     #ROLL globals
     Results_display_widgets_list = []
