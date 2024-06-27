@@ -62,6 +62,7 @@ RelPosMonsters = RelativePositionTracker()
 RelPosTargets = RelativePositionTracker()
 RelPosMassroll = RelativePositionTracker()
 RelPosRandGen = RelativePositionTracker()
+RelPosROLL = RelativePositionTracker()
 
 class PlayerStats():
     def __init__(self):
@@ -71,7 +72,8 @@ class PlayerStats():
         self.ac_int.set(13)
         #TODO: Make multiple monsters
         self.n_monsters_int = tk.IntVar()
-        self.n_monsters_int.set(0)
+        self.n_monsters_int.set(1)
+        self.monster_roll_type_against_str = "Normal"#tk.StringVar()
 
         self.pp: int = 10 #passive perception
         self.percep_mod: int = 2
@@ -116,7 +118,7 @@ def Targets() -> None:
     #Number of targets
     n_targets_text_label = tk.Label(GSM.Targets_frame, text="How many targets: ")
     n_targets_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.increase("y", 35))
-    GSM.N_targets_int.set(1)
+    GSM.N_targets_int.set(4)
 
     # Button to update targets
     GSM.Target_related_widgets = []
@@ -415,9 +417,9 @@ def RandomGenerator():
         random_gen_result_label = tk.Label(GSM.Random_generator_frame, text=(f"{random.choice(fumble_table)}"))
         random_gen_result_label.place(x=RelPosRandGen.reset("x"), y=RelPosRandGen.set("y", 120))
 
-    # Target settings text
-    Target_settings_text_label = tk.Label(GSM.Random_generator_frame, text="Random Generator", font=GSM.Title_font)
-    Target_settings_text_label.place(x=RelPosRandGen.reset("x"), y=RelPosRandGen.reset("y"))
+    # Random generator title
+    random_generator_text_label = tk.Label(GSM.Random_generator_frame, text="Random Generator", font=GSM.Title_font)
+    random_generator_text_label.place(x=RelPosRandGen.reset("x"), y=RelPosRandGen.reset("y"))
 
     roll_fumble_button = tk.Button(GSM.Random_generator_frame, text="Roll fumble", state="normal", command=RollFumbleButton,
                                                padx=9, background="grey")
@@ -434,15 +436,16 @@ def ROLL() -> None:
     n_dice2 = GSM.Monster_dmg2_n_dice_int.get()
     dice_type2 = GSM.Monster_dmg2_dice_type_str.get()
     dmg_type2 = GSM.Monster_dmg2_dmg_type_str.get()
-    rolltype = GSM.Roll_type_str.get()
+    rolltype = "Normal" #GSM.Roll_type_str.get()
     print("----")
-    for widget in TargetDmgWidgets:
-        widget.destroy()
-    TargetDmgWidgets.clear()
-    row = _first_target3_row
 
+    RelPosROLL.reset("x")
+    RelPosROLL.set("y", 60)
+    for widget in GSM.Results_display_widgets_list:
+        widget.destroy()
+    GSM.Results_display_widgets_list.clear()
     def display(hits, dmgs1, dmgs2, target_name) -> None:
-        nonlocal row
+
         def custom_sort(item):
             if isinstance(item, str):
                 return (0, item)  # Put strings first
@@ -451,20 +454,19 @@ def ROLL() -> None:
 
         sorted_hits = sorted(hits, key=custom_sort)
         print(sorted_hits)
-        TargetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"{target_name}"))
-        TargetDmgLabel.grid(column=0, padx=340, row=row, sticky="w")
-        TargetDmgWidgets.append(TargetDmgLabel)
+        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"{target_name}"))
+        targetDmgLabel.place(x=RelPosROLL.set("x", 10), y=RelPosROLL.increase("y", RelPosROLL.constant_y*1.3))
+        GSM.Results_display_widgets_list.append(targetDmgLabel)
 
         filtered_length = (lambda hits: len([hit for hit in hits if hit != "nat1"]))(sorted_hits)
-        TargetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|  {filtered_length}  |   {sorted_hits}"))
-        TargetDmgLabel.grid(column=0, padx=410, row=row, sticky="w")
-        TargetDmgWidgets.append(TargetDmgLabel)
+        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|  {filtered_length}  |   {sorted_hits}"))
+        targetDmgLabel.place(x=RelPosROLL.increase("x", 60), y=RelPosROLL.same("y"))
+        GSM.Results_display_widgets_list.append(targetDmgLabel)
 
-        TargetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|   {sum(dmgs1)} {dmg_type1}   |   {sum(dmgs2)} {dmg_type2}"))
-        TargetDmgLabel.grid(column=0, padx=670, row=row, sticky="w")
-        TargetDmgWidgets.append(TargetDmgLabel)
+        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|   {sum(dmgs1)} {dmg_type1}   |   {sum(dmgs2)} {dmg_type2}"))
+        targetDmgLabel.place(x=RelPosROLL.increase("x", 60), y=RelPosROLL.same("y"))
+        GSM.Results_display_widgets_list.append(targetDmgLabel)
 
-        row = row + 1
 
     def damage(crit=False) -> (int, int):
         if not crit:
@@ -503,7 +505,9 @@ def ROLL() -> None:
         dmgs2 = []
         for monster in range(n_monsters):
             for attack in range(GSM.Monster_n_attacks_int.get()):
-                tohit = GSM.Monster_to_hit_int.get()
+                tohit = int(GSM.Monster_to_hit_int.get())
+                roll = int(0)
+
                 if rolltype == "Normal": #"Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
                     roll = RollDice("d20")
                 elif rolltype == "Advantage":
@@ -531,6 +535,7 @@ def ROLL() -> None:
                         dmgs2.append(dmg2)
                 else:
                     if roll + tohit > ac:
+                        print(roll, tohit, ac)
                         dmg1, dmg2 = damage(crit=False)
                         hits.append(roll+tohit)
                         dmgs1.append(dmg1)
@@ -541,10 +546,13 @@ def ROLL() -> None:
         print(f"Total: {sum(dmgs1)} {dmg_type1}, {sum(dmgs2)} {dmg_type2}")
 
 
-#3 Roll buttons
+#ROLL button
+random_generator_text_label = tk.Label(GSM.ROLL_frame, text="Roll attacks", font=GSM.Title_font)
+random_generator_text_label.place(x=RelPosROLL.reset("x"), y=RelPosROLL.reset("y"))
+
 ROLL_button = tk.Button(GSM.ROLL_frame, text="ROLL", state="normal", command=ROLL, font=GSM.Title_font,
                                            padx=9, background="red")
-ROLL_button.grid(row=Row.increase(), column=0, sticky="w", padx=360)
+ROLL_button.place(x=RelPosROLL.increase("x", 10), y=RelPosROLL.increase("y", RelPosROLL.constant_y*1.5))
 
 
 
