@@ -76,3 +76,4 @@ class GlobalsManager:
     Mass_save_mod_int = tk.IntVar()
     Mass_save_DC_int = tk.IntVar()
     Mass_save_n_monsters_int = tk.IntVar()
+    Mass_save_roll_type_str = tk.StringVar()

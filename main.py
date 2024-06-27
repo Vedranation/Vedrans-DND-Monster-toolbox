@@ -60,6 +60,7 @@ class RelativePositionTracker():
 RelPosSettings = RelativePositionTracker()
 RelPosMonsters = RelativePositionTracker()
 RelPosTargets = RelativePositionTracker()
+RelPosMassroll = RelativePositionTracker()
 class PlayerStats():
     def __init__(self):
         #TODO: Make a setting to pick between PP and rolling percep for mass percep check
@@ -105,18 +106,6 @@ def Settings() -> None:
 
 Settings()
 
-def RollType() -> None:
-    #Roll type (adv/dis/normal)
-    roll_type_text_label = tk.Label(GSM.Settings_frame, text="Roll type:")
-    roll_type_text_label.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
-
-    GSM.Roll_type_str.set(GSM.Roll_types[0])
-    Roll_type_dropdown = tk.OptionMenu(GSM.Settings_frame, GSM.Roll_type_str, *GSM.Roll_types)
-    Roll_type_dropdown.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
-
-RollType()
-
-
 def Targets() -> None:
     # Target settings text
     Target_settings_text_label = tk.Label(GSM.Targets_frame, text="Target settings", font=GSM.Title_font)
@@ -124,7 +113,7 @@ def Targets() -> None:
 
     #Number of targets
     n_targets_text_label = tk.Label(GSM.Targets_frame, text="How many targets: ")
-    n_targets_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.increase("y", 29))
+    n_targets_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.increase("y", 35))
     GSM.N_targets_int.set(1)
 
     # Button to update targets
@@ -225,7 +214,7 @@ def Targets() -> None:
     _target_name_labels_list = []
     _target_name_entry_list = []
     RelPosTargets.constant_y = 24
-    _first_target_row_y = RelPosTargets.increase("y", 45)
+    _first_target_row_y = RelPosTargets.increase("y", 40)
     DrawTargetInputNameBoxes(GSM.N_targets_int.get())
 
 
@@ -236,93 +225,154 @@ Targets()
 
 def CreateMonster() -> None:
     #Monster settings text
-    space = tk.Label(GSM.Monsters_frame, text="").grid(row=Row.increase(), column=0, sticky="w")
     monster_settings_text_label = tk.Label(GSM.Monsters_frame, text="Monster settings", font=GSM.Title_font)
-    monster_settings_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    monster_settings_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
     #Number of attacks
     monster_n_attacks_text_label = tk.Label(GSM.Monsters_frame, text="Number of attacks: ")
-    monster_n_attacks_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    monster_n_attacks_text_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
     GSM.Monster_n_attacks_int.set(1)
     monster_n_attacks_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_n_attacks_int, *[1, 2, 3, 4])
-    monster_n_attacks_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=110)
+    monster_n_attacks_dropdown.place(x=RelPosMonsters.increase("x", 110), y=RelPosMonsters.increase("y", -4))
 
     #To hit
     monster_to_hit_label = tk.Label(GSM.Monsters_frame, text="Monster to hit: +")
-    monster_to_hit_label.grid(row=Row.increase(), column=0, sticky="w")
+    monster_to_hit_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
     GSM.Monster_to_hit_int.set(6)
     monster_to_hit_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_to_hit_int, width=3)
-    monster_to_hit_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+    monster_to_hit_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
     #TODO: add tenacity, reroll 1s and 2s, brutal critical etc, saving throw on hit
-    #Dmg 1
+    'Dmg 1'
     monster_dmg1_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 1:")
-    monster_dmg1_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    monster_dmg1_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 25))
     GSM.Monster_dmg1_n_dice_int.set(1)
     monster_dmg1_number_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg1_n_dice_int, width=3)
-    monster_dmg1_number_dice_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+    monster_dmg1_number_dice_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
 
     GSM.Monster_dmg1_dice_type_str.set("d6")
     monster_dmg1_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg1_dice_type_str, *GSM.Dice_types)
-    monster_dmg1_dice_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    monster_dmg1_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27), y=RelPosMonsters.increase("y", -5))
     GSM.Monster_dmg1_dmg_type_str.set("bludgeoning")
     def UpdateMonsterDmg1FlatText(selected_dmg_type) -> None: #Because python says so this needs to be called here
         #This just displays the user selected dmg type in next line (right next to flat number)
+        current_box_xy = monster_dmg1_flat_text_label.place_info()
+        current_box_x = int(current_box_xy["x"])
+        current_box_y = int(current_box_xy["y"])
         #monster_dmg1_flat_row
         monster_dmg1_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=selected_dmg_type + "                ")
-        monster_dmg1_extra_text_label2.grid(row=monster_dmg1_flat_row, column=0, sticky="w", padx=120)
-    monster_dmg1_flat_row = Row.same() + 1 #This stores the row number where text of flat dmg is
+        monster_dmg1_extra_text_label2.place(x=current_box_x+120, y=current_box_y)
+
     monster_dmg1_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg1_dmg_type_str, *GSM.Dmg_types, command=UpdateMonsterDmg1FlatText)
-    monster_dmg1_dmg_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=180)
+    monster_dmg1_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60), y=RelPosMonsters.same("y"))
 
     #Dmg 1 flat
-    UpdateMonsterDmg1FlatText(GSM.Monster_dmg1_dmg_type_str.get())
     monster_dmg1_flat_text_label = tk.Label(GSM.Monsters_frame, text="Damage 1 flat:  +")
-    monster_dmg1_flat_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    monster_dmg1_flat_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 30))
+    UpdateMonsterDmg1FlatText(GSM.Monster_dmg1_dmg_type_str.get())
 
     GSM.Monster_dmg1_flat_int.set(2)
     monster_dmg1_extra_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg1_flat_int, width=3)
-    monster_dmg1_extra_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+    monster_dmg1_extra_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
-    #Dmg 2
+    'Dmg 2'
     monster_dmg2_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 2:")
-    monster_dmg2_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    monster_dmg2_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 50))
 
     GSM.Monster_dmg2_n_dice_int.set(1)
     monster_dmg2_n_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg2_n_dice_int, width=3)
-    monster_dmg2_n_dice_entry.grid(row=Row.same(), column=0, sticky="w", padx=95)
+    monster_dmg2_n_dice_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
     GSM.Monster_dmg2_dice_type_str.set("d4")
     monster_dmg2_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg2_dice_type_str, *GSM.Dice_types)
-    monster_dmg2_dice_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    monster_dmg2_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27), y=RelPosMonsters.increase("y", -5))
 
     GSM.Monster_dmg2_dmg_type_str.set("fire")
     monster_dmg2_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg2_dmg_type_str, *GSM.Dmg_types)
-    monster_dmg2_dmg_type_dropdown.grid(row=Row.same(), column=0, sticky="w", padx=180)
+    monster_dmg2_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60), y=RelPosMonsters.same("y"))
 
 CreateMonster()
 
 def MassSavingThrow() -> None:
+    RelPosMassroll.constant_y = 25
+
+    mass_savingthrow_label = tk.Label(GSM.Mass_roll_frame, text="Mass saving throw", font=GSM.Title_font)
+    mass_savingthrow_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
     #Saving throw modifier
     mass_save_mod_text_label = tk.Label(GSM.Mass_roll_frame, text="Saving throw mod:  +")
-    mass_save_mod_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    mass_save_mod_text_label.place(x=RelPosMassroll.same("x"), y=RelPosMassroll.increase("y", 35))
 
     GSM.Mass_save_mod_int.set(2)
     mass_save_mod_entry = tk.Entry(GSM.Mass_roll_frame, borderwidth=2, textvariable=GSM.Mass_save_mod_int, width=3)
-    mass_save_mod_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    mass_save_mod_entry.place(x=RelPosMassroll.increase("x", 120), y=RelPosMassroll.increase("y", 2))
     #Save DC
     mass_save_DC_text_label = tk.Label(GSM.Mass_roll_frame, text="Saving throw DC: ")
-    mass_save_DC_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    mass_save_DC_text_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", RelPosMassroll.constant_y))
 
     GSM.Mass_save_DC_int.set(13)
     mass_save_DC_entry = tk.Entry(GSM.Mass_roll_frame, borderwidth=2, textvariable=GSM.Mass_save_DC_int, width=3)
-    mass_save_DC_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    mass_save_DC_entry.place(x=RelPosMassroll.increase("x", 120), y=RelPosMassroll.same("y"))
     #How many monsters
     mass_save_n_monsters_text_label = tk.Label(GSM.Mass_roll_frame, text="How many monsters: ")
-    mass_save_n_monsters_text_label.grid(row=Row.increase(), column=0, sticky="w")
+    mass_save_n_monsters_text_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", RelPosMassroll.constant_y))
 
     GSM.Mass_save_n_monsters_int.set(6)
     mass_save_n_monsters_entry = tk.Entry(GSM.Mass_roll_frame, borderwidth=2, textvariable=GSM.Mass_save_n_monsters_int, width=3)
-    mass_save_n_monsters_entry.grid(row=Row.same(), column=0, sticky="w", padx=120)
+    mass_save_n_monsters_entry.place(x=RelPosMassroll.increase("x", 120), y=RelPosMassroll.same("y"))
+
+    def RollType() -> None:
+        # Roll type (adv/dis/normal)
+        roll_type_text_label = tk.Label(GSM.Mass_roll_frame, text="Roll type:")
+        roll_type_text_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", RelPosMassroll.constant_y))
+
+        GSM.Mass_save_roll_type_str.set(GSM.Roll_types[0])
+        Roll_type_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Mass_save_roll_type_str, *GSM.Roll_types)
+        Roll_type_dropdown.place(x=RelPosMassroll.increase("x", 65), y=RelPosMassroll.increase("y", -4))
+
+    RollType()
+
+    def RollMassSaveButton():
+        for widget in TargetDmgWidgets:
+            widget.destroy()
+        TargetDmgWidgets.clear()
+        passes = 0
+        rolls = []
+        rolltype = GSM.Mass_save_roll_type_str.get()
+        for i in range(GSM.Mass_save_n_monsters_int.get()):
+            if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
+                roll = RollDice("d20")
+            elif rolltype == "Advantage":
+                roll = max(RollDice("d20"), RollDice("d20"))
+            elif rolltype == "Disadvantage":
+                roll = min(RollDice("d20"), RollDice("d20"))
+            elif rolltype == "Super Advantage":
+                roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+            elif rolltype == "Super Disadvantage":
+                roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+            roll = roll + GSM.Mass_save_mod_int.get()
+            if (roll) >= (GSM.Mass_save_DC_int.get()):
+                passes += 1
+            rolls.append(roll)
+
+        rolls.sort(reverse=True)
+
+        nonlocal mass_save_button
+        current_button_xy = mass_save_button.place_info()
+        current_button_x = int(current_button_xy["x"])
+        current_button_y = int(current_button_xy["y"])
+
+        mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(
+            f"Out of {GSM.Mass_save_n_monsters_int.get()} monsters, {passes} passed and {GSM.Mass_save_n_monsters_int.get() - passes} failed"))
+        mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", current_button_y+30))
+        TargetDmgWidgets.append(mass_save_results_label)
+
+        mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Rolled with {rolltype} for: {rolls}"))
+        mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
+        TargetDmgWidgets.append(mass_save_results_label)
+
+    mass_save_button = tk.Button(GSM.Mass_roll_frame, text="Roll save", state="normal", command=RollMassSaveButton,
+                          padx=9, background="grey")
+    mass_save_button.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
+
 
 MassSavingThrow()
 def RollDice(die_type: str) -> int:
@@ -471,43 +521,6 @@ def ROLL() -> None:
 ROLL_button = tk.Button(GSM.ROLL_frame, text="ROLL", state="normal", command=ROLL, font=GSM.Title_font,
                                            padx=9, background="red")
 ROLL_button.grid(row=Row.increase(), column=0, sticky="w", padx=360)
-
-def RollMassSaveButton():
-    for widget in TargetDmgWidgets:
-        widget.destroy()
-    TargetDmgWidgets.clear()
-    passes = 0
-    rolls = []
-    rolltype = GSM.Roll_type_str.get()
-    for i in range(GSM.Mass_save_n_monsters_int.get()):
-        if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
-            roll = RollDice("d20")
-        elif rolltype == "Advantage":
-            roll = max(RollDice("d20"), RollDice("d20"))
-        elif rolltype == "Disadvantage":
-            roll = min(RollDice("d20"), RollDice("d20"))
-        elif rolltype == "Super Advantage":
-            roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-        elif rolltype == "Super Disadvantage":
-            roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-        roll = roll + GSM.Mass_save_mod_int.get()
-        if (roll) >= (GSM.Mass_save_DC_int.get()):
-            passes += 1
-        rolls.append(roll)
-
-    rolls.sort(reverse=True)
-    mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Out of {GSM.Mass_save_n_monsters_int.get()} monsters, {passes} passed and {GSM.Mass_save_n_monsters_int.get()-passes} failed"))
-    mass_save_results_label.grid(column=0, padx=360, row=_first_target3_row, sticky="w")
-    TargetDmgWidgets.append(mass_save_results_label)
-
-    mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Rolled with {rolltype} for: {rolls}"))
-    mass_save_results_label.grid(column=0, padx=360, row=_first_target3_row+1, sticky="w")
-    TargetDmgWidgets.append(mass_save_results_label)
-
-
-DC_button = tk.Button(GSM.Mass_roll_frame, text="Roll save", state="normal", command=RollMassSaveButton,
-                                           padx=9, background="grey")
-DC_button.grid(row=Row.same(), column=0, sticky="w", padx=450)
 
 def RollFumbleButton():
     for widget in TargetDmgWidgets:
