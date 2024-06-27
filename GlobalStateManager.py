@@ -1,11 +1,41 @@
 from typing import List, Union, Tuple
 import tkinter as tk
 from tkinter import font as tkfont  # Import tkfont for font definitions
+from tkinter import ttk
 class GlobalsManager:
-    root = tk.Tk()
-    #Globals for modification
-    root.title("Vedran's D&D monster toolbox")
-    root.geometry("850x580")
+    # GUI globals
+    Root = tk.Tk()
+    Root.title("Vedran's D&D monster toolbox")
+    Root.iconbitmap("Gearhands-corrupted-soldier.ico")
+    Root.geometry("850x580")
+    Notebook = ttk.Notebook(Root)
+    Notebook.place(x=10, y=10)
+    _frame_width = 830
+    _frame_height = 560
+    # Settings tab
+    Settings_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)  # seems that only first frame defines the size of all frames
+    Notebook.add(Settings_frame, text="Main settings")
+
+    # Monsters tab
+    Monsters_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(Monsters_frame, text="Monster creation")
+
+    # Targets tab
+    Targets_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(Targets_frame, text="Target creation")
+
+    # Mass roll tab
+    Mass_roll_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(Mass_roll_frame, text="Mass roll")
+
+    # Random generator tab
+    Random_generator_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(Random_generator_frame, text="Random generator")
+
+    # ROLL tab
+    ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(ROLL_frame, text="ROLL")
+
 
     Roll_types = ["Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"]
     Dmg_types = ["bludgeoning", "magic bludgeoning", "piercing", "magic piercing", "slashing",
@@ -29,7 +59,7 @@ class GlobalsManager:
     Target_related_widgets: List[str] = []
 
     #Target related variables
-
+    Create_targets_button = None #Button defined properly in Targets function
 
     #Monster creation variables
     Monster_n_attacks_int = tk.IntVar()
