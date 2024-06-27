@@ -7,11 +7,11 @@ class GlobalsManager:
     Root = tk.Tk()
     Root.title("Vedran's D&D monster toolbox")
     Root.iconbitmap("Gearhands-corrupted-soldier.ico")
-    Root.geometry("850x580")
+    Root.geometry("850x620")
     Notebook = ttk.Notebook(Root)
     Notebook.place(x=10, y=10)
-    _frame_width = 830
-    _frame_height = 560
+    _frame_width = 605
+    _frame_height = 575
     # Settings tab
     Settings_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)  # seems that only first frame defines the size of all frames
     Notebook.add(Settings_frame, text="Main settings")

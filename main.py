@@ -122,8 +122,6 @@ def Targets() -> None:
     Target_settings_text_label = tk.Label(GSM.Targets_frame, text="Target settings", font=GSM.Title_font)
     Target_settings_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.reset("y"))
 
-    _first_target2_row = Row.increase()
-
     #Number of targets
     n_targets_text_label = tk.Label(GSM.Targets_frame, text="How many targets: ")
     n_targets_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.increase("y", 29))
@@ -136,34 +134,35 @@ def Targets() -> None:
         for widget in GSM.Target_related_widgets:
             widget.destroy()
         GSM.Target_related_widgets.clear()
-        # FIXME: Changing how many targets creates new objects, which removes all progress in entering - can be annoying
+        current_create_targets_button_xy = GSM.Create_targets_button.place_info()
+        current_create_targets_button_x = int(current_create_targets_button_xy["x"])
+        current_create_targets_button_y = int(current_create_targets_button_xy["y"])
+        RelPosTargets.set("x", current_create_targets_button_x)
+        RelPosTargets.set("y", current_create_targets_button_y+20)
+
         for i, TargetObj in enumerate(GSM.Target_obj_list):
 
             if TargetObj.name_str.get():  # string not empty
                 pass
             else:
                 TargetObj.name_str.set(f"Target {i + 1}")
-            if i > 3:
-                right_offset = 220
-                row = _first_target2_row + i - 4
-            else:
-                right_offset = 0
-                row = _first_target2_row + i
+            RelPosTargets.set("x", current_create_targets_button_x)
+            RelPosTargets.increase("y", 25)
 
             target_text_label = tk.Label(GSM.Targets_frame, text=f"{TargetObj.name_str.get()}:")
-            target_text_label.grid(row=row, column=0, sticky="w", padx=right_offset + 360)
+            target_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.same("y"))
             target_ac_text_label = tk.Label(GSM.Targets_frame, text="AC:")
-            target_ac_text_label.grid(row=row, column=0, sticky="w", padx=right_offset + 420)
+            target_ac_text_label.place(x=RelPosTargets.increase("x", 85), y=RelPosTargets.same("y"))
 
             target_ac_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.ac_int, width=2)
-            target_ac_entry.grid(row=row, column=0, sticky="w", padx=right_offset + 450)
+            target_ac_entry.place(x=RelPosTargets.increase("x", 28), y=RelPosTargets.same("y"))
 
             target_n_monsters_text_label = tk.Label(GSM.Targets_frame, text="Monsters:")
-            target_n_monsters_text_label.grid(row=row, column=0, sticky="w", padx=right_offset + 480)
+            target_n_monsters_text_label.place(x=RelPosTargets.increase("x", 30), y=RelPosTargets.same("y"))
 
             target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.n_monsters_int,
                                               width=2)
-            target_n_monster_entry.grid(row=row, column=0, sticky="w", padx=right_offset + 540)
+            target_n_monster_entry.place(x=RelPosTargets.increase("x", 60), y=RelPosTargets.same("y"))
 
             for widget in (target_ac_entry, target_n_monster_entry, target_text_label, target_ac_text_label,
                            target_n_monsters_text_label):
@@ -227,7 +226,6 @@ def Targets() -> None:
     _target_name_entry_list = []
     RelPosTargets.constant_y = 24
     _first_target_row_y = RelPosTargets.increase("y", 45)
-
     DrawTargetInputNameBoxes(GSM.N_targets_int.get())
 
 
