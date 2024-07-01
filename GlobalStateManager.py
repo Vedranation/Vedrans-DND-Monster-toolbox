@@ -62,15 +62,12 @@ class GlobalsManager:
     Create_targets_button = None #Button defined properly in Targets function
 
     #Monster creation variables
-    Monster_n_attacks_int = tk.IntVar()
-    Monster_to_hit_int = tk.IntVar()
-    Monster_dmg1_n_dice_int = tk.IntVar()
-    Monster_dmg1_dice_type_str = tk.StringVar()
-    Monster_dmg1_dmg_type_str = tk.StringVar()
-    Monster_dmg1_flat_int = tk.IntVar()
-    Monster_dmg2_n_dice_int = tk.IntVar()
-    Monster_dmg2_dice_type_str = tk.StringVar()
-    Monster_dmg2_dmg_type_str = tk.StringVar()
+    Monsters_list = []
+    Monsters_widgets_list = []
+    N_monsters_int = tk.IntVar(value=1)
+
+    Monster_dmg1_extra_text_label2 = None #the text that appears next line depending on your choice of dmg type
+    Monster_dmg2_extra_text_label2 = None
 
     #Mass save variables
     Mass_save_mod_int = tk.IntVar()

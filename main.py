@@ -68,11 +68,9 @@ class PlayerStats():
     def __init__(self):
         #TODO: Make a setting to pick between PP and rolling percep for mass percep check
         self.name_str: str = tk.StringVar()
-        self.ac_int = tk.IntVar()
-        self.ac_int.set(13)
+        self.ac_int = tk.IntVar(value=13)
         #TODO: Make multiple monsters
-        self.n_monsters_int = tk.IntVar()
-        self.n_monsters_int.set(1)
+        self.n_monsters_int = tk.IntVar(value=1)
         self.monster_roll_type_against_str = "Normal"#tk.StringVar()
 
         self.pp: int = 10 #passive perception
@@ -84,21 +82,32 @@ class PlayerStats():
 class MonsterStats():
     def __init__(self):
         self.name_str: str = tk.StringVar()
+        self.name_str.set("Fire zombie")
         #to hit modifiers and multiattack
         self.n_attacks: int = tk.IntVar()
+        self.n_attacks.set(1)
         self.to_hit_mod: int = tk.IntVar()
+        self.to_hit_mod.set(5)
         self.roll_type: str = tk.StringVar()  # Normal
         self.roll_type.set("Normal")
         #dmg 1
         self.dmg_type_1: str = tk.StringVar()
-        self.dmg_die_1: str = tk.StringVar()
+        self.dmg_type_1.set("bludgeoning")
         self.dmg_n_die_1: int = tk.IntVar()
+        self.dmg_n_die_1.set(1)
+        self.dmg_die_type_1: str = tk.StringVar()
+        self.dmg_die_type_1.set("d6")
         self.dmg_flat_1: int = tk.IntVar()
+        self.dmg_flat_1.set(3)
         #dmg 2
         self.dmg_type_2: str = tk.StringVar()
-        self.dmg_die_2: str = tk.StringVar()
+        self.dmg_type_2.set("fire")
+        self.dmg_die_type_2: str = tk.StringVar()
+        self.dmg_die_type_2.set("d4")
         self.dmg_n_die_2: int = tk.IntVar()
+        self.dmg_n_die_2.set(1)
         self.dmg_flat_2: int = tk.IntVar()
+        self.dmg_flat_2.set(0)
         #force saving throw on hit
         self.on_hit_force_saving_throw: bool = tk.BooleanVar() #False
         self.on_hit_save_dc: int = tk.IntVar()
@@ -266,82 +275,142 @@ def Targets() -> None:
 
 Targets()
 monster1 = MonsterStats()
-monster2 = MonsterStats()
-monster3 = MonsterStats()
-
 
 def CreateMonster() -> None:
+    'Setup'
     #Monster settings text
     monster_settings_text_label = tk.Label(GSM.Monsters_frame, text="Monster settings", font=GSM.Title_font)
     monster_settings_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
-    #Number of attacks
-    monster_n_attacks_text_label = tk.Label(GSM.Monsters_frame, text="Number of attacks: ")
-    monster_n_attacks_text_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
-    GSM.Monster_n_attacks_int.set(1)
-    monster_n_attacks_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_n_attacks_int, *[1, 2, 3, 4])
-    monster_n_attacks_dropdown.place(x=RelPosMonsters.increase("x", 110), y=RelPosMonsters.increase("y", -4))
 
-    #To hit
-    monster_to_hit_label = tk.Label(GSM.Monsters_frame, text="Monster to hit: +")
-    monster_to_hit_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
-    GSM.Monster_to_hit_int.set(6)
-    monster_to_hit_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_to_hit_int, width=3)
-    monster_to_hit_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+    def ClearMonsterUI() -> None:
+        GSM.Monsters_list.clear()
+        for widget in GSM.Monsters_widgets_list:
+            widget.destroy()
+        GSM.Monsters_widgets_list.clear()
 
-    # Roll type (normal, adv, disadv...)
-    monster_roll_type_text_label = tk.Label(GSM.Monsters_frame, text="Roll type: ")
-    monster_roll_type_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 30))
+    def CreateMonsterUI(monster1, index) -> None:
+        column_offset = 280 * index
 
-    monster_roll_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.roll_type, *GSM.Roll_types)
-    monster_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 70), y=RelPosMonsters.increase("y", -4))
+        # Number of attacks
+        monster_n_attacks_text_label = tk.Label(GSM.Monsters_frame, text="Number of attacks: ")
+        monster_n_attacks_text_label.place(x=RelPosMonsters.reset("x") + column_offset,
+                                           y=RelPosMonsters.set("y", 80))
+        monster_n_attacks_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.n_attacks, *[1, 2, 3, 4])
+        monster_n_attacks_dropdown.place(x=RelPosMonsters.increase("x", 110) + column_offset,
+                                         y=RelPosMonsters.increase("y", -4))
+        GSM.Monsters_widgets_list.append(monster_n_attacks_text_label)
+        GSM.Monsters_widgets_list.append(monster_n_attacks_dropdown)
 
-    'Dmg 1'
-    monster_dmg1_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 1:")
-    monster_dmg1_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
-    GSM.Monster_dmg1_n_dice_int.set(1)
-    monster_dmg1_number_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg1_n_dice_int, width=3)
-    monster_dmg1_number_dice_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        # To hit
+        monster_to_hit_label = tk.Label(GSM.Monsters_frame, text="Monster to hit: +")
+        monster_to_hit_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 35))
+        monster_to_hit_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=monster1.to_hit_mod, width=3)
+        monster_to_hit_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
+        GSM.Monsters_widgets_list.append(monster_to_hit_label)
+        GSM.Monsters_widgets_list.append(monster_to_hit_entry)
 
-    GSM.Monster_dmg1_dice_type_str.set("d6")
-    monster_dmg1_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg1_dice_type_str, *GSM.Dice_types)
-    monster_dmg1_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27), y=RelPosMonsters.increase("y", -5))
-    GSM.Monster_dmg1_dmg_type_str.set("bludgeoning")
-    def UpdateMonsterDmg1FlatText(selected_dmg_type) -> None: #Because python says so this needs to be called here
-        #This just displays the user selected dmg type in next line (right next to flat number)
-        current_box_xy = monster_dmg1_flat_text_label.place_info()
-        current_box_x = int(current_box_xy["x"])
-        current_box_y = int(current_box_xy["y"])
-        #monster_dmg1_flat_row
-        monster_dmg1_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=selected_dmg_type + "                ")
-        monster_dmg1_extra_text_label2.place(x=current_box_x+120, y=current_box_y)
+        # Roll type (normal, adv, disadv...)
+        monster_roll_type_text_label = tk.Label(GSM.Monsters_frame, text="Roll type: ")
+        monster_roll_type_text_label.place(x=RelPosMonsters.reset("x") + column_offset,
+                                           y=RelPosMonsters.increase("y", 30))
+        monster_roll_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.roll_type, *GSM.Roll_types)
+        monster_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 70) + column_offset,
+                                         y=RelPosMonsters.increase("y", -4))
+        GSM.Monsters_widgets_list.append(monster_roll_type_text_label)
+        GSM.Monsters_widgets_list.append(monster_roll_type_dropdown)
 
-    monster_dmg1_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg1_dmg_type_str, *GSM.Dmg_types, command=UpdateMonsterDmg1FlatText)
-    monster_dmg1_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60), y=RelPosMonsters.same("y"))
+        'Dmg 1'
+        monster_dmg1_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 1:")
+        monster_dmg1_text_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 35))
+        monster_dmg1_number_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=monster1.dmg_n_die_1,
+                                                  width=3)
+        monster_dmg1_number_dice_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset,
+                                             y=RelPosMonsters.same("y"))
+        monster_dmg1_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.dmg_die_type_1, *GSM.Dice_types)
+        monster_dmg1_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27) + column_offset,
+                                              y=RelPosMonsters.increase("y", -5))
+        GSM.Monsters_widgets_list.append(monster_dmg1_text_label)
+        GSM.Monsters_widgets_list.append(monster_dmg1_number_dice_entry)
+        GSM.Monsters_widgets_list.append(monster_dmg1_dice_type_dropdown)
 
-    #Dmg 1 flat
-    monster_dmg1_flat_text_label = tk.Label(GSM.Monsters_frame, text="Damage 1 flat:  +")
-    monster_dmg1_flat_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 30))
-    UpdateMonsterDmg1FlatText(GSM.Monster_dmg1_dmg_type_str.get())
+        def UpdateMonsterDmg1FlatText(selected_dmg_type) -> None:
+            if GSM.Monster_dmg1_extra_text_label2 is not None:
+                GSM.Monster_dmg1_extra_text_label2.destroy()
+            current_box_xy = monster_dmg1_flat_text_label.place_info()
+            current_box_x = int(current_box_xy["x"]) + column_offset
+            current_box_y = int(current_box_xy["y"])
+            GSM.Monster_dmg1_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=selected_dmg_type)
+            GSM.Monster_dmg1_extra_text_label2.place(x=current_box_x + 120 + column_offset, y=current_box_y)
+            GSM.Monsters_widgets_list.append(GSM.Monster_dmg1_extra_text_label2)
 
-    GSM.Monster_dmg1_flat_int.set(2)
-    monster_dmg1_extra_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg1_flat_int, width=3)
-    monster_dmg1_extra_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_dmg1_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.dmg_type_1, *GSM.Dmg_types,
+                                                       command=UpdateMonsterDmg1FlatText)
+        monster_dmg1_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60) + column_offset,
+                                             y=RelPosMonsters.same("y"))
+        GSM.Monsters_widgets_list.append(monster_dmg1_dmg_type_dropdown)
 
-    'Dmg 2'
-    monster_dmg2_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 2:")
-    monster_dmg2_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 50))
+        monster_dmg1_flat_text_label = tk.Label(GSM.Monsters_frame, text="Damage 1 flat:  +")
+        monster_dmg1_flat_text_label.place(x=RelPosMonsters.reset("x") + column_offset,
+                                           y=RelPosMonsters.increase("y", 30))
+        monster_dmg1_extra_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=monster1.dmg_flat_1,
+                                            width=3)
+        monster_dmg1_extra_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
+        GSM.Monsters_widgets_list.append(monster_dmg1_flat_text_label)
+        GSM.Monsters_widgets_list.append(monster_dmg1_extra_entry)
 
-    GSM.Monster_dmg2_n_dice_int.set(1)
-    monster_dmg2_n_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=GSM.Monster_dmg2_n_dice_int, width=3)
-    monster_dmg2_n_dice_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        'Dmg 2'
+        monster_dmg2_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 2:")
+        monster_dmg2_text_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 50))
+        monster_dmg2_n_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2,
+                                             textvariable=monster1.dmg_n_die_2, width=3)
+        monster_dmg2_n_dice_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
+        monster_dmg2_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.dmg_die_type_2,
+                                                        *GSM.Dice_types)
+        monster_dmg2_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27) + column_offset,
+                                              y=RelPosMonsters.increase("y", -5))
+        GSM.Monsters_widgets_list.append(monster_dmg2_text_label)
+        GSM.Monsters_widgets_list.append(monster_dmg2_n_dice_entry)
+        GSM.Monsters_widgets_list.append(monster_dmg2_dice_type_dropdown)
 
-    GSM.Monster_dmg2_dice_type_str.set("d4")
-    monster_dmg2_dice_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg2_dice_type_str, *GSM.Dice_types)
-    monster_dmg2_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27), y=RelPosMonsters.increase("y", -5))
+        def UpdateMonsterDmg2FlatText(selected_dmg_type) -> None:
+            if GSM.Monster_dmg2_extra_text_label2 is not None:
+                GSM.Monster_dmg2_extra_text_label2.destroy()
+            current_box_xy = monster_dmg2_flat_text_label.place_info()
+            current_box_x = int(current_box_xy["x"]) + column_offset
+            current_box_y = int(current_box_xy["y"])
+            GSM.Monster_dmg2_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=selected_dmg_type)
+            GSM.Monster_dmg2_extra_text_label2.place(x=column_offset + current_box_x + 120, y=current_box_y)
+            GSM.Monsters_widgets_list.append(GSM.Monster_dmg2_extra_text_label2)
 
-    GSM.Monster_dmg2_dmg_type_str.set("fire")
-    monster_dmg2_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.Monster_dmg2_dmg_type_str, *GSM.Dmg_types)
-    monster_dmg2_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60), y=RelPosMonsters.same("y"))
+        monster_dmg2_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.dmg_type_2, *GSM.Dmg_types,
+                                                       command=UpdateMonsterDmg2FlatText)
+        monster_dmg2_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60) + column_offset,
+                                             y=RelPosMonsters.same("y"))
+        GSM.Monsters_widgets_list.append(monster_dmg2_dmg_type_dropdown)
+
+        monster_dmg2_flat_text_label = tk.Label(GSM.Monsters_frame, text="Damage 2 flat:  +")
+        monster_dmg2_flat_text_label.place(x=RelPosMonsters.reset("x") + column_offset,
+                                           y=RelPosMonsters.increase("y", 30))
+        monster_dmg2_extra_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=monster1.dmg_flat_2,
+                                            width=3)
+        monster_dmg2_extra_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
+        GSM.Monsters_widgets_list.append(monster_dmg2_flat_text_label)
+        GSM.Monsters_widgets_list.append(monster_dmg2_extra_entry)
+
+    def CreateMonsterObject(n_monsters) -> None:
+        #I have no idea why it automatically passes n_monsters in but no harm
+        ClearMonsterUI()
+        for i in range(GSM.N_monsters_int.get()):
+            monster1 = MonsterStats()
+            GSM.Monsters_list.append(monster1)
+            CreateMonsterUI(monster1, i)
+
+    #Number of monsters
+    n_monsters_label = tk.Label(GSM.Monsters_frame, text="How many monsters:")
+    n_monsters_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
+    n_monsters_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.N_monsters_int, *[1, 2, 3], command=CreateMonsterObject)
+    n_monsters_dropdown.place(x=RelPosMonsters.increase("x", 110), y=RelPosMonsters.increase("y", -4))
+
 
 CreateMonster()
 
