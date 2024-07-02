@@ -70,8 +70,10 @@ class PlayerStats():
         self.name_str: str = tk.StringVar()
         self.ac_int = tk.IntVar(value=13)
         #TODO: Make multiple monsters
-        self.n_monsters_int = tk.IntVar(value=1)
-        self.monster_roll_type_against_str = "Normal"#tk.StringVar()
+        self.n_monsters_1_int = tk.IntVar(value=1)
+        self.n_monsters_2_int = tk.IntVar(value=0)
+        self.n_monsters_3_int = tk.IntVar(value=0)
+        self.monster_roll_type_against_str = tk.StringVar(value="Normal") #If dodging or is flanked
 
         self.pp: int = 10 #passive perception
         self.percep_mod: int = 2 #for regular trap spotting
@@ -190,26 +192,35 @@ def Targets() -> None:
                 TargetObj.name_str.set(f"Target {i + 1}")
             RelPosTargets.set("x", current_create_targets_button_x)
             RelPosTargets.increase("y", 25)
-
+            #Display name
             target_text_label = tk.Label(GSM.Targets_frame, text=f"{TargetObj.name_str.get()}:")
             target_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.same("y"))
+            #AC
             target_ac_text_label = tk.Label(GSM.Targets_frame, text="AC:")
             target_ac_text_label.place(x=RelPosTargets.increase("x", 85), y=RelPosTargets.same("y"))
-
             target_ac_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.ac_int, width=2)
             target_ac_entry.place(x=RelPosTargets.increase("x", 28), y=RelPosTargets.same("y"))
+            #N monsters (1-3)
+            for i, monster in enumerate(GSM.Monsters_list):
+                column_index = i * 120
+                target_n_monsters_text_label = tk.Label(GSM.Targets_frame, text=f"{monster.name_str.get()}:")
+                target_n_monsters_text_label.place(x=RelPosTargets.set("x", 70 + column_index), y=RelPosTargets.same("y"))
+                print(monster.name_str.get())
+                if i == 0:
+                    target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.n_monsters_1_int,
+                                                  width=2)
+                elif i == 1:
+                    target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2,
+                                                      textvariable=TargetObj.n_monsters_2_int, width=2)
+                else:
+                    target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2,
+                                                      textvariable=TargetObj.n_monsters_3_int, width=2)
+                target_n_monster_entry.place(x=RelPosTargets.increase("x", 90), y=RelPosTargets.same("y"))
 
-            target_n_monsters_text_label = tk.Label(GSM.Targets_frame, text="Monsters:")
-            target_n_monsters_text_label.place(x=RelPosTargets.increase("x", 30), y=RelPosTargets.same("y"))
-
-            target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.n_monsters_int,
-                                              width=2)
-            target_n_monster_entry.place(x=RelPosTargets.increase("x", 60), y=RelPosTargets.same("y"))
-
-            for widget in (target_ac_entry, target_n_monster_entry, target_text_label, target_ac_text_label,
-                           target_n_monsters_text_label):
-                GSM.Target_related_widgets.append(
-                    widget)  # packs all Target Settings widgets (input and display) into one list so it can be cleared from window
+                for widget in (target_ac_entry, target_n_monster_entry, target_text_label, target_ac_text_label,
+                               target_n_monsters_text_label):
+                    GSM.Target_related_widgets.append(
+                        widget)  # packs all Target Settings widgets (input and display) into one list so it can be cleared from window
 
     def DrawTargetInputNameBoxes(n_targets) -> None:
         current_count = len(GSM.Target_obj_list)
@@ -290,6 +301,7 @@ def CreateMonster() -> None:
         # Name
         monster_name_label = tk.Label(GSM.Monsters_frame, text="Monsters name:")
         monster_name_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.set("y", 80))
+        monster1.name_str.set(str("Fire zombie " + str(index+1)))
         monster_name_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=monster1.name_str, width=18)
         monster_name_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
         GSM.Monsters_widgets_list.append(monster_name_label)
@@ -430,6 +442,9 @@ def CreateMonster() -> None:
                                          variable=monster1.on_hit_force_saving_throw_bool, onvalue=True, offvalue=False, command=EnableDisableForceSaveWidget)
         monster_force_save_throw_checkbox.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", RelPosMonsters.constant_y+10))
         GSM.Monsters_widgets_list.append(monster_force_save_throw_checkbox)
+        GSM.Monsters_widgets_list.append(monster_save_throw_dc_label)
+        GSM.Monsters_widgets_list.append(monster_save_throw_dc_entry)
+        GSM.Monsters_widgets_list.append(monster_save_throw_type_dropdown)
 
 
 
