@@ -28,12 +28,16 @@ class GlobalsManager:
     Mass_roll_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Mass_roll_frame, text="Mass roll")
 
+    # Mass roll tab
+    Spell_caster_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(Spell_caster_frame, text="Spell casters")
+
     # Random generator tab
     Random_generator_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Random_generator_frame, text="Random generator")
 
     # ROLL tab
-    ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )
     Notebook.add(ROLL_frame, text="ROLL")
 
 
@@ -72,6 +76,11 @@ class GlobalsManager:
 
     Monster_dmg1_extra_text_label2 = None #the text that appears next line depending on your choice of dmg type
     Monster_dmg2_extra_text_label2 = None
+
+    #Spell casters variables
+    N_casters_int = tk.IntVar(value=1)
+    Spell_casters_widgets_list = []
+    Spell_checkboxes_dict = {}
 
     #Mass save variables
     Mass_save_mod_int = tk.IntVar()

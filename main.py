@@ -63,13 +63,13 @@ RelPosTargets = RelativePositionTracker()
 RelPosMassroll = RelativePositionTracker()
 RelPosRandGen = RelativePositionTracker()
 RelPosROLL = RelativePositionTracker()
+RelPosSpellCast = RelativePositionTracker()
 
 class PlayerStats():
     def __init__(self):
         #TODO: Make a setting to pick between PP and rolling percep for mass percep check
         self.name_str: str = tk.StringVar()
         self.ac_int = tk.IntVar(value=13)
-        #TODO: Make multiple monsters
         self.n_monsters_1_int = tk.IntVar(value=1)
         self.n_monsters_2_int = tk.IntVar(value=0)
         self.n_monsters_3_int = tk.IntVar(value=0)
@@ -86,12 +86,9 @@ class MonsterStats():
         self.name_str: str = tk.StringVar()
         self.name_str.set("Fire zombie")
         #to hit modifiers and multiattack
-        self.n_attacks: int = tk.IntVar()
-        self.n_attacks.set(1)
-        self.to_hit_mod: int = tk.IntVar()
-        self.to_hit_mod.set(5)
-        self.roll_type: str = tk.StringVar()  # Normal
-        self.roll_type.set("Normal")
+        self.n_attacks: int = tk.IntVar(value=1)
+        self.to_hit_mod: int = tk.IntVar(value=5)
+        self.roll_type: str = tk.StringVar(value="Normal")  # Normal
         #dmg 1
         self.dmg_type_1: str = tk.StringVar(value="bludgeoning")
         self.dmg_n_die_1: int = tk.IntVar(value=1)
@@ -102,10 +99,8 @@ class MonsterStats():
         self.dmg_type_2.set("fire")
         self.dmg_die_type_2: str = tk.StringVar()
         self.dmg_die_type_2.set("d4")
-        self.dmg_n_die_2: int = tk.IntVar()
-        self.dmg_n_die_2.set(1)
-        self.dmg_flat_2: int = tk.IntVar()
-        self.dmg_flat_2.set(0)
+        self.dmg_n_die_2: int = tk.IntVar(value=1)
+        self.dmg_flat_2: int = tk.IntVar(value=0)
         #force saving throw on hit
         self.on_hit_force_saving_throw_bool: bool = tk.BooleanVar(value=False) #False
         self.on_hit_save_dc: int = tk.IntVar(value=13)
@@ -114,20 +109,8 @@ class MonsterStats():
         self.reroll_1_on_hit: bool = tk.BooleanVar() #once rerolls a 1 TO HIT (halfing luck)
         self.reroll_1_2_dmg: bool = tk.BooleanVar() #GW fighting style - reroll 1 or 2 on DMG once
         self.brutal_critical: bool = tk.BooleanVar() #On crit, rolls an extra dmg die
-        self.crit_number: int = tk.IntVar() #Usually 20, in case you want crit on 19 or 18
+        self.crit_number: int = tk.IntVar(value=20) #Usually 20, in case you want crit on 19 or 18
         self.savage_attacker: bool = tk.BooleanVar() #Once per turn, roll dmg twice and use higher number
-
-        # TODO: Add spellcasters
-        self.is_spell_caster: bool = tk.BooleanVar() #Usually no
-        self.lv_1_spell_slots: int = tk.IntVar()
-        self.lv_2_spell_slots: int = tk.IntVar()
-        self.lv_3_spell_slots: int = tk.IntVar()
-        self.lv_4_spell_slots: int = tk.IntVar()
-        self.lv_5_spell_slots: int = tk.IntVar()
-        self.lv_6_spell_slots: int = tk.IntVar()
-        self.lv_7_spell_slots: int = tk.IntVar()
-        self.lv_8_spell_slots: int = tk.IntVar()
-        self.lv_9_spell_slots: int = tk.IntVar()
 
         'Monsters Frame display widgets in row like dmg types'
         self._monster_dmg1_extra_text_label2 = None
@@ -141,23 +124,38 @@ def Settings() -> None:
     main_settings_text_label.place(x=RelPosSettings.same("x"), y=RelPosSettings.same("y"))
 
     #Meets it beats it checkbox
-    checkbox_label = tk.Checkbutton(GSM.Settings_frame, text='Attack roll equal to AC hits',variable=GSM.Meets_it_beats_it_bool, onvalue=True, offvalue=False)
+    checkbox_label = tk.Checkbutton(GSM.Settings_frame, text='Attack roll = AC is hit (meets it beats it)',variable=GSM.Meets_it_beats_it_bool, onvalue=True, offvalue=False)
     checkbox_label.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
+    #Extra crit die is max possible roll
+    def EnableDisableMaxDiceRoll() -> None:
+
+        if GSM.Crits_double_dmg_bool.get() == False:
+            checkbox_label21.config(state="normal")
+        else:
+            checkbox_label21.config(state="disabled")
+    checkbox_label21 = tk.Checkbutton(GSM.Settings_frame, text='Crit extra roll is max possible', variable=GSM.Crits_extra_die_is_max_bool,
+                                     onvalue=True, offvalue=False)
+    checkbox_label21.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
+    checkbox_label21.config(state="disabled")
+
     #Crits double dice checkbox
-    checkbox_label2 = tk.Checkbutton(GSM.Settings_frame, text='Crits double dmg instead of dice',variable=GSM.Crits_double_dmg_bool, onvalue=True, offvalue=False)
-    GSM.Crits_double_dmg_bool.set(True)
+    checkbox_label2 = tk.Checkbutton(GSM.Settings_frame, text='Crits double dmg instead of dice',variable=GSM.Crits_double_dmg_bool,
+                                     onvalue=True, offvalue=False, command=EnableDisableMaxDiceRoll)
     checkbox_label2.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
     #Crit always hits
     checkbox_label3 = tk.Checkbutton(GSM.Settings_frame, text='NAT 20 always hits',variable=GSM.Crits_always_hit_bool, onvalue=True, offvalue=False)
-    GSM.Crits_always_hit_bool.set(True)
     checkbox_label3.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
     #Nat1 always miss
-    checkbox_label3 = tk.Checkbutton(GSM.Settings_frame, text='NAT 1 always miss',variable=GSM.Nat1_always_miss_bool, onvalue=True, offvalue=False)
-    GSM.Nat1_always_miss_bool.set(True)
-    checkbox_label3.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
+    checkbox_label4 = tk.Checkbutton(GSM.Settings_frame, text='NAT 1 always miss',variable=GSM.Nat1_always_miss_bool, onvalue=True, offvalue=False)
+    checkbox_label4.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
+
+    # (Dis)advantages combine into super (dis)advantages
+    checkbox_label5 = tk.Checkbutton(GSM.Settings_frame, text='2 Advantages combine into super Advantage', variable=GSM.Adv_combine_bool,
+                                     onvalue=True, offvalue=False)
+    checkbox_label5.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
 Settings()
 
@@ -172,18 +170,18 @@ def Targets() -> None:
     GSM.N_targets_int.set(4)
 
     # Button to update targets
-    GSM.Target_related_widgets = []
+    GSM.Target_widgets_list = []
 
     def CreateTargetsButton() -> None:
-        for widget in GSM.Target_related_widgets:
+        for widget in GSM.Target_widgets_list:
             widget.destroy()
-        GSM.Target_related_widgets.clear()
+        GSM.Target_widgets_list.clear()
         current_create_targets_button_xy = GSM.Create_targets_button.place_info()
         current_create_targets_button_x = int(current_create_targets_button_xy["x"])
         current_create_targets_button_y = int(current_create_targets_button_xy["y"])
         RelPosTargets.set("x", current_create_targets_button_x)
         RelPosTargets.set("y", current_create_targets_button_y+20)
-
+        #TODO: Wanna change this to be vertical (put monster names, AC etc ABOVE inputs to save a lot of space, make it tabular)
         for i, TargetObj in enumerate(GSM.Target_obj_list):
 
             if TargetObj.name_str.get():  # string not empty
@@ -193,34 +191,49 @@ def Targets() -> None:
             RelPosTargets.set("x", current_create_targets_button_x)
             RelPosTargets.increase("y", 25)
             #Display name
-            target_text_label = tk.Label(GSM.Targets_frame, text=f"{TargetObj.name_str.get()}:")
+            target_text_label = tk.Label(GSM.Targets_frame, text=f"{TargetObj.name_str.get()}:", font=GSM.Target_font)
             target_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.same("y"))
+            GSM.Target_widgets_list.append(target_text_label)
             #AC
             target_ac_text_label = tk.Label(GSM.Targets_frame, text="AC:")
-            target_ac_text_label.place(x=RelPosTargets.increase("x", 85), y=RelPosTargets.same("y"))
+            target_ac_text_label.place(x=RelPosTargets.increase("x", 90), y=RelPosTargets.same("y"))
             target_ac_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.ac_int, width=2)
             target_ac_entry.place(x=RelPosTargets.increase("x", 28), y=RelPosTargets.same("y"))
+            GSM.Target_widgets_list.append(target_ac_text_label)
+            GSM.Target_widgets_list.append(target_ac_entry)
+
+            # Roll type (normal, adv, disadv...)
+            #FIXME: Allignment issue, fix it when making it tabular
+            target_roll_type_text_label = tk.Label(GSM.Targets_frame, text="Roll type: ")
+            target_roll_type_text_label.place(x=RelPosTargets.increase("x", 30),
+                                              y=RelPosTargets.same("y"))
+            target_roll_type_dropdown = tk.OptionMenu(GSM.Targets_frame, TargetObj.monster_roll_type_against_str, *GSM.Roll_types)
+            target_roll_type_dropdown.place(x=RelPosTargets.increase("x", 60),
+                                            y=RelPosTargets.increase("y", -4))
+            GSM.Target_widgets_list.append(target_roll_type_text_label)
+            GSM.Target_widgets_list.append(target_roll_type_dropdown)
+
             #N monsters (1-3)
             for i, monster in enumerate(GSM.Monsters_list):
-                column_index = i * 120
+                column_increase = 45
                 target_n_monsters_text_label = tk.Label(GSM.Targets_frame, text=f"{monster.name_str.get()}:")
-                target_n_monsters_text_label.place(x=RelPosTargets.set("x", 70 + column_index), y=RelPosTargets.same("y"))
-                print(monster.name_str.get())
-                if i == 0:
-                    target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2, textvariable=TargetObj.n_monsters_1_int,
-                                                  width=2)
-                elif i == 1:
-                    target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2,
-                                                      textvariable=TargetObj.n_monsters_2_int, width=2)
-                else:
-                    target_n_monster_entry = tk.Entry(GSM.Targets_frame, borderwidth=2,
-                                                      textvariable=TargetObj.n_monsters_3_int, width=2)
-                target_n_monster_entry.place(x=RelPosTargets.increase("x", 90), y=RelPosTargets.same("y"))
 
-                for widget in (target_ac_entry, target_n_monster_entry, target_text_label, target_ac_text_label,
-                               target_n_monsters_text_label):
-                    GSM.Target_related_widgets.append(
-                        widget)  # packs all Target Settings widgets (input and display) into one list so it can be cleared from window
+
+                if i == 0:
+                    target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, width=3, textvariable=TargetObj.n_monsters_1_int, from_=0, to=50)
+                    target_n_monsters_text_label.place(x=RelPosTargets.increase("x", 70), y=RelPosTargets.same("y"))
+                elif i == 1:
+                    target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, from_=0, to=50, textvariable=TargetObj.n_monsters_2_int, width=3)
+                    target_n_monsters_text_label.place(x=RelPosTargets.increase("x", column_increase), y=RelPosTargets.same("y"))
+                else:
+                    target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, from_=0, to=50, textvariable=TargetObj.n_monsters_3_int, width=3)
+                    target_n_monsters_text_label.place(x=RelPosTargets.increase("x", column_increase), y=RelPosTargets.same("y"))
+
+                target_n_monster_spinbox.place(x=RelPosTargets.increase("x", 90), y=RelPosTargets.same("y"))
+                #TODO: Add the target individual rolltype
+                GSM.Target_widgets_list.append(target_n_monsters_text_label)
+                GSM.Target_widgets_list.append(target_n_monster_spinbox)# packs all Target Settings widgets (input and display) into one list so it can be cleared from window
+
 
     def DrawTargetInputNameBoxes(n_targets) -> None:
         current_count = len(GSM.Target_obj_list)
@@ -282,10 +295,7 @@ def Targets() -> None:
     DrawTargetInputNameBoxes(GSM.N_targets_int.get())
 
 
-
-
 Targets()
-monster1 = MonsterStats()
 
 def CreateMonster() -> None:
 
@@ -446,16 +456,43 @@ def CreateMonster() -> None:
         GSM.Monsters_widgets_list.append(monster_save_throw_dc_entry)
         GSM.Monsters_widgets_list.append(monster_save_throw_type_dropdown)
 
-
-
-
-        # Nat1 always miss
-        monster_force_save_throw_checkbox = tk.Checkbutton(GSM.Monsters_frame, text='On hit, force save: ',
-                                                           variable=monster1.on_hit_force_saving_throw_bool,
+        # Halfling luck (reroll ones)
+        monster_halfling_luck_checkbox = tk.Checkbutton(GSM.Monsters_frame, text='Halfling luck (reroll nat 1)',
+                                                           variable=monster1.reroll_1_on_hit,
                                                            onvalue=True, offvalue=False)
-        monster_force_save_throw_checkbox.place(x=RelPosMonsters.reset("x") + column_offset,
+        monster_halfling_luck_checkbox.place(x=RelPosMonsters.reset("x") + column_offset,
                                                 y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
-        GSM.Monsters_widgets_list.append(monster_force_save_throw_checkbox)
+        GSM.Monsters_widgets_list.append(monster_halfling_luck_checkbox)
+        # Reroll 1 and 2 dmg die
+        monster_reroll_1_2_dmg_checkbox = tk.Checkbutton(GSM.Monsters_frame, text='GWM (reroll 1 & 2 dmg dice)',
+                                                        variable=monster1.reroll_1_2_dmg,
+                                                        onvalue=True, offvalue=False)
+        monster_reroll_1_2_dmg_checkbox.place(x=RelPosMonsters.reset("x") + column_offset,
+                                             y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
+        GSM.Monsters_widgets_list.append(monster_reroll_1_2_dmg_checkbox)
+        # Brutal critical
+        monster_brutal_crit_checkbox = tk.Checkbutton(GSM.Monsters_frame, text='Brutal critical (add 1 extra dmg dice on crit)',
+                                                         variable=monster1.brutal_critical,
+                                                         onvalue=True, offvalue=False)
+        monster_brutal_crit_checkbox.place(x=RelPosMonsters.reset("x") + column_offset,
+                                              y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
+        GSM.Monsters_widgets_list.append(monster_brutal_crit_checkbox)
+        # Savage attacker
+        monster_savage_attacker_checkbox = tk.Checkbutton(GSM.Monsters_frame,
+                                                      text='Savage attacker (Roll dmg dice twice and use higher)',
+                                                      variable=monster1.savage_attacker,
+                                                      onvalue=True, offvalue=False)
+        monster_savage_attacker_checkbox.place(x=RelPosMonsters.reset("x") + column_offset,
+                                           y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
+        GSM.Monsters_widgets_list.append(monster_savage_attacker_checkbox)
+        # Crit number
+        monster_crit_number_text_label = tk.Label(GSM.Monsters_frame, text="Champion - crit on:")
+        monster_crit_number_text_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 25))
+        monster_crit_number_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.crit_number, *[20, 19, 18, 17, 16])
+        monster_crit_number_dropdown.place(x=RelPosMonsters.increase("x", 110) + column_offset,
+                                             y=RelPosMonsters.increase("y", -4))
+        GSM.Monsters_widgets_list.append(monster_crit_number_text_label)
+        GSM.Monsters_widgets_list.append(monster_crit_number_dropdown)
 
     def CreateMonsterObject(n_monsters) -> None:
         #I have no idea why it automatically passes n_monsters in but no harm
@@ -561,8 +598,64 @@ def MassSavingThrow() -> None:
                           padx=9, background="grey")
     mass_save_button.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
 
-
 MassSavingThrow()
+def SpellCasters() -> None:
+    # Spell casters title
+    SpellCasters_text_label = tk.Label(GSM.Spell_caster_frame, text="Spell casters", font=GSM.Title_font)
+    SpellCasters_text_label.place(x=RelPosSpellCast.reset("x"), y=RelPosSpellCast.reset("y"))
+
+    def CreateSpellCasters(n_casters) -> None:
+        for widget in GSM.Spell_casters_widgets_list:
+            widget.destroy()
+        GSM.Spell_casters_widgets_list.clear()
+        GSM.Spell_checkboxes_dict = {i: [] for i in range(n_casters)}  # Dictionary to hold checkboxes for each caster
+
+        def DrawSpellBoxes(caster_lv, index):
+            base_y = 200  # Starting y position for checkboxes
+            column_offset = index * 165  # Position offset for each caster column
+            print(caster_lv, index)
+            # Remove old checkboxes if any
+            for checkbox in GSM.Spell_checkboxes_dict.get(index, []):
+                checkbox.destroy()
+            GSM.Spell_checkboxes_dict[index] = []
+
+            # Example spells for demonstration, you could customize this per level
+            spells = ["Spell 1", "Spell 2", "Spell 3"]
+            for i, spell in enumerate(spells):
+                cb = tk.Checkbutton(GSM.Spell_caster_frame, text=spell)
+                cb.place(x=RelPosSpellCast.reset("x") + column_offset, y=base_y + 25 * i)
+                GSM.Spell_checkboxes_dict[index].append(cb)
+
+        for i in range(GSM.N_casters_int.get()):
+            column_offset = i * 165
+            caster_lv = tk.IntVar(value=1)
+
+            caster_name_label = tk.Label(GSM.Spell_caster_frame, text="Name:")
+            caster_name_label.place(x=RelPosSpellCast.reset("x") + column_offset, y=RelPosSpellCast.set("y", 80))
+            caster_name_entry = tk.Entry(GSM.Spell_caster_frame, borderwidth=2, width=13)
+            caster_name_entry.place(x=RelPosSpellCast.increase("x", 47) + column_offset, y=RelPosSpellCast.same("y"))
+            caster_lv_label = tk.Label(GSM.Spell_caster_frame, text="Spellcasting level:")
+            caster_lv_label.place(x=RelPosSpellCast.reset("x") + column_offset, y=RelPosSpellCast.increase("y", 35))
+            caster_lv_dropdown = tk.OptionMenu(GSM.Spell_caster_frame, caster_lv,
+                                               *[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                               command=lambda lv, idx=i: DrawSpellBoxes(lv, idx))
+            caster_lv_dropdown.place(x=RelPosSpellCast.increase("x", 97) + column_offset, y=RelPosSpellCast.increase("y", -4))
+            GSM.Spell_casters_widgets_list.append(caster_name_label)
+            GSM.Spell_casters_widgets_list.append(caster_name_entry)
+            GSM.Spell_casters_widgets_list.append(caster_lv_label)
+            GSM.Spell_casters_widgets_list.append(caster_lv_dropdown)
+
+
+    # Number of casters
+    n_casters_text_label = tk.Label(GSM.Spell_caster_frame, text="How many spell casters: ")
+    n_casters_text_label.place(x=RelPosSpellCast.same("x"), y=RelPosSpellCast.increase("y", 35))
+    n_casters_dropdown = tk.OptionMenu(GSM.Spell_caster_frame, GSM.N_casters_int, *[1, 2, 3, 4, 5], command=CreateSpellCasters)
+    n_casters_dropdown.place(x=RelPosSpellCast.increase("x", 135), y=RelPosSpellCast.increase("y", -4))
+
+    # TODO: Add spellcasters, maybe in separate tab
+
+SpellCasters()
+
 def RollDice(die_type: str) -> int:
     if die_type == "d4":
         die_max = 4
