@@ -45,19 +45,22 @@ class GlobalsManager:
     Saving_throw_types = ["STR", "DEX", "CON", "WIS", "INT", "CHAR"]
 
     Title_font = tkfont.Font(family="Helvetica", size=12, weight="bold")
+    Target_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
 
 
     #Globals for running the program
-    Meets_it_beats_it_bool = tk.BooleanVar()
-    Crits_double_dmg_bool = tk.BooleanVar()
-    Crits_always_hit_bool = tk.BooleanVar()
-    Nat1_always_miss_bool = tk.BooleanVar()
+    Meets_it_beats_it_bool = tk.BooleanVar(value=False)
+    Crits_double_dmg_bool = tk.BooleanVar(value=True)
+    Crits_extra_die_is_max_bool = tk.BooleanVar(value=False)
+    Crits_always_hit_bool = tk.BooleanVar(value=True)
+    Nat1_always_miss_bool = tk.BooleanVar(value=True)
+    Adv_combine_bool = tk.BooleanVar(value=False)
 
     Roll_type_str = tk.StringVar()
     N_targets_int = tk.IntVar()
 
     Target_obj_list: List[str] = []
-    Target_related_widgets: List[str] = []
+    Target_widgets_list: List[str] = []
 
     #Target related variables
     Create_targets_button = None #Button defined properly in Targets function
