@@ -91,14 +91,10 @@ class MonsterStats():
         self.roll_type: str = tk.StringVar()  # Normal
         self.roll_type.set("Normal")
         #dmg 1
-        self.dmg_type_1: str = tk.StringVar()
-        self.dmg_type_1.set("bludgeoning")
-        self.dmg_n_die_1: int = tk.IntVar()
-        self.dmg_n_die_1.set(1)
-        self.dmg_die_type_1: str = tk.StringVar()
-        self.dmg_die_type_1.set("d6")
-        self.dmg_flat_1: int = tk.IntVar()
-        self.dmg_flat_1.set(3)
+        self.dmg_type_1: str = tk.StringVar(value="bludgeoning")
+        self.dmg_n_die_1: int = tk.IntVar(value=1)
+        self.dmg_die_type_1: str = tk.StringVar(value="d6")
+        self.dmg_flat_1: int = tk.IntVar(value=3)
         #dmg 2
         self.dmg_type_2: str = tk.StringVar()
         self.dmg_type_2.set("fire")
@@ -109,9 +105,9 @@ class MonsterStats():
         self.dmg_flat_2: int = tk.IntVar()
         self.dmg_flat_2.set(0)
         #force saving throw on hit
-        self.on_hit_force_saving_throw: bool = tk.BooleanVar() #False
-        self.on_hit_save_dc: int = tk.IntVar()
-        self.on_hit_save_type: str = tk.StringVar()
+        self.on_hit_force_saving_throw_bool: bool = tk.BooleanVar(value=False) #False
+        self.on_hit_save_dc: int = tk.IntVar(value=13)
+        self.on_hit_save_type: str = tk.StringVar(value="STR")
         #extra abilities
         self.reroll_1_on_hit: bool = tk.BooleanVar() #once rerolls a 1 TO HIT (halfing luck)
         self.reroll_1_2_dmg: bool = tk.BooleanVar() #GW fighting style - reroll 1 or 2 on DMG once
@@ -130,6 +126,10 @@ class MonsterStats():
         self.lv_7_spell_slots: int = tk.IntVar()
         self.lv_8_spell_slots: int = tk.IntVar()
         self.lv_9_spell_slots: int = tk.IntVar()
+
+        'Monsters Frame display widgets in row like dmg types'
+        self._monster_dmg1_extra_text_label2 = None
+        self._monster_dmg2_extra_text_label2 = None
 GSM = GlobalStateManager.GlobalsManager()
 
 def Settings() -> None:
@@ -277,10 +277,6 @@ Targets()
 monster1 = MonsterStats()
 
 def CreateMonster() -> None:
-    'Setup'
-    #Monster settings text
-    monster_settings_text_label = tk.Label(GSM.Monsters_frame, text="Monster settings", font=GSM.Title_font)
-    monster_settings_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
 
     def ClearMonsterUI() -> None:
         GSM.Monsters_list.clear()
@@ -291,10 +287,18 @@ def CreateMonster() -> None:
     def CreateMonsterUI(monster1, index) -> None:
         column_offset = 280 * index
 
+        # Name
+        monster_name_label = tk.Label(GSM.Monsters_frame, text="Monsters name:")
+        monster_name_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.set("y", 80))
+        monster_name_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2, textvariable=monster1.name_str, width=18)
+        monster_name_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
+        GSM.Monsters_widgets_list.append(monster_name_label)
+        GSM.Monsters_widgets_list.append(monster_name_entry)
+
         # Number of attacks
         monster_n_attacks_text_label = tk.Label(GSM.Monsters_frame, text="Number of attacks: ")
         monster_n_attacks_text_label.place(x=RelPosMonsters.reset("x") + column_offset,
-                                           y=RelPosMonsters.set("y", 80))
+                                           y=RelPosMonsters.increase("y", 35))
         monster_n_attacks_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.n_attacks, *[1, 2, 3, 4])
         monster_n_attacks_dropdown.place(x=RelPosMonsters.increase("x", 110) + column_offset,
                                          y=RelPosMonsters.increase("y", -4))
@@ -334,14 +338,15 @@ def CreateMonster() -> None:
         GSM.Monsters_widgets_list.append(monster_dmg1_dice_type_dropdown)
 
         def UpdateMonsterDmg1FlatText(selected_dmg_type) -> None:
-            if GSM.Monster_dmg1_extra_text_label2 is not None:
-                GSM.Monster_dmg1_extra_text_label2.destroy()
-            current_box_xy = monster_dmg1_flat_text_label.place_info()
-            current_box_x = int(current_box_xy["x"]) + column_offset
-            current_box_y = int(current_box_xy["y"])
-            GSM.Monster_dmg1_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=selected_dmg_type)
-            GSM.Monster_dmg1_extra_text_label2.place(x=current_box_x + 120 + column_offset, y=current_box_y)
-            GSM.Monsters_widgets_list.append(GSM.Monster_dmg1_extra_text_label2)
+            if monster1._monster_dmg1_extra_text_label2 is None:
+                monster1._monster_dmg1_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=monster1.dmg_type_1.get())
+                current_box_xy = monster_dmg1_flat_text_label.place_info()
+                current_box_x = int(current_box_xy["x"])
+                current_box_y = int(current_box_xy["y"])
+                monster1._monster_dmg1_extra_text_label2.place(x=current_box_x + 120, y=current_box_y)
+                GSM.Monsters_widgets_list.append(monster1._monster_dmg1_extra_text_label2)
+            else:
+                monster1._monster_dmg1_extra_text_label2.config(text=monster1.dmg_type_1.get())
 
         monster_dmg1_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.dmg_type_1, *GSM.Dmg_types,
                                                        command=UpdateMonsterDmg1FlatText)
@@ -360,7 +365,7 @@ def CreateMonster() -> None:
 
         'Dmg 2'
         monster_dmg2_text_label = tk.Label(GSM.Monsters_frame, text="Damage type 2:")
-        monster_dmg2_text_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 50))
+        monster_dmg2_text_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 40))
         monster_dmg2_n_dice_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2,
                                              textvariable=monster1.dmg_n_die_2, width=3)
         monster_dmg2_n_dice_entry.place(x=RelPosMonsters.increase("x", 93) + column_offset, y=RelPosMonsters.same("y"))
@@ -373,14 +378,15 @@ def CreateMonster() -> None:
         GSM.Monsters_widgets_list.append(monster_dmg2_dice_type_dropdown)
 
         def UpdateMonsterDmg2FlatText(selected_dmg_type) -> None:
-            if GSM.Monster_dmg2_extra_text_label2 is not None:
-                GSM.Monster_dmg2_extra_text_label2.destroy()
-            current_box_xy = monster_dmg2_flat_text_label.place_info()
-            current_box_x = int(current_box_xy["x"]) + column_offset
-            current_box_y = int(current_box_xy["y"])
-            GSM.Monster_dmg2_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=selected_dmg_type)
-            GSM.Monster_dmg2_extra_text_label2.place(x=column_offset + current_box_x + 120, y=current_box_y)
-            GSM.Monsters_widgets_list.append(GSM.Monster_dmg2_extra_text_label2)
+            if monster1._monster_dmg2_extra_text_label2 is None:
+                monster1._monster_dmg2_extra_text_label2 = tk.Label(GSM.Monsters_frame, text=monster1.dmg_type_2.get())
+                current_box_xy = monster_dmg2_flat_text_label.place_info()
+                current_box_x = int(current_box_xy["x"])
+                current_box_y = int(current_box_xy["y"])
+                monster1._monster_dmg2_extra_text_label2.place(x=current_box_x + 120, y=current_box_y)
+                GSM.Monsters_widgets_list.append(monster1._monster_dmg2_extra_text_label2)
+            else:
+                monster1._monster_dmg2_extra_text_label2.config(text=monster1.dmg_type_2.get())
 
         monster_dmg2_dmg_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.dmg_type_2, *GSM.Dmg_types,
                                                        command=UpdateMonsterDmg2FlatText)
@@ -397,6 +403,45 @@ def CreateMonster() -> None:
         GSM.Monsters_widgets_list.append(monster_dmg2_flat_text_label)
         GSM.Monsters_widgets_list.append(monster_dmg2_extra_entry)
 
+        # Force saving throw on hit:
+        monster_save_throw_dc_label = tk.Label(GSM.Monsters_frame, text="DC: ")
+        monster_save_throw_dc_label.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", 35))
+        monster_save_throw_dc_label.config(state="disabled")
+        monster_save_throw_dc_entry = tk.Entry(GSM.Monsters_frame, borderwidth=2,
+                                             textvariable=monster1.on_hit_save_dc, width=3)
+        monster_save_throw_dc_entry.place(x=RelPosMonsters.increase("x", 35) + column_offset, y=RelPosMonsters.same("y"))
+        monster_save_throw_dc_entry.config(state="disabled")
+        monster_save_throw_type_dropdown = tk.OptionMenu(GSM.Monsters_frame, monster1.on_hit_save_type,
+                                                        *GSM.Saving_throw_types)
+        monster_save_throw_type_dropdown.place(x=RelPosMonsters.increase("x", 27) + column_offset,
+                                              y=RelPosMonsters.increase("y", -5))
+        monster_save_throw_type_dropdown.config(state="disabled")
+        def EnableDisableForceSaveWidget():
+            if monster1.on_hit_force_saving_throw_bool.get():
+                monster_save_throw_dc_label.config(state="normal")
+                monster_save_throw_dc_entry.config(state="normal")
+                monster_save_throw_type_dropdown.config(state="normal")
+            else:
+                monster_save_throw_dc_label.config(state="disabled")
+                monster_save_throw_dc_entry.config(state="disabled")
+                monster_save_throw_type_dropdown.config(state="disabled")
+
+        monster_force_save_throw_checkbox = tk.Checkbutton(GSM.Monsters_frame, text='On hit, force saving throw',
+                                         variable=monster1.on_hit_force_saving_throw_bool, onvalue=True, offvalue=False, command=EnableDisableForceSaveWidget)
+        monster_force_save_throw_checkbox.place(x=RelPosMonsters.reset("x") + column_offset, y=RelPosMonsters.increase("y", RelPosMonsters.constant_y+10))
+        GSM.Monsters_widgets_list.append(monster_force_save_throw_checkbox)
+
+
+
+
+        # Nat1 always miss
+        monster_force_save_throw_checkbox = tk.Checkbutton(GSM.Monsters_frame, text='On hit, force save: ',
+                                                           variable=monster1.on_hit_force_saving_throw_bool,
+                                                           onvalue=True, offvalue=False)
+        monster_force_save_throw_checkbox.place(x=RelPosMonsters.reset("x") + column_offset,
+                                                y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
+        GSM.Monsters_widgets_list.append(monster_force_save_throw_checkbox)
+
     def CreateMonsterObject(n_monsters) -> None:
         #I have no idea why it automatically passes n_monsters in but no harm
         ClearMonsterUI()
@@ -405,11 +450,16 @@ def CreateMonster() -> None:
             GSM.Monsters_list.append(monster1)
             CreateMonsterUI(monster1, i)
 
+    'Setup'
+    # Monster settings text
+    monster_settings_text_label = tk.Label(GSM.Monsters_frame, text="Monster settings", font=GSM.Title_font)
+    monster_settings_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
+
     #Number of monsters
     n_monsters_label = tk.Label(GSM.Monsters_frame, text="How many monsters:")
     n_monsters_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
     n_monsters_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.N_monsters_int, *[1, 2, 3], command=CreateMonsterObject)
-    n_monsters_dropdown.place(x=RelPosMonsters.increase("x", 110), y=RelPosMonsters.increase("y", -4))
+    n_monsters_dropdown.place(x=RelPosMonsters.increase("x", 120), y=RelPosMonsters.increase("y", -4))
 
 
 CreateMonster()
@@ -546,6 +596,7 @@ def RandomGenerator():
 RandomGenerator()
 
 def ROLL() -> None:
+    #TODO: Add a "Copy results to clipboard" button!
     n_dice1 = GSM.Monster_dmg1_n_dice_int.get()
     dice_type1 = GSM.Monster_dmg1_dice_type_str.get()
     flat_dmg1 = GSM.Monster_dmg1_flat_int.get()
@@ -555,7 +606,6 @@ def ROLL() -> None:
     dmg_type2 = GSM.Monster_dmg2_dmg_type_str.get()
     rolltype = "Normal" #GSM.Roll_type_str.get()
     print("----")
-
     RelPosROLL.reset("x")
     RelPosROLL.set("y", 60)
     for widget in GSM.Results_display_widgets_list:

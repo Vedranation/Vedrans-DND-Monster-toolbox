@@ -42,6 +42,7 @@ class GlobalsManager:
                  "magic slashing", "acid", "cold", "fire", "force", "lightning", "thunder", "necrotic",
                  "poison", "psychic", "radiant"]
     Dice_types = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"]
+    Saving_throw_types = ["STR", "DEX", "CON", "WIS", "INT", "CHAR"]
 
     Title_font = tkfont.Font(family="Helvetica", size=12, weight="bold")
 
