@@ -95,10 +95,8 @@ class MonsterStats():
         self.dmg_die_type_1: str = tk.StringVar(value="d6")
         self.dmg_flat_1: int = tk.IntVar(value=3)
         #dmg 2
-        self.dmg_type_2: str = tk.StringVar()
-        self.dmg_type_2.set("fire")
-        self.dmg_die_type_2: str = tk.StringVar()
-        self.dmg_die_type_2.set("d4")
+        self.dmg_type_2: str = tk.StringVar(value="fire")
+        self.dmg_die_type_2: str = tk.StringVar(value="d4")
         self.dmg_n_die_2: int = tk.IntVar(value=1)
         self.dmg_flat_2: int = tk.IntVar(value=0)
         #force saving throw on hit
@@ -106,11 +104,11 @@ class MonsterStats():
         self.on_hit_save_dc: int = tk.IntVar(value=13)
         self.on_hit_save_type: str = tk.StringVar(value="STR")
         #extra abilities
-        self.reroll_1_on_hit: bool = tk.BooleanVar() #once rerolls a 1 TO HIT (halfing luck)
-        self.reroll_1_2_dmg: bool = tk.BooleanVar() #GW fighting style - reroll 1 or 2 on DMG once
-        self.brutal_critical: bool = tk.BooleanVar() #On crit, rolls an extra dmg die
+        self.reroll_1_on_hit: bool = tk.BooleanVar(value=False) #once rerolls a 1 TO HIT (halfing luck)
+        self.reroll_1_2_dmg: bool = tk.BooleanVar(value=False) #GW fighting style - reroll 1 or 2 on DMG once
+        self.brutal_critical: bool = tk.BooleanVar(value=False) #On crit, rolls an extra dmg die
         self.crit_number: int = tk.IntVar(value=20) #Usually 20, in case you want crit on 19 or 18
-        self.savage_attacker: bool = tk.BooleanVar() #Once per turn, roll dmg twice and use higher number
+        self.savage_attacker: bool = tk.BooleanVar(value=False) #Once per turn, roll dmg twice and use higher number
 
         'Monsters Frame display widgets in row like dmg types'
         self._monster_dmg1_extra_text_label2 = None
@@ -748,7 +746,7 @@ def SpellCasters() -> None:
 
             caster_name_label = tk.Label(GSM.Spell_caster_frame, text="Name:")
             caster_name_label.place(x=RelPosSpellCast.reset("x") + column_offset, y=RelPosSpellCast.set("y", 80))
-            caster_name_entry = tk.Entry(GSM.Spell_caster_frame, borderwidth=2, width=13)
+            caster_name_entry = tk.Entry(GSM.Spell_caster_frame, borderwidth=2, width=15)
             caster_name_entry.place(x=RelPosSpellCast.increase("x", 47) + column_offset, y=RelPosSpellCast.same("y"))
             caster_lv_label = tk.Label(GSM.Spell_caster_frame, text="Spellcasting level:")
             caster_lv_label.place(x=RelPosSpellCast.reset("x") + column_offset, y=RelPosSpellCast.increase("y", 35))
@@ -820,14 +818,6 @@ RandomGenerator()
 
 def ROLL() -> None:
     #TODO: Add a "Copy results to clipboard" button!
-    n_dice1 = GSM.Monster_dmg1_n_dice_int.get()
-    dice_type1 = GSM.Monster_dmg1_dice_type_str.get()
-    flat_dmg1 = GSM.Monster_dmg1_flat_int.get()
-    dmg_type1 = GSM.Monster_dmg1_dmg_type_str.get()
-    n_dice2 = GSM.Monster_dmg2_n_dice_int.get()
-    dice_type2 = GSM.Monster_dmg2_dice_type_str.get()
-    dmg_type2 = GSM.Monster_dmg2_dmg_type_str.get()
-    rolltype = "Normal" #GSM.Roll_type_str.get()
     print("----")
     RelPosROLL.reset("x")
     RelPosROLL.set("y", 60)
@@ -888,25 +878,81 @@ def ROLL() -> None:
     for i, TargetObj in enumerate(GSM.Target_obj_list):
 
         ac = int(TargetObj.ac_int.get())
-        n_monsters = int(TargetObj.n_monsters_int.get())
 
         hits = []
         dmgs1 = []
         dmgs2 = []
-        for monster in range(n_monsters):
-            for attack in range(GSM.Monster_n_attacks_int.get()):
-                tohit = int(GSM.Monster_to_hit_int.get())
+        for monster_object in GSM.Monsters_list:
+            monster_name = monster_object.name_str.get()
+            monster_n_attacks = monster_object.n_attacks.get()
+            monster_to_hit_mod = monster_object.to_hit_mod.get()
+            monster_roll_type = monster_object.roll_type.get()
+
+            monster_dmg_1_type = monster_object.dmg_type_1.get()
+            monster_dmg_1_n_die = monster_object.dmg_n_die_1.get()
+            monster_dmg_1_die_type = monster_object.dmg_die_type_1.get()
+            monster_dmg_1_flat = monster_object.dmg_flat_1.get()
+
+            monster_dmg_2_type = monster_object.dmg_type_2.get()
+            monster_dmg_2_n_die = monster_object.dmg_n_die_2.get()
+            monster_dmg_2_die_type = monster_object.dmg_die_type_2.get()
+            monster_dmg_2_flat = monster_object.dmg_flat_2.get()
+
+            monster_on_hit_force_saving_throw_bool = monster_object.on_hit_force_saving_throw_bool.get()
+            monster_on_hit_save_dc = monster_object.on_hit_save_dc.get()
+            monster_on_hit_save_type = monster_object.on_hit_save_type.get()
+
+            monster_halfling_luck = monster_object.reroll_1_on_hit.get()
+            monster_GW_fighting_style = monster_object.reroll_1_2_dmg.get()
+            monster_brut_crit = monster_object.brutal_critical.get()
+            monster_crit_number = monster_object.crit_number.get()
+            monster_savage_attacker = monster_object.savage_attacker()
+
+            def CombineRollTypes(monster_type, target_type):
+                #Combines 2 roll types to get what to actually use (like adv + disadv = normal)
+                if monster_type == "Normal":
+                    if target_type == "Normal":
+                        return "Normal"
+                    elif target_type == "Advantage":
+                        return "Advantage"
+                    elif target_type == "Super Advantage":
+                        return "Super Advantage"
+                    elif target_type == "Disadvantage":
+                        return "Disadvantage"
+                    else: #Super Disadvantage
+                        return "Super Disadvantage"
+                elif monster_type == "Advantage":
+                    if target_type == "Normal":
+                        return "Advantage"
+                    elif target_type == "Disadvantage":
+                        return "Normal"
+                    elif target_type == "Super Disadvantage":
+                        return "Disadvantage"
+                    elif target_type == "Advantage":
+                        if GSM.Adv_combine_bool.get():
+                            return "Super Advantage"
+                        else:
+                            return "Advantage"
+                    else: #Super Advantage
+                        return "Super Advantage"
+
+
+
+            final_rolltype =  CombineRollTypes(monster_roll_type, TargetObj.monster_roll_type_against_str.get())
+            print(final_rolltype)
+            for attack in range(monster_n_attacks):
+
                 roll = int(0)
 
-                if rolltype == "Normal": #"Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
+                if final_rolltype == "Normal": #"Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
                     roll = RollDice("d20")
-                elif rolltype == "Advantage":
+                elif final_rolltype == "Advantage":
                     roll = max(RollDice("d20"), RollDice("d20"))
-                elif rolltype == "Disadvantage":
+                elif final_rolltype == "Disadvantage":
                     roll = min(RollDice("d20"), RollDice("d20"))
-                elif rolltype == "Super Advantage":
+                elif final_rolltype == "Super Advantage":
                     roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-                elif rolltype == "Super Disadvantage":
+                elif final_rolltype == "Super Disadvantage":
                     roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
 
                 if roll == 20 and GSM.Crits_always_hit_bool.get():

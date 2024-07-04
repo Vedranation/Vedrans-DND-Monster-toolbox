@@ -70,7 +70,7 @@ class GlobalsManager:
     Create_targets_button = None #Button defined properly in Targets function
 
     #Monster creation variables
-    Monsters_list = []
+    Monsters_list = []  #Holds the created 1-3 monster types
     Monsters_widgets_list = []
     N_monsters_int = tk.IntVar(value=1)
 
