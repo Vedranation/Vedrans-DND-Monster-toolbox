@@ -56,7 +56,6 @@ class GlobalsManager:
     Meets_it_beats_it_bool = tk.BooleanVar(value=False)
     Crits_double_dmg_bool = tk.BooleanVar(value=True)
     Crits_extra_die_is_max_bool = tk.BooleanVar(value=False)
-    Crits_always_hit_bool = tk.BooleanVar(value=True)
     Nat1_always_miss_bool = tk.BooleanVar(value=True)
     Adv_combine_bool = tk.BooleanVar(value=False)
 

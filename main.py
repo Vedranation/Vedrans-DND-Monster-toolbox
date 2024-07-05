@@ -138,20 +138,16 @@ def Settings() -> None:
     checkbox_label21.config(state="disabled")
 
     #Crits double dice checkbox
-    checkbox_label2 = tk.Checkbutton(GSM.Settings_frame, text='Crits double dmg instead of dice',variable=GSM.Crits_double_dmg_bool,
+    checkbox_label2 = tk.Checkbutton(GSM.Settings_frame, text='Crits double TOTAL dmg instead of dice',variable=GSM.Crits_double_dmg_bool,
                                      onvalue=True, offvalue=False, command=EnableDisableMaxDiceRoll)
     checkbox_label2.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
-
-    #Crit always hits
-    checkbox_label3 = tk.Checkbutton(GSM.Settings_frame, text='NAT 20 always hits',variable=GSM.Crits_always_hit_bool, onvalue=True, offvalue=False)
-    checkbox_label3.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
     #Nat1 always miss
     checkbox_label4 = tk.Checkbutton(GSM.Settings_frame, text='NAT 1 always miss',variable=GSM.Nat1_always_miss_bool, onvalue=True, offvalue=False)
     checkbox_label4.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
     # (Dis)advantages combine into super (dis)advantages
-    checkbox_label5 = tk.Checkbutton(GSM.Settings_frame, text='2 Advantages combine into super Advantage', variable=GSM.Adv_combine_bool,
+    checkbox_label5 = tk.Checkbutton(GSM.Settings_frame, text='2 Advantages combine into 1 Super Advantage', variable=GSM.Adv_combine_bool,
                                      onvalue=True, offvalue=False)
     checkbox_label5.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
@@ -202,7 +198,7 @@ def Targets() -> None:
 
             # Roll type (normal, adv, disadv...)
             #FIXME: Allignment issue, fix it when making it tabular
-            target_roll_type_text_label = tk.Label(GSM.Targets_frame, text="Roll type: ")
+            target_roll_type_text_label = tk.Label(GSM.Targets_frame, text="Imposes: ")
             target_roll_type_text_label.place(x=RelPosTargets.increase("x", 30),
                                               y=RelPosTargets.same("y"))
             target_roll_type_dropdown = tk.OptionMenu(GSM.Targets_frame, TargetObj.monster_roll_type_against_str, *GSM.Roll_types)
@@ -785,6 +781,22 @@ def RollDice(die_type: str) -> int:
     elif die_type == "d100":
         die_max = 100
     return random.randint(1, die_max)
+def ReturnMaxPossibleDie(die_type: str) -> int:
+    if die_type == "d4":
+        die_max = 4
+    elif die_type == "d6":
+        die_max = 6
+    elif die_type == "d8":
+        die_max = 8
+    elif die_type == "d10":
+        die_max = 10
+    elif die_type == "d12":
+        die_max = 12
+    elif die_type == "d20":
+        die_max = 20
+    elif die_type == "d100":
+        die_max = 100
+    return die_max
 
 def RandomGenerator():
     fumble_table = ["Get distracted: Disadvantage on next attack", "Overextended Swing: Next attack on you have advantage", "Hit yourself for half dmg",
@@ -818,7 +830,8 @@ RandomGenerator()
 
 def ROLL() -> None:
     #TODO: Add a "Copy results to clipboard" button!
-    print("----")
+    print("")
+    print("NEW ROLL")
     RelPosROLL.reset("x")
     RelPosROLL.set("y", 60)
     for widget in GSM.Results_display_widgets_list:
@@ -843,46 +856,146 @@ def ROLL() -> None:
         targetDmgLabel.place(x=RelPosROLL.increase("x", 60), y=RelPosROLL.same("y"))
         GSM.Results_display_widgets_list.append(targetDmgLabel)
 
-        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|   {sum(dmgs1)} {dmg_type1}   |   {sum(dmgs2)} {dmg_type2}"))
+        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|   {sum(dmgs1)} {monster_dmg_1_type}   |   {sum(dmgs2)} {monster_dmg_2_type}"))
         targetDmgLabel.place(x=RelPosROLL.increase("x", 60), y=RelPosROLL.same("y"))
         GSM.Results_display_widgets_list.append(targetDmgLabel)
 
+    def CombineRollTypes(monster_type: str, target_type: str) -> str:
+        # Combines 2 roll types to get what to actually use (like adv + disadv = normal)
+        if monster_type == "Normal":
+            if target_type == "Normal":
+                return "Normal"
+            elif target_type == "Advantage":
+                return "Advantage"
+            elif target_type == "Super Advantage":
+                return "Super Advantage"
+            elif target_type == "Disadvantage":
+                return "Disadvantage"
+            else:  # Super Disadvantage
+                return "Super Disadvantage"
+        elif monster_type == "Advantage":
+            if target_type == "Normal":
+                return "Advantage"
+            elif target_type == "Disadvantage":
+                return "Normal"
+            elif target_type == "Super Disadvantage":
+                return "Disadvantage"
+            elif target_type == "Advantage":
+                if GSM.Adv_combine_bool.get():
+                    return "Super Advantage"
+                else:
+                    return "Advantage"
+            else:  # Super Advantage
+                return "Super Advantage"
+        elif monster_type == "Disadvantage":
+            if target_type == "Normal":
+                return "Disadvantage"
+            elif target_type == "Disadvantage":
+                if GSM.Adv_combine_bool.get():
+                    return "Super Disadvantage"
+                else:
+                    return "Disadvantage"
+            elif target_type == "Super Disadvantage":
+                return "Super Disadvantage"
+            elif target_type == "Advantage":
+                return "Normal"
+            else:  # Super Advantage
+                return "Advantage"
+        elif monster_type == "Super Advantage":
+            if target_type == "Normal":
+                return "Super Advantage"
+            elif target_type == "Disadvantage":
+                return "Advantage"
+            elif target_type == "Super Disadvantage":
+                return "Normal"
+            elif target_type == "Advantage":
+                return "Super Advantage"
+            else:  # Super Advantage
+                return "Super Advantage"
+        elif monster_type == "Super Disadvantage":
+            if target_type == "Normal":
+                return "Super Disadvantage"
+            elif target_type == "Disadvantage":
+                return "Super Disadvantage"
+            elif target_type == "Super Disadvantage":
+                return "Super Disadvantage"
+            elif target_type == "Advantage":
+                return "Disadvantage"
+            else:  # Super Advantage
+                return "Normal"
 
-    def damage(crit=False) -> (int, int):
+    def RollToHit(final_rolltype: str) -> int:
+        if final_rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
+            roll = RollDice("d20")
+        elif final_rolltype == "Advantage":
+            roll = max(RollDice("d20"), RollDice("d20"))
+        elif final_rolltype == "Disadvantage":
+            roll = min(RollDice("d20"), RollDice("d20"))
+        elif final_rolltype == "Super Advantage":
+            roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+        elif final_rolltype == "Super Disadvantage":
+            roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+        return int(roll)
+    def damage(dmg_1_n_die: int, dmg_1_die_type: str, dmg_1_flat: int, dmg_2_n_die: int, dmg_2_die_type: str,
+               dmg_2_flat: int, GW_fighting_style: bool, brut_crit: bool, savage_attacker: bool, crit=False) -> (int, int):
         if not crit:
-            dmg1 = flat_dmg1
-            for dice in range(n_dice1):
-                dmg1 = dmg1 + RollDice(dice_type1)
-            dmg2 = 0
-            for dice in range(n_dice2):
-                dmg2 = dmg2 + RollDice(dice_type2)
-        else:
-            if GSM.Crits_double_dmg_bool.get():
-                dmg1 = flat_dmg1
-                for dice in range(n_dice1):
-                    dmg1 = dmg1 + RollDice(dice_type1)
+            dmg1 = dmg_1_flat
+            for dice in range(dmg_1_n_die):
+                dmg1 = dmg1 + RollDice(dmg_1_die_type)
+            dmg2 = dmg_2_flat
+            for dice in range(dmg_2_n_die):
+                dmg2 = dmg2 + RollDice(dmg_2_die_type)
+        else: #Three different ways to compute critical hit
+            if GSM.Crits_double_dmg_bool.get(): #Double all crit dmg
+                dmg1 = dmg_1_flat
+                for dice in range(dmg_1_n_die):
+                    dmg1 = dmg1 + RollDice(dmg_1_die_type)
                 dmg1 = dmg1*2
-                dmg2 = 0
-                for dice in range(n_dice2):
-                    dmg2 = dmg2 + RollDice(dice_type2)
+                dmg2 = dmg_2_flat
+                for dice in range(dmg_2_n_die):
+                    dmg2 = dmg2 + RollDice(dmg_2_die_type)
                 dmg2 = dmg2*2
             else:
-                dmg1 = flat_dmg1
-                for dice in range(n_dice1*2):
-                    dmg1 = dmg1 + RollDice(dice_type1)
-                dmg2 = 0
-                for dice in range(n_dice2*2):
-                    dmg2 = dmg2 + RollDice(dice_type2)
-        return dmg1, dmg2
+                if not Crits_extra_die_is_max_bool.get(): #Roll crit normally
+                    dmg1 = dmg_1_flat
+                    for dice in range(dmg_1_n_die*2):
+                        dmg1 = dmg1 + RollDice(dmg_1_die_type)
+                    dmg2 = dmg_2_flat
+                    for dice in range(dmg_2_n_die*2):
+                        dmg2 = dmg2 + RollDice(dmg_2_die_type)
+                else: #Anti snake eyes crit rule
+                    dmg1 = dmg_1_flat
+                    for dice in range(dmg_1_n_die):
+                        dmg1 = dmg1 + RollDice(dmg_1_die_type) + ReturnMaxPossibleDie(dmg_1_die_type)
+                    dmg2 = dmg_2_flat
+                    for dice in range(dmg_2_n_die):
+                        dmg2 = dmg2 + RollDice(dmg_2_die_type) + ReturnMaxPossibleDie(dmg_2_die_type)
+        return dmg1, dmg2 #TODO: Incorporate the calculations for GW fighting style, Brutal crit and Savaga attacker
 
-    for i, TargetObj in enumerate(GSM.Target_obj_list):
+    for TargetObj in GSM.Target_obj_list:
+        if len(GSM.Monsters_list) == 1: #Brute force way to create proper size nested lists but it works for only 3 monsters
+            hits = [[]]
+            dmgs1 = [[]]
+            dmgs2 = [[]]
+            dmgs1_type = [[]]
+            dmgs2_type = [[]]
+        elif len(GSM.Monsters_list) == 2:
+            hits = [[], []]
+            dmgs1 = [[], []]
+            dmgs2 = [[], []]
+            dmgs1_type = [[], []]
+            dmgs2_type = [[], []]
+        else:
+            hits = [[], [], []]
+            dmgs1 = [[], [], []]
+            dmgs2 = [[], [], []]
+            dmgs1_type = [[], [], []]
+            dmgs2_type = [[], [], []]
 
         ac = int(TargetObj.ac_int.get())
+        print(f"-----{TargetObj.name_str.get()}-----")
 
-        hits = []
-        dmgs1 = []
-        dmgs2 = []
-        for monster_object in GSM.Monsters_list:
+        for i, monster_object in enumerate(GSM.Monsters_list):
             monster_name = monster_object.name_str.get()
             monster_n_attacks = monster_object.n_attacks.get()
             monster_to_hit_mod = monster_object.to_hit_mod.get()
@@ -906,80 +1019,57 @@ def ROLL() -> None:
             monster_GW_fighting_style = monster_object.reroll_1_2_dmg.get()
             monster_brut_crit = monster_object.brutal_critical.get()
             monster_crit_number = monster_object.crit_number.get()
-            monster_savage_attacker = monster_object.savage_attacker()
-
-            def CombineRollTypes(monster_type, target_type):
-                #Combines 2 roll types to get what to actually use (like adv + disadv = normal)
-                if monster_type == "Normal":
-                    if target_type == "Normal":
-                        return "Normal"
-                    elif target_type == "Advantage":
-                        return "Advantage"
-                    elif target_type == "Super Advantage":
-                        return "Super Advantage"
-                    elif target_type == "Disadvantage":
-                        return "Disadvantage"
-                    else: #Super Disadvantage
-                        return "Super Disadvantage"
-                elif monster_type == "Advantage":
-                    if target_type == "Normal":
-                        return "Advantage"
-                    elif target_type == "Disadvantage":
-                        return "Normal"
-                    elif target_type == "Super Disadvantage":
-                        return "Disadvantage"
-                    elif target_type == "Advantage":
-                        if GSM.Adv_combine_bool.get():
-                            return "Super Advantage"
-                        else:
-                            return "Advantage"
-                    else: #Super Advantage
-                        return "Super Advantage"
-
-
+            monster_savage_attacker = monster_object.savage_attacker.get()
 
             final_rolltype =  CombineRollTypes(monster_roll_type, TargetObj.monster_roll_type_against_str.get())
-            print(final_rolltype)
-            for attack in range(monster_n_attacks):
 
-                roll = int(0)
+            if i == 0: #Grabs the corrent number for each monster amount
+                n_monsters = TargetObj.n_monsters_1_int.get()
+            elif i == 1:
+                n_monsters = TargetObj.n_monsters_2_int.get()
+            elif i == 2:
+                n_monsters = TargetObj.n_monsters_3_int.get()
+            print(n_monsters)
+            for j in range(n_monsters):
+                for attack in range(monster_n_attacks):
 
-                if final_rolltype == "Normal": #"Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
-                    roll = RollDice("d20")
-                elif final_rolltype == "Advantage":
-                    roll = max(RollDice("d20"), RollDice("d20"))
-                elif final_rolltype == "Disadvantage":
-                    roll = min(RollDice("d20"), RollDice("d20"))
-                elif final_rolltype == "Super Advantage":
-                    roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-                elif final_rolltype == "Super Disadvantage":
-                    roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+                    roll = RollToHit(final_rolltype)
 
-                if roll == 20 and GSM.Crits_always_hit_bool.get():
-                    dmg1, dmg2 = damage(crit=True)
-                    hits.append("nat20")
-                    dmgs1.append(dmg1)
-                    dmgs2.append(dmg2)
-                elif roll == 1 and GSM.Nat1_always_miss_bool.get():
-                    hits.append("nat1")
+                    if roll == 1 and monster_halfling_luck: #reroll halfling luck (1 to hit)
+                        roll = RollToHit(final_rolltype)
 
-                elif (GSM.Meets_it_beats_it_bool.get()):
-                    if roll + tohit >= ac:
-                        dmg1, dmg2 = damage(crit=False)
-                        hits.append(roll+tohit)
-                        dmgs1.append(dmg1)
-                        dmgs2.append(dmg2)
-                else:
-                    if roll + tohit > ac:
-                        print(roll, tohit, ac)
-                        dmg1, dmg2 = damage(crit=False)
-                        hits.append(roll+tohit)
-                        dmgs1.append(dmg1)
-                        dmgs2.append(dmg2)
+                    if roll >= monster_crit_number: #and GSM.Crits_always_hit_bool.get():
+                        dmg1, dmg2 = damage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                                            monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
+                                            monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=True)
+                        hits[i].append("crit" + str(monster_crit_number))
+                        dmgs1[i].append(dmg1)
+                        dmgs2[i].append(dmg2)
 
-        print(f"Hits: {hits}, {dmgs1} {dmg_type1}, {dmgs2} {dmg_type2}")
-        display(hits, dmgs1, dmgs2, TargetObj.name_str.get())
-        print(f"Total: {sum(dmgs1)} {dmg_type1}, {sum(dmgs2)} {dmg_type2}")
+                    elif roll == 1 and GSM.Nat1_always_miss_bool.get():
+                        hits[i].append("nat1")
+
+                    elif (GSM.Meets_it_beats_it_bool.get()):
+                        if roll + monster_to_hit_mod >= ac:
+                            dmg1, dmg2 = damage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                                            monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
+                                            monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=False)
+                            hits[i].append(roll+monster_to_hit_mod)
+                            dmgs1[i].append(dmg1)
+                            dmgs2[i].append(dmg2)
+                    else:
+                        if roll + monster_to_hit_mod > ac:
+                            dmg1, dmg2 = damage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                                            monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
+                                            monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=False)
+                            hits[i].append(roll+monster_to_hit_mod)
+                            dmgs1[i].append(dmg1)
+                            dmgs2[i].append(dmg2)
+                dmgs1_type[i] = monster_dmg_1_type
+                dmgs2_type[i] = monster_dmg_2_type
+            print(f"{monster_name} Hits: {hits[i]}, {dmgs1[i]} {dmgs1_type[i]}, {dmgs2[i]} {dmgs2_type[i]}")
+            #display(hits, dmgs1, dmgs2, TargetObj.name_str.get())
+            print(f"Total: {sum(dmgs1[i])} {dmgs1_type[i]}, {sum(dmgs2[i])} {dmgs2_type[i]}")
 
 
 #ROLL button
