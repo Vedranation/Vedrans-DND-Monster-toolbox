@@ -984,39 +984,70 @@ def ROLL() -> None:
         return int(roll)
     def ComputeDamage(dmg_1_n_die: int, dmg_1_die_type: str, dmg_1_flat: int, dmg_2_n_die: int, dmg_2_die_type: str,
                dmg_2_flat: int, GW_fighting_style: bool, brut_crit: bool, savage_attacker: bool, crit=False) -> (int, int):
+        def GW_roll(die_type: str) -> int:  #Rolls dice with GW fighting style (reroll 1 & 2)
+            roll = RollDice(die_type)
+            if roll == 1 or roll == 2:
+                roll = RollDice(die_type)
+            return roll
+        def Savage_attacker_roll(die_type: str) -> int: #Rolls dmg twice and use higher
+            return max(RollDice(die_type), RollDice(die_type))
+        def Brutal_crit_roll(die_type: str) -> int:     #Rolls dmg twice and use both
+            return RollDice(die_type) + RollDice(die_type)
+        def RollWithStyleNoCrit(GW: bool, savage: bool, die_type: str) -> int:
+            "Rolls with one of two (or none) special abilities"
+            if GW:  # Use GW fighting? #FIXME: At the moment, ONLY ONE of the three options is applied, never more
+                return GW_roll(die_type)
+            elif savage:  # Use Savaga attacker?
+                return Savage_attacker_roll(die_type)
+            else:  # Normal roll
+                return RollDice(die_type)
+        def RollWithStyleIsCrit(GW: bool, savage: bool, brut: bool, die_type: str) -> int:
+            "Rolls with one of three (or none) special abilities when crits"
+            if GW:  # Use GW fighting? #FIXME: At the moment, ONLY ONE of the three options is applied, never more
+                return GW_roll(die_type)
+            elif savage:  # Use Savaga attacker?
+                return Savage_attacker_roll(die_type)
+            elif brut:  # Use brutal hit (barb extra die)
+                return Brutal_crit_roll(die_type)
+            else:  # Normal roll
+                return RollDice(die_type)
+
         if not crit:
             dmg1 = dmg_1_flat
             for dice in range(dmg_1_n_die):
-                dmg1 = dmg1 + RollDice(dmg_1_die_type)
+                dmg1 = dmg1 + RollWithStyleNoCrit(GW_fighting_style, savage_attacker, dmg_1_die_type)
             dmg2 = dmg_2_flat
             for dice in range(dmg_2_n_die):
-                dmg2 = dmg2 + RollDice(dmg_2_die_type)
+                dmg2 = dmg2 + RollWithStyleNoCrit(GW_fighting_style, savage_attacker, dmg_2_die_type)
+
         else: #Three different ways to compute critical hit
             if GSM.Crits_double_dmg_bool.get(): #Double all crit dmg
                 dmg1 = dmg_1_flat
                 for dice in range(dmg_1_n_die):
-                    dmg1 = dmg1 + RollDice(dmg_1_die_type)
+                    dmg1 = dmg1 + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_1_die_type)
                 dmg1 = dmg1*2
                 dmg2 = dmg_2_flat
                 for dice in range(dmg_2_n_die):
-                    dmg2 = dmg2 + RollDice(dmg_2_die_type)
+                        dmg2 = dmg2 + + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_2_die_type)
                 dmg2 = dmg2*2
             else:
                 if not Crits_extra_die_is_max_bool.get(): #Roll crit normally
                     dmg1 = dmg_1_flat
                     for dice in range(dmg_1_n_die*2):
-                        dmg1 = dmg1 + RollDice(dmg_1_die_type)
+                            dmg1 = dmg1 + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_1_die_type)
                     dmg2 = dmg_2_flat
                     for dice in range(dmg_2_n_die*2):
-                        dmg2 = dmg2 + RollDice(dmg_2_die_type)
+                        dmg2 = dmg2 + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_2_die_type)
                 else: #Anti snake eyes crit rule
                     dmg1 = dmg_1_flat
                     for dice in range(dmg_1_n_die):
-                        dmg1 = dmg1 + RollDice(dmg_1_die_type) + ReturnMaxPossibleDie(dmg_1_die_type)
+                        dmg1 = dmg1 + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_1_die_type)\
+                               + ReturnMaxPossibleDie(dmg_1_die_type)
                     dmg2 = dmg_2_flat
                     for dice in range(dmg_2_n_die):
-                        dmg2 = dmg2 + RollDice(dmg_2_die_type) + ReturnMaxPossibleDie(dmg_2_die_type)
-        return dmg1, dmg2 #TODO: Incorporate the calculations for GW fighting style, Brutal crit and Savaga attacker
+                        dmg2 = dmg2 + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_2_die_type)\
+                               + ReturnMaxPossibleDie(dmg_1_die_type)
+        return dmg1, dmg2
 
     for TargetObj in GSM.Target_obj_list:
         if len(GSM.Monsters_list) == 1: #Brute force way to create proper size nested lists but it works for only 3 monsters
