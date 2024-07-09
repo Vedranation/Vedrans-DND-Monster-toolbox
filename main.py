@@ -837,28 +837,74 @@ def ROLL() -> None:
     for widget in GSM.Results_display_widgets_list:
         widget.destroy()
     GSM.Results_display_widgets_list.clear()
-    def display(hits, dmgs1, dmgs2, target_name) -> None:
+    GSM.Treeview_target_id_list.clear()
 
-        def custom_sort(item):
-            if isinstance(item, str):
-                return (0, item)  # Put strings first
-            else:
-                return (1, -item)  # Sort integers in reverse order
+    def CreateTreeview():
 
-        sorted_hits = sorted(hits, key=custom_sort)
-        print(sorted_hits)
-        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"{target_name}"))
-        targetDmgLabel.place(x=RelPosROLL.set("x", 10), y=RelPosROLL.increase("y", RelPosROLL.constant_y*1.3))
-        GSM.Results_display_widgets_list.append(targetDmgLabel)
+        GSM.Tree_item_id = 0
+        GSM.Roll_Treeview = ttk.Treeview(GSM.ROLL_frame)
+        GSM.Roll_Treeview.place(x=RelPosROLL.set("x", 35), y=RelPosROLL.set("y", 130), height=300, width=755)
+        GSM.Results_display_widgets_list.append(GSM.Roll_Treeview)
 
-        filtered_length = (lambda hits: len([hit for hit in hits if hit != "nat1"]))(sorted_hits)
-        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|  {filtered_length}  |   {sorted_hits}"))
-        targetDmgLabel.place(x=RelPosROLL.increase("x", 60), y=RelPosROLL.same("y"))
-        GSM.Results_display_widgets_list.append(targetDmgLabel)
+        #Define columns
+        GSM.Roll_Treeview["columns"] = ('Hits', 'Dmg rolls 1', 'Total dmg 1',
+                               'Dmg Type 1', 'Dmg rolls 2', 'Total dmg 2', 'Dmg Type 2',
+                               'Save')
+        #Format columns
+        GSM.Roll_Treeview.column("#0", anchor="w", width=80, minwidth=30)  #Target column
+        GSM.Roll_Treeview.column("Hits", anchor="center", width=40, minwidth=30)
+        GSM.Roll_Treeview.column("Dmg rolls 1", anchor="center", width=40, minwidth=30)
+        GSM.Roll_Treeview.column("Total dmg 1", anchor="center", width=5, minwidth=10)
+        GSM.Roll_Treeview.column("Dmg Type 1", anchor="center", width=40, minwidth=30)
+        GSM.Roll_Treeview.column("Dmg rolls 2", anchor="center", width=40, minwidth=30)
+        GSM.Roll_Treeview.column("Total dmg 2", anchor="center", width=5, minwidth=10)
+        GSM.Roll_Treeview.column("Dmg Type 2", anchor="center", width=40, minwidth=30)
+        GSM.Roll_Treeview.column("Save", anchor="center", width=20, minwidth=20)
+        # Create headings
+        GSM.Roll_Treeview.heading("#0", anchor="center", text="Target")
+        GSM.Roll_Treeview.heading("Hits", anchor="center", text="Hits")
+        GSM.Roll_Treeview.heading("Dmg rolls 1", anchor="center", text="Dmg rolls 1")
+        GSM.Roll_Treeview.heading("Total dmg 1", anchor="center", text="Total dmg 1")
+        GSM.Roll_Treeview.heading("Dmg Type 1", anchor="center", text="Dmg Type 1")
+        GSM.Roll_Treeview.heading("Dmg rolls 2", anchor="center", text="Dmg rolls 2")
+        GSM.Roll_Treeview.heading("Total dmg 2", anchor="center", text="Total dmg 2")
+        GSM.Roll_Treeview.heading("Dmg Type 2", anchor="center", text="Dmg Type 2")
+        GSM.Roll_Treeview.heading("Save", anchor="center", text="Save")
 
-        targetDmgLabel = tk.Label(GSM.ROLL_frame, text=(f"|   {sum(dmgs1)} {monster_dmg_1_type}   |   {sum(dmgs2)} {monster_dmg_2_type}"))
-        targetDmgLabel.place(x=RelPosROLL.increase("x", 60), y=RelPosROLL.same("y"))
-        GSM.Results_display_widgets_list.append(targetDmgLabel)
+
+    CreateTreeview()
+
+    def DisplayResults(hits: list, dmgs1: list, dmgs1_type: list, dmgs2: list, dmgs2_type: list, target_name: str,
+                       monster_names: list, n_monsters_list: list) -> None:
+        '''Index of lists is a sublist of individual monster related hits/dmgs etc,
+        is called once for each target '''
+
+        for i in range(len(monster_names)):
+            print(n_monsters_list[i], monster_names[i], hits[i], dmgs1[i], dmgs1_type[i], dmgs2[i], dmgs2_type[i])
+            # 1 Fire zombie 1 ['crit20'] [16] bludgeoning [6] fire
+            # 1 Fire zombie 2 [19, 17] [4, 6] magic piercing [3, 4] cold
+        #Insert Target parent
+        GSM.Tree_item_id += 1
+        GSM.Roll_Treeview.insert(parent="", index="end", iid=GSM.Tree_item_id,
+                                 text=target_name, values=(""))
+        GSM.Treeview_target_id_list.append(GSM.Tree_item_id)
+
+        #Insert monster children
+        for i, monster in enumerate(monster_names):
+            GSM.Tree_item_id += 1
+            GSM.Roll_Treeview.insert(parent=GSM.Treeview_target_id_list[-1], index="end", iid=GSM.Tree_item_id,
+                                     text=monster, values=(hits[i], dmgs1[i], sum(dmgs1[i]), dmgs1_type[i],
+                                                           dmgs2[i], sum(dmgs2[i]), dmgs2_type[i]))
+
+        # def custom_sort(item):
+        #     if isinstance(item, str):
+        #         return (0, item)  # Put strings first
+        #     else:
+        #         return (1, -item)  # Sort integers in reverse order
+        #
+        # sorted_hits = sorted(hits, key=custom_sort)
+        # print(sorted_hits)
+        # GSM.Results_display_widgets_list.append(targetDmgLabel)
 
     def CombineRollTypes(monster_type: str, target_type: str) -> str:
         # Combines 2 roll types to get what to actually use (like adv + disadv = normal)
@@ -936,7 +982,7 @@ def ROLL() -> None:
         elif final_rolltype == "Super Disadvantage":
             roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
         return int(roll)
-    def damage(dmg_1_n_die: int, dmg_1_die_type: str, dmg_1_flat: int, dmg_2_n_die: int, dmg_2_die_type: str,
+    def ComputeDamage(dmg_1_n_die: int, dmg_1_die_type: str, dmg_1_flat: int, dmg_2_n_die: int, dmg_2_die_type: str,
                dmg_2_flat: int, GW_fighting_style: bool, brut_crit: bool, savage_attacker: bool, crit=False) -> (int, int):
         if not crit:
             dmg1 = dmg_1_flat
@@ -979,18 +1025,24 @@ def ROLL() -> None:
             dmgs2 = [[]]
             dmgs1_type = [[]]
             dmgs2_type = [[]]
+            monster_names_list = [[]]
+            n_monsters_list = [[]]
         elif len(GSM.Monsters_list) == 2:
             hits = [[], []]
             dmgs1 = [[], []]
             dmgs2 = [[], []]
             dmgs1_type = [[], []]
             dmgs2_type = [[], []]
+            monster_names_list = [[], []]
+            n_monsters_list = [[], []]
         else:
             hits = [[], [], []]
             dmgs1 = [[], [], []]
             dmgs2 = [[], [], []]
             dmgs1_type = [[], [], []]
             dmgs2_type = [[], [], []]
+            monster_names_list = [[], [], []]
+            n_monsters_list = [[], [], []]
 
         ac = int(TargetObj.ac_int.get())
         print(f"-----{TargetObj.name_str.get()}-----")
@@ -1029,7 +1081,7 @@ def ROLL() -> None:
                 n_monsters = TargetObj.n_monsters_2_int.get()
             elif i == 2:
                 n_monsters = TargetObj.n_monsters_3_int.get()
-            print(n_monsters)
+
             for j in range(n_monsters):
                 for attack in range(monster_n_attacks):
 
@@ -1039,7 +1091,7 @@ def ROLL() -> None:
                         roll = RollToHit(final_rolltype)
 
                     if roll >= monster_crit_number: #and GSM.Crits_always_hit_bool.get():
-                        dmg1, dmg2 = damage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                        dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                             monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=True)
                         hits[i].append("crit" + str(monster_crit_number))
@@ -1051,7 +1103,7 @@ def ROLL() -> None:
 
                     elif (GSM.Meets_it_beats_it_bool.get()):
                         if roll + monster_to_hit_mod >= ac:
-                            dmg1, dmg2 = damage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                            dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                             monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=False)
                             hits[i].append(roll+monster_to_hit_mod)
@@ -1059,17 +1111,19 @@ def ROLL() -> None:
                             dmgs2[i].append(dmg2)
                     else:
                         if roll + monster_to_hit_mod > ac:
-                            dmg1, dmg2 = damage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                            dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                             monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=False)
                             hits[i].append(roll+monster_to_hit_mod)
                             dmgs1[i].append(dmg1)
                             dmgs2[i].append(dmg2)
-                dmgs1_type[i] = monster_dmg_1_type
-                dmgs2_type[i] = monster_dmg_2_type
-            print(f"{monster_name} Hits: {hits[i]}, {dmgs1[i]} {dmgs1_type[i]}, {dmgs2[i]} {dmgs2_type[i]}")
-            #display(hits, dmgs1, dmgs2, TargetObj.name_str.get())
-            print(f"Total: {sum(dmgs1[i])} {dmgs1_type[i]}, {sum(dmgs2[i])} {dmgs2_type[i]}")
+            dmgs1_type[i] = monster_dmg_1_type
+            dmgs2_type[i] = monster_dmg_2_type
+            monster_names_list[i] = monster_name
+            n_monsters_list[i] = n_monsters
+            # print(f"{n_monsters} {monster_name}s:   hits: {hits[i]};   {dmgs1[i]} {dmgs1_type[i]};   {dmgs2[i]} {dmgs2_type[i]}")
+            # print(f"Total: {sum(dmgs1[i])} {dmgs1_type[i]};   {sum(dmgs2[i])} {dmgs2_type[i]}")
+        DisplayResults(hits, dmgs1, dmgs1_type, dmgs2, dmgs2_type, TargetObj.name_str.get(), monster_names_list, n_monsters_list)
 
 
 #ROLL button
