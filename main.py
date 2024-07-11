@@ -846,6 +846,11 @@ def ROLL() -> None:
         GSM.Roll_Treeview.place(x=RelPosROLL.set("x", 35), y=RelPosROLL.set("y", 110), height=450, width=755)
         GSM.Results_display_widgets_list.append(GSM.Roll_Treeview)
 
+        style = ttk.Style(GSM.ROLL_frame)
+        style.map("Treeview", background=[("selected", "green")])
+        GSM.Roll_Treeview.tag_configure('has_hits', background="silver")
+        GSM.Roll_Treeview.tag_configure('no_hits', background="white")
+
         #Define columns
         GSM.Roll_Treeview["columns"] = ('Hits', 'Dmg rolls 1', 'Total dmg 1',
                                'Dmg Type 1', 'Dmg rolls 2', 'Total dmg 2', 'Dmg Type 2',
@@ -888,10 +893,17 @@ def ROLL() -> None:
         GSM.Roll_Treeview.insert(parent="", index="end", iid=GSM.Tree_item_id,
                                  text=target_name, values=(""))
         GSM.Treeview_target_id_list.append(GSM.Tree_item_id)
-
+        expand = False
         #Insert monster children
         for i, monster in enumerate(monster_names):
             GSM.Tree_item_id += 1
+
+            if hits[i]:  #If 'Hits' is not empty, color row
+                tag = 'has_hits'
+                expand = True
+            else:
+                tag = 'no_hits'
+
             # saving_throw_package[i] = [bool, dc, save_type]
             if saving_throw_package[i][0]: #If has saving throw
                 dc = str(saving_throw_package[i][1])
@@ -900,11 +912,12 @@ def ROLL() -> None:
                 write_save = str(f"{str(n_times)}x DC{dc} {save_type}")
                 GSM.Roll_Treeview.insert(parent=GSM.Treeview_target_id_list[-1], index="end", iid=GSM.Tree_item_id,
                                          text=monster, values=(hits[i], dmgs1[i], sum(dmgs1[i]), dmgs1_type[i],
-                                                               dmgs2[i], sum(dmgs2[i]), dmgs2_type[i], write_save))
+                                                               dmgs2[i], sum(dmgs2[i]), dmgs2_type[i], write_save), tags=tag)
             else:
                 GSM.Roll_Treeview.insert(parent=GSM.Treeview_target_id_list[-1], index="end", iid=GSM.Tree_item_id,
                                          text=monster, values=(hits[i], dmgs1[i], sum(dmgs1[i]), dmgs1_type[i],
-                                                               dmgs2[i], sum(dmgs2[i]), dmgs2_type[i]))
+                                                               dmgs2[i], sum(dmgs2[i]), dmgs2_type[i]), tags=tag)
+            GSM.Roll_Treeview.item(GSM.Treeview_target_id_list[-1], open=expand)  # This expands the parent node
 
     def CombineRollTypes(monster_type: str, target_type: str) -> str:
         # Combines 2 roll types to get what to actually use (like adv + disadv = normal)
@@ -1031,7 +1044,7 @@ def ROLL() -> None:
                         dmg2 = dmg2 + + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_2_die_type)
                 dmg2 = dmg2*2
             else:
-                if not Crits_extra_die_is_max_bool.get(): #Roll crit normally
+                if not GSM.Crits_extra_die_is_max_bool.get(): #Roll crit normally
                     dmg1 = dmg_1_flat
                     for dice in range(dmg_1_n_die*2):
                             dmg1 = dmg1 + RollWithStyleIsCrit(GW_fighting_style, savage_attacker, brut_crit, dmg_1_die_type)
