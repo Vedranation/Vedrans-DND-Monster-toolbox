@@ -88,6 +88,11 @@ class GlobalsManager:
     Mass_save_roll_type_str = tk.StringVar()
     Results_random_gen_widgets_to_clear = []
 
+    Results_mass_skill_check_widgets_to_clear = []
+    Mass_skill_check_stats_list = []
+    Mass_skill_check_dc_int = tk.IntVar(value=15)
+    Mass_skill_enable_checkboxes_list = []
+
     #ROLL globals
     Results_display_widgets_list = []
     Roll_Treeview = None
