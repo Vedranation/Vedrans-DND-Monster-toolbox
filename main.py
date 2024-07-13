@@ -578,11 +578,11 @@ def MassRoll() -> None:
         current_button_y = int(current_button_xy["y"])
 
         mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(
-            f"Out of {GSM.Mass_save_n_monsters_int.get()} monsters, {passes} passed and {GSM.Mass_save_n_monsters_int.get() - passes} failed"))
+            f"PASSES: {passes}     FAILS: {GSM.Mass_save_n_monsters_int.get() - passes}"))
         mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", current_button_y+30))
         GSM.Results_random_gen_widgets_to_clear.append(mass_save_results_label)
 
-        mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Rolled with {rolltype} for: {rolls}"))
+        mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Results: {rolls}"))
         mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
         GSM.Results_random_gen_widgets_to_clear.append(mass_save_results_label)
 
