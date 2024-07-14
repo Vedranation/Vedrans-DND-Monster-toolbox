@@ -2,6 +2,8 @@ from typing import List, Union, Tuple
 import tkinter as tk
 from tkinter import font as tkfont  # Import tkfont for font definitions
 from tkinter import ttk
+
+#TODO: Create a way to save and load presets which automatically loads in monsters, targets etc5
 class GlobalsManager:
     # GUI globals
     Root = tk.Tk()
@@ -12,9 +14,6 @@ class GlobalsManager:
     Notebook.place(x=10, y=10)
     _frame_width = 825
     _frame_height = 575
-    # Settings tab
-    Settings_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)  # seems that only first frame defines the size of all frames
-    Notebook.add(Settings_frame, text="Main settings")
 
     # Monsters tab
     Monsters_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
@@ -24,11 +23,15 @@ class GlobalsManager:
     Targets_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Targets_frame, text="Target creation")
 
+    # ROLL tab
+    ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )
+    Notebook.add(ROLL_frame, text="ROLL")
+
     # Mass roll tab
     Mass_roll_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Mass_roll_frame, text="Mass roll")
 
-    # Mass roll tab
+    # Spell casters tab
     Spell_caster_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Spell_caster_frame, text="Spell casters")
 
@@ -36,9 +39,10 @@ class GlobalsManager:
     Random_generator_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Random_generator_frame, text="Random generator")
 
-    # ROLL tab
-    ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )
-    Notebook.add(ROLL_frame, text="ROLL")
+    # Settings tab
+    Settings_frame = ttk.Frame(Notebook, width=_frame_width,
+                               height=_frame_height)  # seems that only first frame defines the size of all frames
+    Notebook.add(Settings_frame, text="Main settings")
 
 
     Roll_types = ["Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"]
