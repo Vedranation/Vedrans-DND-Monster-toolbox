@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkfont  # Import tkfont for font definitions
 from tkinter import ttk
-import pyperclip
+#import pyperclip
 import random
 import GlobalStateManager
 
