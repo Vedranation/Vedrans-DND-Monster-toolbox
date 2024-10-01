@@ -1,5 +1,6 @@
 import time
 import random
+import copy
 from PIL import Image
 import pygame
 from io import BytesIO
@@ -81,6 +82,54 @@ class Grid:
     def __len__(self) -> int:
         return len(self.data)
 
+def Rotate90CounterClockwise(tile_obj):
+    current = {
+        'ltop': tile_obj.Connection_points.get('ltop', 0),
+        'lmid': tile_obj.Connection_points.get('lmid', 0),
+        'lbot': tile_obj.Connection_points.get('lbot', 0),
+        'topl': tile_obj.Connection_points.get('topl', 0),
+        'topm': tile_obj.Connection_points.get('topm', 0),
+        'topr': tile_obj.Connection_points.get('topr', 0),
+        'rtop': tile_obj.Connection_points.get('rtop', 0),
+        'rmid': tile_obj.Connection_points.get('rmid', 0),
+        'rbot': tile_obj.Connection_points.get('rbot', 0),
+        'botl': tile_obj.Connection_points.get('botl', 0),
+        'botm': tile_obj.Connection_points.get('botm', 0),
+        'botr': tile_obj.Connection_points.get('botr', 0),
+    }
+
+    # Assign new positions based on CCW rotation
+    tile_obj.Connection_points['botl'] = current['ltop']
+    tile_obj.Connection_points['botm'] = current['lmid']
+    tile_obj.Connection_points['botr'] = current['lbot']
+
+    tile_obj.Connection_points['rtop'] = current['botr']
+    tile_obj.Connection_points['rmid'] = current['botm']
+    tile_obj.Connection_points['rbot'] = current['botl']
+
+    tile_obj.Connection_points['topr'] = current['rbot']
+    tile_obj.Connection_points['topm'] = current['rmid']
+    tile_obj.Connection_points['topl'] = current['rtop']
+
+    tile_obj.Connection_points['lbot'] = current['topl']
+    tile_obj.Connection_points['lmid'] = current['topm']
+    tile_obj.Connection_points['ltop'] = current['topr']
+    tile_obj.tile = tile_obj.tile.transpose(Image.Transpose.ROTATE_90)
+
+def Generate_rotations(original_tile: object, tile_name_base: str, n_positions: int) -> list:
+    '''Produces 3 rotations of the passed tile, n_positions 2 (only 1 rotation) or 4 (3 rotations)
+    '''
+    rotations = []
+    current_tile = original_tile
+    # 0 degrees is the original, so start with 90
+    for i in range(1, n_positions):  # 1*90=90, 2*90=180, 3*90=270
+        new_tile = copy.deepcopy(current_tile)
+        new_tile.name = f"{tile_name_base}_{i * 90}"
+        Rotate90CounterClockwise(new_tile)  # Assume this modifies new_tile to rotate it
+        rotations.append(new_tile)
+        current_tile = new_tile  # Set the current tile to the newly rotated tile for the next iteration
+    return rotations
+
 #Starting tiles, only 1
 tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start")
 tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start")
@@ -92,7 +141,7 @@ tile_I = Tile(grid_x=3, grid_y=16, topm=1, botm=1, tile_type="default", name="Ti
 tile_cross = Tile(grid_x=17, grid_y=16, topm=1, botm=1, lmid=1, rmid=1, tile_type="default", name="TileObj_cross")
 tile_sideway = Tile(grid_x=31, grid_y=16, topr=1, botl=1, tile_type="default", name="TileObj_sideway")
 tile_L_toleft = Tile(grid_x=45, grid_y=16, lmid=1, botr=1, tile_type="default", name="TileObj_L_toleft")
-tile_altar = Tile(grid_x=59, grid_y=16, botm=1, tile_type="default", name="TileObj__altar")
+tile_altar = Tile(grid_x=59, grid_y=16, botm=1, tile_type="default", name="TileObj_altar")
 
 tile_chamber = Tile(grid_x=3, grid_y=30, topm=1, botm=1, tile_type="default", name="TileObj_chamber")
 tile_bridge = Tile(grid_x=17, grid_y=30, lmid=1, rmid=1, tile_type="default", name="TileObj_bridge")
@@ -101,6 +150,32 @@ tile_bot_left = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="de
 tile_hallway_cap = Tile(grid_x=59, grid_y=30, botm=1, tile_type="default", name="TileObj_hallway_cap")
 default_tiles = [tile_I, tile_cross, tile_sideway, tile_L_toleft, tile_altar,
                  tile_chamber, tile_bridge, tile_round_deadend, tile_bot_left, tile_hallway_cap]
+
+#Empty tile (can't compile)
+tile_empty = Tile(grid_x=45, grid_y=2, tile_type="empty", name="TileObj_empty")
+
+#3 rotations of each tile
+rotations = Generate_rotations(tile_altar, tile_altar.name,4)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_I, tile_I.name, 2)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_sideway, tile_sideway.name, 4)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_L_toleft, tile_L_toleft.name, 4)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_chamber, tile_chamber.name, 2)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_bridge, tile_bridge.name, 2)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_round_deadend, tile_round_deadend.name, 4)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_bot_left, tile_bot_left.name, 4)
+default_tiles.extend(rotations)
+rotations = Generate_rotations(tile_hallway_cap, tile_hallway_cap.name, 4)
+default_tiles.extend(rotations)
+
+for i in range(1, 3):
+    print(i)
 
 Grid = Grid(6, 6)
 Grid.set(x=random.randint(0, Grid.width-1), y=random.randint(0, Grid.height-1), tile=start_tile)
@@ -126,6 +201,8 @@ def ComputeEntropy(x, y):
             entropy += tile_l.Connection_points["rbot"]
         else:
             entropy += 3
+    else:
+        entropy += 3
     if x < Grid.width-1: #Check right
         if Grid.get(x + 1, y):
             tile_r = Grid.get(x + 1, y)
@@ -134,6 +211,8 @@ def ComputeEntropy(x, y):
             entropy += tile_r.Connection_points["lbot"]
         else:
             entropy += 3
+    else:
+        entropy += 3
     if y > 0: #Check down
         if Grid.get(x, y - 1):
             tile_d = Grid.get(x, y - 1)
@@ -142,6 +221,8 @@ def ComputeEntropy(x, y):
             entropy += tile_d.Connection_points["topr"]
         else:
             entropy += 3
+    else:
+        entropy += 3
     if y < Grid.height-1: #Check up
         if Grid.get(x, y + 1):
             tile_u = Grid.get(x, y + 1)
@@ -150,6 +231,8 @@ def ComputeEntropy(x, y):
             entropy += tile_u.Connection_points["botr"]
         else:
             entropy += 3
+    else:
+        entropy += 3
     return entropy
 
 def ChooseTileToPlace(x, y):
@@ -211,7 +294,6 @@ def ChooseTileToPlace(x, y):
             free_connections.append("topr")
 
     available_tiles = []
-    print(free_connections)
     for tile in default_tiles:
         if len(forced_connections) != 0: #Solve for all forced points
             if all(tile.Connection_points.get(conn_point) == 1 for conn_point in forced_connections):
@@ -220,9 +302,8 @@ def ChooseTileToPlace(x, y):
             if any(tile.Connection_points.get(conn_point) == 1 for conn_point in free_connections):
                 available_tiles.append(tile)
     if len(available_tiles) == 0:
-        available_tiles = [tile_start_split]
+        available_tiles = [tile_empty]
     Grid.set(x, y, random.choice(available_tiles))
-    print(available_tiles)
     return forced_connections
 
 def draw_text(screen, text, position, font, color=(255, 255, 255)):
@@ -269,5 +350,5 @@ while running:
     # Update the display
     pygame.display.flip()
 
-    time.sleep(1)
+    time.sleep(0.05)
 
