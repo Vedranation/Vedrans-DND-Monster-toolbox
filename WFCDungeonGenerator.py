@@ -24,7 +24,7 @@ class Tile:
             "botm": botm,
             "botr": botr,
         }
-        self.tile_type = tile_type #start, goal, default
+        self.tile_type = tile_type #start, goal, empty, default
         self.tile = self._extract_tile(Tilemap, grid_x=grid_x, grid_y=grid_y)
         self.name = name
     def _extract_tile(self, tilemap: Image, grid_x: int, grid_y: int, grid_pixel_size:float=25.6) -> Image:
@@ -130,55 +130,82 @@ def Generate_rotations(original_tile: object, tile_name_base: str, n_positions: 
         current_tile = new_tile  # Set the current tile to the newly rotated tile for the next iteration
     return rotations
 
-#Starting tiles, only 1
-tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start")
-tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start")
-tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start")
-start_tile = random.choice([tile_start_T, tile_start_L, tile_start_split])
+class DefineTileObjects():
+    '''Stores all tile objects for encapsulation purposes'''
+    #Starting tiles, only 1
+    tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start")
+    tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start")
+    tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start")
+    tile_start_pentagon = Tile(grid_x=45, grid_y=2, topm=1, tile_type="start")
+    tile_start_crookedL = Tile(grid_x=59, grid_y=2, topm=1, lbot=1, tile_type="start")
+    start_tile = random.choice([tile_start_T, tile_start_L, tile_start_split, tile_start_pentagon, tile_start_crookedL])
 
-#Default tiles
-tile_I = Tile(grid_x=3, grid_y=16, topm=1, botm=1, tile_type="default", name="TileObj_I")
-tile_cross = Tile(grid_x=17, grid_y=16, topm=1, botm=1, lmid=1, rmid=1, tile_type="default", name="TileObj_cross")
-tile_sideway = Tile(grid_x=31, grid_y=16, topr=1, botl=1, tile_type="default", name="TileObj_sideway")
-tile_L_toleft = Tile(grid_x=45, grid_y=16, lmid=1, botr=1, tile_type="default", name="TileObj_L_toleft")
-tile_altar = Tile(grid_x=59, grid_y=16, botm=1, tile_type="default", name="TileObj_altar")
+    #Default tiles
+    tile_I = Tile(grid_x=3, grid_y=16, topm=1, botm=1, tile_type="default", name="TileObj_I")
+    tile_cross = Tile(grid_x=17, grid_y=16, topm=1, botm=1, lmid=1, rmid=1, tile_type="default", name="TileObj_cross")
+    tile_sideway = Tile(grid_x=31, grid_y=16, topr=1, botl=1, tile_type="default", name="TileObj_sideway")
+    tile_L_toleft = Tile(grid_x=45, grid_y=16, lmid=1, botr=1, tile_type="default", name="TileObj_L_toleft")
+    tile_altar = Tile(grid_x=59, grid_y=16, botm=1, tile_type="default", name="TileObj_altar")
 
-tile_chamber = Tile(grid_x=3, grid_y=30, topm=1, botm=1, tile_type="default", name="TileObj_chamber")
-tile_bridge = Tile(grid_x=17, grid_y=30, lmid=1, rmid=1, tile_type="default", name="TileObj_bridge")
-tile_round_deadend = Tile(grid_x=31, grid_y=30, botm=1, tile_type="default", name="TileObj_round_deadend")
-tile_bot_left = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default", name="TileObj_bot_left")
-tile_hallway_cap = Tile(grid_x=59, grid_y=30, botm=1, tile_type="default", name="TileObj_hallway_cap")
-default_tiles = [tile_I, tile_cross, tile_sideway, tile_L_toleft, tile_altar,
-                 tile_chamber, tile_bridge, tile_round_deadend, tile_bot_left, tile_hallway_cap]
+    tile_chamber = Tile(grid_x=3, grid_y=30, topm=1, botm=1, tile_type="default", name="TileObj_chamber")
+    tile_bridge = Tile(grid_x=17, grid_y=30, lmid=1, rmid=1, tile_type="default", name="TileObj_bridge")
+    tile_round_deadend = Tile(grid_x=31, grid_y=30, botm=1, tile_type="default", name="TileObj_round_deadend")
+    tile_bot_left = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default", name="TileObj_bot_left")
+    tile_hallway_cap = Tile(grid_x=59, grid_y=30, botm=1, tile_type="default", name="TileObj_hallway_cap")
 
-#Empty tile (can't compile)
-tile_empty = Tile(grid_x=45, grid_y=2, tile_type="empty", name="TileObj_empty")
+    tile_corner = Tile(grid_x=3, grid_y=44, topm=1, rmid=1, tile_type="default", name="TileObj_corner")
+    tile_half_diagonal = Tile(grid_x=17, grid_y=44, lmid=1, rtop=1, tile_type="default", name="TileObj_half_diagonal")
+    tile_bigroom_corner = Tile(grid_x=31, grid_y=44, topl=1, topm=1, topr=1, rtop=1, rmid=1, rbot=1, tile_type="default", name="TileObj_bigroom_corner")
+    # tile_bigroom_interior = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default", name="TileObj_bot_left")
+    tile_T_block = Tile(grid_x=59, grid_y=44, lmid=1, rmid=1, topm=1, tile_type="default", name="TileObj_T_block")
 
-#3 rotations of each tile
-rotations = Generate_rotations(tile_altar, tile_altar.name,4)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_I, tile_I.name, 2)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_sideway, tile_sideway.name, 4)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_L_toleft, tile_L_toleft.name, 4)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_chamber, tile_chamber.name, 2)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_bridge, tile_bridge.name, 2)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_round_deadend, tile_round_deadend.name, 4)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_bot_left, tile_bot_left.name, 4)
-default_tiles.extend(rotations)
-rotations = Generate_rotations(tile_hallway_cap, tile_hallway_cap.name, 4)
-default_tiles.extend(rotations)
+    tile_bigroom_wall_entrance = Tile(grid_x=31, grid_y=58, lmid=1, topl=1, topm=1, topr=1, rtop=1, rmid=1, rbot=1, tile_type="default", name="TileObj_wall_entrance")
+    # tile_bigroom_wall = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default",
+    #                              name="TileObj_bot_left")
+    default_tiles = [tile_I, tile_cross, tile_sideway, tile_L_toleft, tile_altar,
+                     tile_chamber, tile_bridge, tile_round_deadend, tile_bot_left, tile_hallway_cap,
+                     tile_corner, tile_half_diagonal, tile_T_block]#, tile_bigroom_corner,
+                     #tile_bigroom_wall_entrance]
 
-for i in range(1, 3):
-    print(i)
+    #Empty tile (can't compile)
+    tile_empty = Tile(grid_x=59, grid_y=58, tile_type="empty", name="TileObj_empty")
 
+    #3 or 1 rotations of each tile
+    rotations = Generate_rotations(tile_altar, tile_altar.name,4)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_I, tile_I.name, 2)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_sideway, tile_sideway.name, 4)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_L_toleft, tile_L_toleft.name, 4)
+    default_tiles.extend(rotations)
+
+    rotations = Generate_rotations(tile_chamber, tile_chamber.name, 2)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_bridge, tile_bridge.name, 2)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_round_deadend, tile_round_deadend.name, 4)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_bot_left, tile_bot_left.name, 4)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_hallway_cap, tile_hallway_cap.name, 4)
+    default_tiles.extend(rotations)
+
+    rotations = Generate_rotations(tile_corner, tile_corner.name, 4)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_half_diagonal, tile_half_diagonal.name, 4)
+    default_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_T_block, tile_T_block.name, 4)
+    default_tiles.extend(rotations)
+    # rotations = Generate_rotations(tile_bigroom_corner, tile_bigroom_corner.name, 4)
+    # default_tiles.extend(rotations)
+
+    # rotations = Generate_rotations(tile_bigroom_wall_entrance, tile_bigroom_wall_entrance.name, 4)
+    # default_tiles.extend(rotations)
+
+TileObj = DefineTileObjects()
 Grid = Grid(6, 6)
-Grid.set(x=random.randint(0, Grid.width-1), y=random.randint(0, Grid.height-1), tile=start_tile)
+Grid.set(x=random.randint(0, Grid.width-1), y=random.randint(0, Grid.height-1), tile=TileObj.start_tile)
 
 pygame.init()
 screen_size = (800, 800)
@@ -187,7 +214,7 @@ pygame.display.set_caption("Dungeon generator")
 pygame.font.init()  # You only need to call this once; initialize font module
 font_size = 24
 font = pygame.font.Font(None, font_size)  # Default font, and font size
-pygame_tile_start = Pil_image_to_pygame(start_tile.tile)
+pygame_tile_start = Pil_image_to_pygame(TileObj.start_tile.tile)
 running = True
 
 def ComputeEntropy(x, y):
@@ -294,15 +321,15 @@ def ChooseTileToPlace(x, y):
             free_connections.append("topr")
 
     available_tiles = []
-    for tile in default_tiles:
+    for tile in TileObj.default_tiles:
         if len(forced_connections) != 0: #Solve for all forced points
             if all(tile.Connection_points.get(conn_point) == 1 for conn_point in forced_connections):
                 available_tiles.append(tile)
         else: #If no forced points, grab all tiles that may satisfy any free points and go there
-            if any(tile.Connection_points.get(conn_point) == 1 for conn_point in free_connections):
+            if all(tile.Connection_points.get(conn_point) == 1 for conn_point in free_connections):
                 available_tiles.append(tile)
     if len(available_tiles) == 0:
-        available_tiles = [tile_empty]
+        available_tiles = [TileObj.tile_empty]
     Grid.set(x, y, random.choice(available_tiles))
     return forced_connections
 
@@ -310,7 +337,20 @@ def draw_text(screen, text, position, font, color=(255, 255, 255)):
     text_surface = font.render(text, True, color)
     screen.blit(text_surface, position)
 
+'''Main loop'''
+First_Pass = True
 while running:
+    # Second pass - remove all empty tiles
+    if not First_Pass:
+        for y in range(Grid.height):
+            for x in range(Grid.width):
+                if not Grid.get(x, y):  # No tile present
+                    continue
+                if Grid.get(x, y).tile_type == "empty":
+                    Grid.set(x, y, None)
+        First_Pass = True
+
+    #First pass - place down all tiles according to rules
     #Clear the screen with a black background
     screen.fill((0, 0, 0))
     tile_dim = pygame_tile_start.get_height()
@@ -322,7 +362,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    '''Displays to display'''
+    '''Compute entropy and draw tiles and text'''
     for y in range(Grid.height):
         for x in range(Grid.width):
             if not Grid.get(x, y): #No tile present
@@ -341,6 +381,8 @@ while running:
 
     if min_entropy == 999:
         pygame.display.flip()
+        First_Pass = False
+        time.sleep(0.5)
         continue
 
     connections = ChooseTileToPlace(min_entropy_x_y[0], min_entropy_x_y[1])
@@ -349,6 +391,4 @@ while running:
     draw_text(screen, str(connections), (text_x, text_y), font)
     # Update the display
     pygame.display.flip()
-
-    time.sleep(0.05)
-
+    time.sleep(0.1)
