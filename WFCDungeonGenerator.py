@@ -82,7 +82,7 @@ class Grid:
     def __len__(self) -> int:
         return len(self.data)
 
-def Rotate90CounterClockwise(tile_obj):
+def Rotate90CounterClockwise(tile_obj: object) -> None:
     current = {
         'ltop': tile_obj.Connection_points.get('ltop', 0),
         'lmid': tile_obj.Connection_points.get('lmid', 0),
@@ -116,6 +116,42 @@ def Rotate90CounterClockwise(tile_obj):
     tile_obj.Connection_points['ltop'] = current['topr']
     tile_obj.tile = tile_obj.tile.transpose(Image.Transpose.ROTATE_90)
 
+def CreateMirrorHorCopy(tile_obj: object) -> object:
+    '''Creates a copy of passed object, mirrors it and returns it'''
+    current = {
+        'ltop': tile_obj.Connection_points.get('ltop', 0),
+        'lmid': tile_obj.Connection_points.get('lmid', 0),
+        'lbot': tile_obj.Connection_points.get('lbot', 0),
+        'topl': tile_obj.Connection_points.get('topl', 0),
+        'topm': tile_obj.Connection_points.get('topm', 0),
+        'topr': tile_obj.Connection_points.get('topr', 0),
+        'rtop': tile_obj.Connection_points.get('rtop', 0),
+        'rmid': tile_obj.Connection_points.get('rmid', 0),
+        'rbot': tile_obj.Connection_points.get('rbot', 0),
+        'botl': tile_obj.Connection_points.get('botl', 0),
+        'botm': tile_obj.Connection_points.get('botm', 0),
+        'botr': tile_obj.Connection_points.get('botr', 0),
+    }
+    new_tile_obj = copy.deepcopy(tile_obj)
+    new_tile_obj.name = f"{new_tile_obj.name}_mir"
+
+    # Assign new positions based on horizontal (LR) flip
+    new_tile_obj.Connection_points['botl'] = current['botr']
+    new_tile_obj.Connection_points['botr'] = current['botl']
+
+    new_tile_obj.Connection_points['rtop'] = current['ltop']
+    new_tile_obj.Connection_points['rmid'] = current['lmid']
+    new_tile_obj.Connection_points['rbot'] = current['lbot']
+
+    new_tile_obj.Connection_points['topr'] = current['topl']
+    new_tile_obj.Connection_points['topl'] = current['topr']
+
+    new_tile_obj.Connection_points['lbot'] = current['rbot']
+    new_tile_obj.Connection_points['lmid'] = current['rmid']
+    new_tile_obj.Connection_points['ltop'] = current['rtop']
+    new_tile_obj.tile = new_tile_obj.tile.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    return new_tile_obj
+
 def Generate_rotations(original_tile: object, tile_name_base: str, n_positions: int) -> list:
     '''Produces 3 rotations of the passed tile, n_positions 2 (only 1 rotation) or 4 (3 rotations)
     '''
@@ -138,7 +174,29 @@ class DefineTileObjects():
     tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start")
     tile_start_pentagon = Tile(grid_x=45, grid_y=2, topm=1, tile_type="start")
     tile_start_crookedL = Tile(grid_x=59, grid_y=2, topm=1, lbot=1, tile_type="start")
-    start_tile = random.choice([tile_start_T, tile_start_L, tile_start_split, tile_start_pentagon, tile_start_crookedL])
+    start_tiles = [tile_start_T, tile_start_L, tile_start_split, tile_start_pentagon, tile_start_crookedL]
+    rotations = Generate_rotations(tile_start_T, tile_start_T.name, 4)
+    start_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_start_L, tile_start_L.name, 4)
+    start_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_start_split, tile_start_split.name, 4)
+    start_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_start_pentagon, tile_start_pentagon.name, 4)
+    start_tiles.extend(rotations)
+    rotations = Generate_rotations(tile_start_crookedL, tile_start_crookedL.name, 4)
+    start_tiles.extend(rotations)
+    start_tile = random.choice(start_tiles)
+
+    #Start tiles and rotations for mirrored versions
+    #TODO: This code can be cleaned up further, functionized to required less copy pasting, and sourced from outside
+    flipped_new_tile = CreateMirrorHorCopy(tile_start_L)
+    start_tiles.append(flipped_new_tile)
+    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+    start_tiles.extend(rotations)
+    flipped_new_tile = CreateMirrorHorCopy(tile_start_crookedL)
+    start_tiles.append(flipped_new_tile)
+    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+    start_tiles.extend(rotations)
 
     #Default tiles
     tile_I = Tile(grid_x=3, grid_y=16, topm=1, botm=1, tile_type="default", name="TileObj_I")
@@ -203,9 +261,29 @@ class DefineTileObjects():
     # rotations = Generate_rotations(tile_bigroom_wall_entrance, tile_bigroom_wall_entrance.name, 4)
     # default_tiles.extend(rotations)
 
+    #Mirrored defaults and their rotations
+    flipped_new_tile = CreateMirrorHorCopy(tile_sideway)
+    default_tiles.append(flipped_new_tile)
+    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+    default_tiles.extend(rotations)
+    flipped_new_tile = CreateMirrorHorCopy(tile_L_toleft)
+    default_tiles.append(flipped_new_tile)
+    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+    default_tiles.extend(rotations)
+
+    flipped_new_tile = CreateMirrorHorCopy(tile_bot_left)
+    default_tiles.append(flipped_new_tile)
+    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+    default_tiles.extend(rotations)
+
+    flipped_new_tile = CreateMirrorHorCopy(tile_half_diagonal)
+    default_tiles.append(flipped_new_tile)
+    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+    default_tiles.extend(rotations)
+
 TileObj = DefineTileObjects()
 Grid = Grid(6, 6)
-Grid.set(x=random.randint(0, Grid.width-1), y=random.randint(0, Grid.height-1), tile=TileObj.start_tile)
+Grid.set(x=random.randint(1, Grid.width-2), y=random.randint(1, Grid.height-2), tile=TileObj.start_tile)
 
 pygame.init()
 screen_size = (800, 800)
@@ -263,75 +341,105 @@ def ComputeEntropy(x, y):
     return entropy
 
 def ChooseTileToPlace(x, y):
-    free_connections = []
     forced_connections = []
+    blocked_connections = []
 
     #Check available connection points
     if x > 0:  # Check left
         if Grid.get(x - 1, y):
             tile_l = Grid.get(x - 1, y)
-            if tile_l.Connection_points["rtop"]:
-                forced_connections.append("ltop")
-            if tile_l.Connection_points["rmid"]:
-                forced_connections.append("lmid")
-            if tile_l.Connection_points["rbot"]:
-                forced_connections.append("lbot")
-        else:
-            free_connections.append("ltop")
-            free_connections.append("lmid")
-            free_connections.append("lbot")
+            if not tile_l.tile_type == "empty":  # if tile is empty, no connections are required or blocked
+                if tile_l.Connection_points["rtop"]:
+                    forced_connections.append("ltop")
+                else:
+                    blocked_connections.append("ltop") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_l.Connection_points["rmid"]:
+                    forced_connections.append("lmid")
+                else:
+                    blocked_connections.append("lmid")
+                if tile_l.Connection_points["rbot"]:
+                    forced_connections.append("lbot")
+                else:
+                    blocked_connections.append("lbot")
+    else: # World edge, no connection allowed
+        blocked_connections.append("ltop")
+        blocked_connections.append("lmid")
+        blocked_connections.append("lbot")
+
     if x < Grid.width - 1:  # Check right
         if Grid.get(x + 1, y):
             tile_r = Grid.get(x + 1, y)
-            if tile_r.Connection_points["ltop"]:
-                forced_connections.append("rtop")
-            if tile_r.Connection_points["lmid"]:
-                forced_connections.append("rmid")
-            if tile_r.Connection_points["lbot"]:
-                forced_connections.append("rbot")
-        else:
-            free_connections.append("rtop")
-            free_connections.append("rmid")
-            free_connections.append("rbot")
+            if not tile_r.tile_type == "empty":  # if tile is empty, no connections are required or blocked
+                if tile_r.Connection_points["ltop"]:
+                    forced_connections.append("rtop")
+                else:
+                    blocked_connections.append("rtop") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_r.Connection_points["lmid"]:
+                    forced_connections.append("rmid")
+                else:
+                    blocked_connections.append("rmid") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_r.Connection_points["lbot"]:
+                    forced_connections.append("rbot")
+                else:
+                    blocked_connections.append("rbot") #If there isn't a connection on occupied tile, we gotta block it
+    else:
+        blocked_connections.append("rtop")
+        blocked_connections.append("rmid")
+        blocked_connections.append("rbot")
     if y > 0:  # Check down
         if Grid.get(x, y - 1):
             tile_d = Grid.get(x, y - 1)
-            if tile_d.Connection_points["topl"]:
-                forced_connections.append("botl")
-            if tile_d.Connection_points["topm"]:
-                forced_connections.append("botm")
-            if tile_d.Connection_points["topr"]:
-                forced_connections.append("botr")
-        else:
-            free_connections.append("botl")
-            free_connections.append("botm")
-            free_connections.append("botr")
+            if not tile_d.tile_type == "empty":  # if tile is empty, no connections are required or blocked
+                if tile_d.Connection_points["topl"]:
+                    forced_connections.append("botl")
+                else:
+                    blocked_connections.append("botl") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_d.Connection_points["topm"]:
+                    forced_connections.append("botm")
+                else:
+                    blocked_connections.append("botm") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_d.Connection_points["topr"]:
+                    forced_connections.append("botr")
+                else:
+                    blocked_connections.append("botr") #If there isn't a connection on occupied tile, we gotta block it
+    else:
+        blocked_connections.append("botl")
+        blocked_connections.append("botm")
+        blocked_connections.append("botr")
     if y < Grid.height - 1:  # Check up
         if Grid.get(x, y + 1):
             tile_u = Grid.get(x, y + 1)
-            if tile_u.Connection_points["botl"]:
-                forced_connections.append("topl")
-            if tile_u.Connection_points["botm"]:
-                forced_connections.append("topm")
-            if tile_u.Connection_points["botr"]:
-                forced_connections.append("topr")
-        else:
-            free_connections.append("topl")
-            free_connections.append("topm")
-            free_connections.append("topr")
+            if not tile_u.tile_type == "empty":  # if tile is empty, no connections are required or blocked
+                if tile_u.Connection_points["botl"]:
+                    forced_connections.append("topl")
+                else:
+                    blocked_connections.append("topl") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_u.Connection_points["botm"]:
+                    forced_connections.append("topm")
+                else:
+                    blocked_connections.append("topm") #If there isn't a connection on occupied tile, we gotta block it
+                if tile_u.Connection_points["botr"]:
+                    forced_connections.append("topr")
+                else:
+                    blocked_connections.append("topr") #If there isn't a connection on occupied tile, we gotta block it
+    else:
+        blocked_connections.append("topl")
+        blocked_connections.append("topm")
+        blocked_connections.append("topr")
 
     available_tiles = []
+    random.shuffle(TileObj.default_tiles)
     for tile in TileObj.default_tiles:
-        if len(forced_connections) != 0: #Solve for all forced points
-            if all(tile.Connection_points.get(conn_point) == 1 for conn_point in forced_connections):
-                available_tiles.append(tile)
-        else: #If no forced points, grab all tiles that may satisfy any free points and go there
-            if all(tile.Connection_points.get(conn_point) == 1 for conn_point in free_connections):
-                available_tiles.append(tile)
+        if all(tile.Connection_points.get(conn_point) == 1 for conn_point in forced_connections) and \
+            not any(tile.Connection_points.get(conn_point) == 1 for conn_point in blocked_connections):
+            available_tiles.append(tile)
+
+    print(available_tiles)
+
     if len(available_tiles) == 0:
         available_tiles = [TileObj.tile_empty]
     Grid.set(x, y, random.choice(available_tiles))
-    return forced_connections
+    return blocked_connections
 
 def draw_text(screen, text, position, font, color=(255, 255, 255)):
     text_surface = font.render(text, True, color)
