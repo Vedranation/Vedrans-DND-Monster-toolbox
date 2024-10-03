@@ -3,12 +3,12 @@ import random
 import copy
 from PIL import Image
 import pygame
-from io import BytesIO
+from typing import Union
 
-Tilemap = Image.open("WFC tiles.jpg")
+Tilemap = Image.open("WFC tiles 4k.jpg")
 
 class Tile:
-    def __init__(self, grid_x:int, grid_y:int, ltop=0, lmid=0, lbot=0, topl=0, topm=0, topr=0, rtop=0, rmid=0, rbot=0, botl=0,
+    def __init__(self, grid_x:int, grid_y:int, rotations:Union[0, 1, 3], mirror=False, ltop=0, lmid=0, lbot=0, topl=0, topm=0, topr=0, rtop=0, rmid=0, rbot=0, botl=0,
                  botm=0, botr=0, tile_type="default", name="tile"):
         self.Connection_points = {
             "ltop": ltop,
@@ -28,6 +28,23 @@ class Tile:
         self.tile = self._extract_tile(Tilemap, grid_x=grid_x, grid_y=grid_y)
         self.name = name
     def _extract_tile(self, tilemap: Image, grid_x: int, grid_y: int, grid_pixel_size:float=25.6) -> Image:
+        """
+    Extracts a tile from the specified position in a tilemap image.
+
+    :param tilemap: The image from which to extract the tile.
+    :type tilemap: Image
+    :param grid_x: The x-coordinate of the tile in the grid.
+    :type grid_x: int
+    :param grid_y: The y-coordinate of the tile in the grid.
+    :type grid_y: int
+    :param grid_pixel_size: The size of one grid square in pixels, defaults to 25.6.
+    :type grid_pixel_size: float
+    :return: A cropped image of the tile.
+    :rtype: Image
+
+    This method calculates the pixel coordinates to extract based on the grid position and pixel size,
+    then returns the cropped portion of the image.
+    """
         x = grid_x * grid_pixel_size
         y = grid_y * grid_pixel_size
         width = height = 12 * grid_pixel_size
@@ -168,118 +185,213 @@ def Generate_rotations(original_tile: object, tile_name_base: str, n_positions: 
 
 class DefineTileObjects():
     '''Stores all tile objects for encapsulation purposes'''
-    #Starting tiles, only 1
-    tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start")
-    tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start")
-    tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start")
-    tile_start_pentagon = Tile(grid_x=45, grid_y=2, topm=1, tile_type="start")
-    tile_start_crookedL = Tile(grid_x=59, grid_y=2, topm=1, lbot=1, tile_type="start")
-    start_tiles = [tile_start_T, tile_start_L, tile_start_split, tile_start_pentagon, tile_start_crookedL]
-    rotations = Generate_rotations(tile_start_T, tile_start_T.name, 4)
-    start_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_start_L, tile_start_L.name, 4)
-    start_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_start_split, tile_start_split.name, 4)
-    start_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_start_pentagon, tile_start_pentagon.name, 4)
-    start_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_start_crookedL, tile_start_crookedL.name, 4)
-    start_tiles.extend(rotations)
-    start_tile = random.choice(start_tiles)
+    def TileRelativePosToBlocksX(self, x_pos:int, n_blocks_between=2, n_tile_width=12, start_blocks_x=3) -> int:
+        """
+    Transforms relative X into number of blocks so it can be passed into Tile class
 
-    #Start tiles and rotations for mirrored versions
-    #TODO: This code can be cleaned up further, functionized to required less copy pasting, and sourced from outside
-    flipped_new_tile = CreateMirrorHorCopy(tile_start_L)
-    start_tiles.append(flipped_new_tile)
-    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
-    start_tiles.extend(rotations)
-    flipped_new_tile = CreateMirrorHorCopy(tile_start_crookedL)
-    start_tiles.append(flipped_new_tile)
-    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
-    start_tiles.extend(rotations)
+    :param x_pos: the position of tile relative to other tiles on the X axis (from 0 to inf)
+    :type x_pos: int
+    :param n_blocks_between: How many blocks separates each tile in X
+    :type n_blocks_between: int
+    :param n_tile_width: How many blocks in X is the tile wide
+    :type n_tile_width: int
+    :param start_blocks_x: The offset from left side of screen to the first tile
+    :type start_blocks_x: int
+    :return: The position in X from left side of screen to wanted tile in a number of blocks
+    :rtype: int
+    """
+        return start_blocks_x + x_pos * (n_blocks_between + n_tile_width)
 
-    #Default tiles
-    tile_I = Tile(grid_x=3, grid_y=16, topm=1, botm=1, tile_type="default", name="TileObj_I")
-    tile_cross = Tile(grid_x=17, grid_y=16, topm=1, botm=1, lmid=1, rmid=1, tile_type="default", name="TileObj_cross")
-    tile_sideway = Tile(grid_x=31, grid_y=16, topr=1, botl=1, tile_type="default", name="TileObj_sideway")
-    tile_L_toleft = Tile(grid_x=45, grid_y=16, lmid=1, botr=1, tile_type="default", name="TileObj_L_toleft")
-    tile_altar = Tile(grid_x=59, grid_y=16, botm=1, tile_type="default", name="TileObj_altar")
+    def TileRelativePosToBlocksY(self, y_pos:int, n_blocks_between=2, n_tile_width=12, start_blocks_y=2) -> int:
+        """
+    Transforms relative Y into number of blocks so it can be passed into Tile class
 
-    tile_chamber = Tile(grid_x=3, grid_y=30, topm=1, botm=1, tile_type="default", name="TileObj_chamber")
-    tile_bridge = Tile(grid_x=17, grid_y=30, lmid=1, rmid=1, tile_type="default", name="TileObj_bridge")
-    tile_round_deadend = Tile(grid_x=31, grid_y=30, botm=1, tile_type="default", name="TileObj_round_deadend")
-    tile_bot_left = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default", name="TileObj_bot_left")
-    tile_hallway_cap = Tile(grid_x=59, grid_y=30, botm=1, tile_type="default", name="TileObj_hallway_cap")
+    :param y_pos: the position of tile relative to other tiles on the Y axis (from 0 to inf)
+    :type y_pos: int
+    :param n_blocks_between: How many blocks separates each tile in Y
+    :type n_blocks_between: int
+    :param n_tile_width: How many blocks in Y is the tile tall
+    :type n_tile_width: int
+    :param start_blocks_y: The offset from top of screen to the first tile
+    :type start_blocks_y: int
+    :return: The position in Y from top of screen to wanted tile in a number of blocks
+    :rtype: int
+    """
+        return start_blocks_y + y_pos * (n_blocks_between + n_tile_width)
 
-    tile_corner = Tile(grid_x=3, grid_y=44, topm=1, rmid=1, tile_type="default", name="TileObj_corner")
-    tile_half_diagonal = Tile(grid_x=17, grid_y=44, lmid=1, rtop=1, tile_type="default", name="TileObj_half_diagonal")
-    tile_bigroom_corner = Tile(grid_x=31, grid_y=44, topl=1, topm=1, topr=1, rtop=1, rmid=1, rbot=1, tile_type="default", name="TileObj_bigroom_corner")
-    # tile_bigroom_interior = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default", name="TileObj_bot_left")
-    tile_T_block = Tile(grid_x=59, grid_y=44, lmid=1, rmid=1, topm=1, tile_type="default", name="TileObj_T_block")
+    def __init__(self):
+        '''Create all tiles'''
 
-    tile_bigroom_wall_entrance = Tile(grid_x=31, grid_y=58, lmid=1, topl=1, topm=1, topr=1, rtop=1, rmid=1, rbot=1, tile_type="default", name="TileObj_wall_entrance")
-    # tile_bigroom_wall = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default",
-    #                              name="TileObj_bot_left")
-    default_tiles = [tile_I, tile_cross, tile_sideway, tile_L_toleft, tile_altar,
-                     tile_chamber, tile_bridge, tile_round_deadend, tile_bot_left, tile_hallway_cap,
-                     tile_corner, tile_half_diagonal, tile_T_block]#, tile_bigroom_corner,
-                     #tile_bigroom_wall_entrance]
+        '''Starting tiles, only 1, Y=0'''
+        self.default_tiles = []
+        tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start")
+        tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start")
+        tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start")
+        tile_start_pentagon = Tile(grid_x=45, grid_y=2, topm=1, tile_type="start")
+        tile_start_crookedL = Tile(grid_x=59, grid_y=2, topm=1, lbot=1, tile_type="start")
+        self.start_tiles = [tile_start_T, tile_start_L, tile_start_split, tile_start_pentagon, tile_start_crookedL]
+        rotations = Generate_rotations(tile_start_T, tile_start_T.name, 4)
+        self.start_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_start_L, tile_start_L.name, 4)
+        self.start_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_start_split, tile_start_split.name, 4)
+        self.start_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_start_pentagon, tile_start_pentagon.name, 4)
+        self.start_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_start_crookedL, tile_start_crookedL.name, 4)
+        self.start_tiles.extend(rotations)
+        self.start_tile = random.choice(self.start_tiles)
 
-    #Empty tile (can't compile)
-    tile_empty = Tile(grid_x=59, grid_y=58, tile_type="empty", name="TileObj_empty")
+        '''Start tiles and rotations for mirrored versions'''
+        #TODO: This code can be cleaned up further, functionized to required less copy pasting, and sourced from outside
+        flipped_new_tile = CreateMirrorHorCopy(tile_start_L)
+        self.start_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.start_tiles.extend(rotations)
+        flipped_new_tile = CreateMirrorHorCopy(tile_start_crookedL)
+        self.start_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.start_tiles.extend(rotations)
 
-    #3 or 1 rotations of each tile
-    rotations = Generate_rotations(tile_altar, tile_altar.name,4)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_I, tile_I.name, 2)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_sideway, tile_sideway.name, 4)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_L_toleft, tile_L_toleft.name, 4)
-    default_tiles.extend(rotations)
+        '''Default tiles'''
+        # Y=1
+        tile_I = Tile(grid_x=3, grid_y=16, topm=1, botm=1, tile_type="default", name="TileObj_I")
+        tile_cross = Tile(grid_x=17, grid_y=16, topm=1, botm=1, lmid=1, rmid=1, tile_type="default", name="TileObj_cross")
+        tile_sideway = Tile(grid_x=31, grid_y=16, topr=1, botl=1, tile_type="default", name="TileObj_sideway")
+        tile_L_toleft = Tile(grid_x=45, grid_y=16, lmid=1, botr=1, tile_type="default", name="TileObj_L_toleft")
+        tile_altar = Tile(grid_x=59, grid_y=16, botm=1, tile_type="default", name="TileObj_altar")
+        # Y=2
+        tile_chamber = Tile(grid_x=3, grid_y=30, topm=1, botm=1, tile_type="default", name="TileObj_chamber")
+        tile_bridge = Tile(grid_x=17, grid_y=30, lmid=1, rmid=1, tile_type="default", name="TileObj_bridge")
+        tile_round_deadend = Tile(grid_x=31, grid_y=30, botm=1, tile_type="default", name="TileObj_round_deadend")
+        tile_bot_left = Tile(grid_x=45, grid_y=30, lmid=1, botr=1, botl=1, tile_type="default", name="TileObj_bot_left")
+        tile_hallway_cap = Tile(grid_x=59, grid_y=30, botm=1, tile_type="default", name="TileObj_hallway_cap")
+        # Y=3
+        tile_corner = Tile(grid_x=3, grid_y=44, topm=1, rmid=1, tile_type="default", name="TileObj_corner")
+        tile_half_diagonal = Tile(grid_x=17, grid_y=44, lmid=1, rtop=1, tile_type="default", name="TileObj_half_diagonal")
+        tile_bigroom_corner = Tile(grid_x=self.TileRelativePosToBlocksX(2), grid_y=self.TileRelativePosToBlocksY(3),
+                                   topl=1, topm=1, topr=1, rtop=1, rmid=1, rbot=1, tile_type="default", name="TileObj_bigroom_corner")
+        tile_bigroom_walled_entrance = Tile(grid_x=self.TileRelativePosToBlocksX(3), grid_y=self.TileRelativePosToBlocksY(3),
+                                            rmid=1, ltop=1, lmid=1, lbot=1, tile_type="default", name="TileObj_bigroom_walled_entrance")
+        tile_T_block = Tile(grid_x=self.TileRelativePosToBlocksX(4), grid_y=self.TileRelativePosToBlocksY(3), lmid=1, rmid=1, topm=1, tile_type="default", name="TileObj_T_block")
+        # Y=4
+        tile_mini_double_corner = Tile(grid_x=self.TileRelativePosToBlocksX(0), grid_y=self.TileRelativePosToBlocksY(4),
+                                       topl=1, ltop=1, rbot=1, botr=1, tile_type="default", name="TileObj_mini_double_corner")
+        tile_V = Tile(grid_x=self.TileRelativePosToBlocksX(1), grid_y=self.TileRelativePosToBlocksY(4),
+                                topl=1, topr=1, botm=1, tile_type="default", name="TileObj_V")
+        tile_bigroom_corner_entrance = Tile(grid_x=self.TileRelativePosToBlocksX(2), grid_y=self.TileRelativePosToBlocksY(4),
+                                   lmid=1, rtop=1, rmid=1, rbot=1, botl=1, botm=1, botr=1, tile_type="default", name="TileObj_bigroom_corner_entrance")
+        tile_bigroom_walled = Tile(grid_x=self.TileRelativePosToBlocksX(3), grid_y=self.TileRelativePosToBlocksY(4),
+                                            ltop=1, lmid=1, lbot=1, tile_type="default", name="TileObj_bigroom_walled")
+        tile_mini_corner = Tile(grid_x=self.TileRelativePosToBlocksX(4), grid_y=self.TileRelativePosToBlocksY(4),
+                                       topl=1, ltop=1, tile_type="default", name="TileObj_mini_corner")
+        # Y=5
+        '''Empty tile (can't compile)'''
+        self.tile_empty = Tile(grid_x=self.TileRelativePosToBlocksX(0), grid_y=self.TileRelativePosToBlocksY(5),
+                               tile_type="empty", name="TileObj_empty")
+        tile_pillars = Tile(grid_x=self.TileRelativePosToBlocksX(1), grid_y=self.TileRelativePosToBlocksY(5),
+                      topm=1, botm=1, tile_type="default", name="TileObj_pillars")
+        tile_stripes_side = Tile(grid_x=self.TileRelativePosToBlocksX(2), grid_y=self.TileRelativePosToBlocksY(5),
+                                            lbot=1, rbot=1, topl=1, topr=1, tile_type="default", name="TileObj_stripes_side")
+        tile_corner_humped = Tile(grid_x=self.TileRelativePosToBlocksX(3), grid_y=self.TileRelativePosToBlocksY(5),
+                                   ltop=1, topm=1, tile_type="default", name="TileObj_corner_humped")
+        tile_corner_humped2 = Tile(grid_x=self.TileRelativePosToBlocksX(4), grid_y=self.TileRelativePosToBlocksY(5),
+                                ltop=1, topr=1, tile_type="default", name="TileObj_corner_humped2")
+        self.default_tiles = [tile_I, tile_cross, tile_sideway, tile_L_toleft, tile_altar,
+                              tile_chamber, tile_bridge, tile_round_deadend, tile_bot_left, tile_hallway_cap,
+                              tile_corner, tile_half_diagonal, tile_bigroom_corner, tile_bigroom_walled_entrance, tile_T_block,
+                              tile_mini_double_corner, tile_V, tile_bigroom_corner_entrance, tile_bigroom_walled, tile_mini_corner,
+                              tile_pillars, tile_stripes_side, tile_corner_humped, tile_corner_humped2]
 
-    rotations = Generate_rotations(tile_chamber, tile_chamber.name, 2)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_bridge, tile_bridge.name, 2)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_round_deadend, tile_round_deadend.name, 4)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_bot_left, tile_bot_left.name, 4)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_hallway_cap, tile_hallway_cap.name, 4)
-    default_tiles.extend(rotations)
+        '''3 or 1 rotations of each tile'''
+        # Y=1
+        rotations = Generate_rotations(tile_altar, tile_altar.name,4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_I, tile_I.name, 2)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_sideway, tile_sideway.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_L_toleft, tile_L_toleft.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=2
+        rotations = Generate_rotations(tile_chamber, tile_chamber.name, 2)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_bridge, tile_bridge.name, 2)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_round_deadend, tile_round_deadend.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_bot_left, tile_bot_left.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_hallway_cap, tile_hallway_cap.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=3
+        rotations = Generate_rotations(tile_corner, tile_corner.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_half_diagonal, tile_half_diagonal.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_bigroom_corner, tile_bigroom_corner.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_bigroom_walled_entrance, tile_bigroom_walled_entrance.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_T_block, tile_T_block.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=4
+        rotations = Generate_rotations(tile_mini_double_corner, tile_mini_double_corner.name, 2)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_V, tile_V.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_bigroom_corner_entrance, tile_bigroom_corner_entrance.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_bigroom_walled, tile_bigroom_walled.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_mini_corner, tile_mini_corner.name, 2)
+        self.default_tiles.extend(rotations)
+        # Y=5
+        rotations = Generate_rotations(tile_pillars, tile_pillars.name, 2)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_stripes_side, tile_stripes_side.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_corner_humped, tile_corner_humped.name, 4)
+        self.default_tiles.extend(rotations)
+        rotations = Generate_rotations(tile_corner_humped2, tile_corner_humped2.name, 4)
+        self.default_tiles.extend(rotations)
 
-    rotations = Generate_rotations(tile_corner, tile_corner.name, 4)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_half_diagonal, tile_half_diagonal.name, 4)
-    default_tiles.extend(rotations)
-    rotations = Generate_rotations(tile_T_block, tile_T_block.name, 4)
-    default_tiles.extend(rotations)
-    # rotations = Generate_rotations(tile_bigroom_corner, tile_bigroom_corner.name, 4)
-    # default_tiles.extend(rotations)
+        #TODO: Intergrate rotations and flipping into tile creation to get rid of this shit
+        '''Mirrored defaults and their rotations'''
+        # Y=1
+        flipped_new_tile = CreateMirrorHorCopy(tile_sideway)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
+        flipped_new_tile = CreateMirrorHorCopy(tile_L_toleft)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=2
+        flipped_new_tile = CreateMirrorHorCopy(tile_bot_left)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=3
+        flipped_new_tile = CreateMirrorHorCopy(tile_half_diagonal)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=4
+        flipped_new_tile = CreateMirrorHorCopy(tile_bigroom_corner_entrance)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
+        # Y=5
+        flipped_new_tile = CreateMirrorHorCopy(tile_corner_humped)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
 
-    # rotations = Generate_rotations(tile_bigroom_wall_entrance, tile_bigroom_wall_entrance.name, 4)
-    # default_tiles.extend(rotations)
-
-    #Mirrored defaults and their rotations
-    flipped_new_tile = CreateMirrorHorCopy(tile_sideway)
-    default_tiles.append(flipped_new_tile)
-    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
-    default_tiles.extend(rotations)
-    flipped_new_tile = CreateMirrorHorCopy(tile_L_toleft)
-    default_tiles.append(flipped_new_tile)
-    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
-    default_tiles.extend(rotations)
-
-    flipped_new_tile = CreateMirrorHorCopy(tile_bot_left)
-    default_tiles.append(flipped_new_tile)
-    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
-    default_tiles.extend(rotations)
-
-    flipped_new_tile = CreateMirrorHorCopy(tile_half_diagonal)
-    default_tiles.append(flipped_new_tile)
-    rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
-    default_tiles.extend(rotations)
+        flipped_new_tile = CreateMirrorHorCopy(tile_corner_humped2)
+        self.default_tiles.append(flipped_new_tile)
+        rotations = Generate_rotations(flipped_new_tile, flipped_new_tile.name, 4)
+        self.default_tiles.extend(rotations)
 
 TileObj = DefineTileObjects()
 Grid = Grid(6, 6)
@@ -428,13 +540,11 @@ def ChooseTileToPlace(x, y):
         blocked_connections.append("topr")
 
     available_tiles = []
-    random.shuffle(TileObj.default_tiles)
     for tile in TileObj.default_tiles:
         if all(tile.Connection_points.get(conn_point) == 1 for conn_point in forced_connections) and \
             not any(tile.Connection_points.get(conn_point) == 1 for conn_point in blocked_connections):
             available_tiles.append(tile)
 
-    print(available_tiles)
 
     if len(available_tiles) == 0:
         available_tiles = [TileObj.tile_empty]
@@ -448,15 +558,6 @@ def draw_text(screen, text, position, font, color=(255, 255, 255)):
 '''Main loop'''
 First_Pass = True
 while running:
-    # Second pass - remove all empty tiles
-    if not First_Pass:
-        for y in range(Grid.height):
-            for x in range(Grid.width):
-                if not Grid.get(x, y):  # No tile present
-                    continue
-                if Grid.get(x, y).tile_type == "empty":
-                    Grid.set(x, y, None)
-        First_Pass = True
 
     #First pass - place down all tiles according to rules
     #Clear the screen with a black background
@@ -499,4 +600,4 @@ while running:
     draw_text(screen, str(connections), (text_x, text_y), font)
     # Update the display
     pygame.display.flip()
-    time.sleep(0.1)
+    time.sleep(0.05)
