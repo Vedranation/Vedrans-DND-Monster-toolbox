@@ -3,12 +3,12 @@ import random
 import copy
 from PIL import Image
 import pygame
-from typing import Union
+from typing import Literal
 
 Tilemap = Image.open("WFC tiles 4k.jpg")
 
 class Tile:
-    def __init__(self, grid_x:int, grid_y:int, rotations:Union[0, 1, 3], mirror=False, ltop=0, lmid=0, lbot=0, topl=0, topm=0, topr=0, rtop=0, rmid=0, rbot=0, botl=0,
+    def __init__(self, grid_x:int, grid_y:int, rotations:Literal[0, 1, 3]=0, mirror=False, ltop=0, lmid=0, lbot=0, topl=0, topm=0, topr=0, rtop=0, rmid=0, rbot=0, botl=0,
                  botm=0, botr=0, tile_type="default", name="tile"):
         self.Connection_points = {
             "ltop": ltop,
@@ -224,11 +224,11 @@ class DefineTileObjects():
 
         '''Starting tiles, only 1, Y=0'''
         self.default_tiles = []
-        tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start")
-        tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start")
-        tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start")
-        tile_start_pentagon = Tile(grid_x=45, grid_y=2, topm=1, tile_type="start")
-        tile_start_crookedL = Tile(grid_x=59, grid_y=2, topm=1, lbot=1, tile_type="start")
+        tile_start_T = Tile(grid_x=3, grid_y=2, lmid=1, rmid=1, tile_type="start", name="TileObj_start_T")
+        tile_start_L = Tile(grid_x=17, grid_y=2, lmid=1, tile_type="start", name="TileObj_start_L")
+        tile_start_split = Tile(grid_x=31, grid_y=2, topl=1, topr=1, tile_type="start", name="TileObj_start_split")
+        tile_start_pentagon = Tile(grid_x=45, grid_y=2, topm=1, tile_type="start", name="TileObj_start_pentagon")
+        tile_start_crookedL = Tile(grid_x=59, grid_y=2, topm=1, lbot=1, tile_type="start", name="TileObj_start_crookedL")
         self.start_tiles = [tile_start_T, tile_start_L, tile_start_split, tile_start_pentagon, tile_start_crookedL]
         rotations = Generate_rotations(tile_start_T, tile_start_T.name, 4)
         self.start_tiles.extend(rotations)
