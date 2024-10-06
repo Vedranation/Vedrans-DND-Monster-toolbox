@@ -1,11 +1,12 @@
 import time
 import random
 import copy
-from PIL import Image
+from PIL import Image, ImageDraw
 import pygame
 from typing import Literal, List
 
 Tilemap = Image.open("WFC tiles 4k.jpg")
+Tilemap_mask = Image.open("WFC tiles mask 4k.jpg")
 
 class Tile:
     def __init__(self, grid_x:int, grid_y:int, orientations:Literal[1, 2, 4]=1, mirror=False, ltop=0, lmid=0, lbot=0, topl=0, topm=0, topr=0, rtop=0, rmid=0, rbot=0, botl=0,
@@ -25,7 +26,8 @@ class Tile:
             "botr": botr,
         }
         self.tile_type = tile_type #start, goal, empty, default, bigroom
-        self.tile = self._extract_tile(Tilemap, grid_x=grid_x, grid_y=grid_y)
+        self.tile = self._extract_tile(Tilemap, global_grid_x=grid_x, global_grid_y=grid_y)
+        self.tile_mask = self._extract_tile(Tilemap_mask, grid_x, global_grid_y=grid_y) #Image of the tilemap
         self.name = name
         self.orientations = orientations
         self.mirror = mirror
@@ -46,16 +48,16 @@ class Tile:
             self.variations.extend(rotations)
         return self.variations
 
-    def _extract_tile(self, tilemap: Image, grid_x: int, grid_y: int, grid_pixel_size:float=25.6) -> Image:
+    def _extract_tile(self, tilemap: Image, global_grid_x: int, global_grid_y: int, grid_pixel_size:float=25.6) -> Image:
         """
     Extracts a tile from the specified position in a tilemap image.
 
     :param tilemap: The image from which to extract the tile.
     :type tilemap: Image
-    :param grid_x: The x-coordinate of the tile in the grid.
-    :type grid_x: int
-    :param grid_y: The y-coordinate of the tile in the grid.
-    :type grid_y: int
+    :param global_grid_x: The x-coordinate of the tile in the GLOBAL grid.
+    :type global_grid_x: int
+    :param global_grid_y: The y-coordinate of the tile in the GLOBAL grid.
+    :type global_grid_y: int
     :param grid_pixel_size: The size of one grid square in pixels, defaults to 25.6.
     :type grid_pixel_size: float
     :return: A cropped image of the tile.
@@ -64,8 +66,8 @@ class Tile:
     This method calculates the pixel coordinates to extract based on the grid position and pixel size,
     then returns the cropped portion of the image.
     """
-        x = grid_x * grid_pixel_size
-        y = grid_y * grid_pixel_size
+        x = global_grid_x * grid_pixel_size
+        y = global_grid_y * grid_pixel_size
         width = height = 12 * grid_pixel_size
         return tilemap.crop((x, y, x + width, y + height))
 
@@ -103,6 +105,7 @@ class Tile:
         tile_obj.Connection_points['lmid'] = current['topm']
         tile_obj.Connection_points['ltop'] = current['topr']
         tile_obj.tile = tile_obj.tile.transpose(Image.Transpose.ROTATE_90)
+        tile_obj.tile_mask = tile_obj.tile_mask.transpose(Image.Transpose.ROTATE_90)
 
     def _createMirrorHorCopy(self, tile_obj: object) -> object:
         '''Creates a copy of passed object, mirrors it and returns it'''
@@ -138,6 +141,7 @@ class Tile:
         new_tile_obj.Connection_points['lmid'] = current['rmid']
         new_tile_obj.Connection_points['ltop'] = current['rtop']
         new_tile_obj.tile = new_tile_obj.tile.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        new_tile_obj.tile_mask = new_tile_obj.tile_mask.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
         return new_tile_obj
 
     def _generate_rotations(self, original_tile: object, n_orientations: Literal[2, 4]) -> list:
@@ -154,11 +158,44 @@ class Tile:
             rotations.append(new_tile)
             current_tile = new_tile  # Set the current tile to the newly rotated tile for the next iteration
         return rotations
-    def __str__(self):
-        return self.name
 
-    def __repr__(self):
-        return self.__str__()
+    def CanPlaceObject(self, local_tile_grid_x: int, local_tile_grid_y: int,):
+        """ Check mask to see if an object can be placed at (x, y)
+         :param local_tile_grid_x This means the blocks on the LOCAL tile grid, from 0 to tile width/height"""
+        block_length = self.tile_mask.size[0] // 12
+        middle_x = local_tile_grid_x * block_length + block_length // 2
+        middle_y = local_tile_grid_y * block_length + block_length // 2
+        block_mask_pixel = self.tile_mask.getpixel((middle_x, middle_y))
+        self.draw = ImageDraw.Draw(self.tile_mask)  # Allows drawing on the mask
+
+        # draw red square
+        top_left = (local_tile_grid_x * block_length +block_length//2, local_tile_grid_y * block_length+block_length//2)
+        bottom_right = (top_left[0] + block_length//2, top_left[1] + block_length//2)
+        self.draw.rectangle([top_left, bottom_right], fill=(255, 0, 0))  # Red for visibility
+
+        result = self._is_color_within_tolerance(block_mask_pixel, (22, 199, 49))
+
+        return result
+
+
+
+    def _is_color_within_tolerance(self, pixel_color: tuple, target_color: tuple, tolerance=2) -> bool:
+        """
+        Check if the pixel color is within the tolerance range of the target color.
+
+        :param pixel_color: The RGB color of the pixel (r, g, b).
+        :param target_color: The RGB target color (r, g, b).
+        :param tolerance: The tolerance level for each color channel.
+
+        :return bool: True if the pixel color is within the tolerance, False otherwise.
+        """
+        return all(abs(pixel_color[i] - target_color[i]) <= tolerance for i in range(3))
+
+def __str__(self):
+    return self.name
+
+def __repr__(self):
+    return self.__str__()
 
 def Pil_image_to_pygame(pil_image) -> pygame.image:
     shorter_dim = min(screen.get_width(), screen.get_height())
@@ -202,8 +239,6 @@ class Grid:
 
     def __len__(self) -> int:
         return len(self.data)
-
-
 
 class TileObjectsFactory:
     '''Stores all tile objects for encapsulation purposes - time to make this a Factory'''
@@ -259,6 +294,7 @@ class TileObjectsFactory:
         y3 = self.TileRelativePosToBlocksY(3)
         y4 = self.TileRelativePosToBlocksY(4)
         y5 = self.TileRelativePosToBlocksY(5)
+        y6 = self.TileRelativePosToBlocksY(6)
         '''Start tiles'''
         # Y=0
         start_tiles_constructor = [
@@ -323,6 +359,17 @@ class TileObjectsFactory:
  "tile_type": "default", "orientations": 4, "mirror": True},
 {"name": "TileObj_corner_humped2", "grid_x": x4, "grid_y": y5, "ltop": 1, "topr": 1,
  "tile_type": "default", "orientations": 4, "mirror": True},
+
+        # Y=6
+{"name": "TileObj_diagonal", "grid_x": x0, "grid_y": y6, "ltop": 1, "botr": 1, "tile_type": "default",
+ "orientations": 4, "mirror": True},
+{"name": "TileObj_bigroom_walled_entrance_side", "grid_x": x1, "grid_y": y6, "rmid": 1, "topl": 1, "topm": 1,"topr": 1,
+ "tile_type": "default", "orientations": 4, "mirror": True},
+{"name": "TileObj_fork", "grid_x": x2, "grid_y": y6, "botm": 1, "topl": 1, "topr": 1,
+ "tile_type": "default", "orientations": 4},
+{"name": "TileObj_bigroom_corner_entrance_side", "grid_x": x3, "grid_y": y6, "ltop": 1, "rtop": 1, "rmid": 1, "rbot": 1,
+ "botl": 1, "botm": 1, "botr": 1, "tile_type": "default", "orientations": 4, "mirror": True},
+
 ]
 
         for data in default_tiles_constructor:
@@ -392,7 +439,8 @@ def ComputeEntropy(x, y):
         entropy += 3
     return entropy
 
-def ChooseTileToPlace(x, y):
+def ChooseAndPlaceTile(x:int, y:int) -> list:
+    '''Places a tile down and returns blocked_connections or forced_connections for debug purposes'''
     forced_connections = []
     blocked_connections = []
 
@@ -485,7 +533,6 @@ def ChooseTileToPlace(x, y):
             not any(tile.Connection_points.get(conn_point) == 1 for conn_point in blocked_connections):
             available_tiles.append(tile)
 
-
     if len(available_tiles) == 0:
         available_tiles = [TileObj.tile_empty]
     Grid.set(x, y, random.choice(available_tiles))
@@ -495,26 +542,24 @@ def draw_text(screen, text, position, font, color=(255, 255, 255)):
     text_surface = font.render(text, True, color)
     screen.blit(text_surface, position)
 
-'''Main loop'''
-First_Pass = True
-while running:
+def HandleEvents() -> None:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            global running
+            running = False
 
-    #First pass - place down all tiles according to rules
-    #Clear the screen with a black background
-    screen.fill((0, 0, 0))
-    tile_dim = pygame_tile_start.get_height()
-    max_y = screen_size[1] - tile_dim #Handles display Y inversion
+def FirstPass(tile_dim: int, max_y: int) -> (tuple, int):
+    '''Compute entropy and draw current tiles and text to screen
+
+    :param tile_dim: the dimension (pixels) of each individual tile
+    :param max_y: max_y so screen can be inverted from window to cartesian coordinates
+    :return (x, y) of minimum entropy, and its int value'''
     min_entropy_x_y = (0, 0)
     min_entropy = 999
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    '''Compute entropy and draw tiles and text'''
     for y in range(Grid.height):
         for x in range(Grid.width):
-            if not Grid.get(x, y): #No tile present
+            if not Grid.get(x, y):  # No tile present
                 tile_entropy = ComputeEntropy(x, y)
                 if tile_entropy < min_entropy:
                     min_entropy_x_y = (x, y)
@@ -523,21 +568,81 @@ while running:
                 text_y = (max_y - tile_dim * y) + tile_dim // 2
                 draw_text(screen, str(tile_entropy), (text_x, text_y), font)
                 continue
-            pygame_tile = Pil_image_to_pygame(Grid.get(x, y).tile)
-            screen.blit(pygame_tile, (
-                tile_dim * x,
-                max_y - tile_dim * y))
+            pygame_tile = Pil_image_to_pygame(Grid.get(x, y).tile)  # Draw tile to screen
+            screen.blit(pygame_tile, (tile_dim * x, max_y - tile_dim * y))
 
-    if min_entropy == 999:
+    return min_entropy_x_y, min_entropy
+
+def SecondPass() -> bool:
+    '''Delete all empty tiles and their adjacents
+
+    return True if there are missing tiles on the map'''
+    missing_tiles_present = False #Are there any missing tiles on the map
+    for y in range(Grid.height):
+        for x in range(Grid.width):
+            current_tile = Grid.get(x, y)
+            if current_tile and current_tile.tile_type == "empty":  # An empty tile is present
+                Grid.set(x, y, None)  # Delete the empty tile
+                # Check and delete adjacent tiles, ensuring they exist and are not 'start' tiles
+                if y > 0:
+                    north_tile = Grid.get(x, y - 1)
+                    if north_tile and north_tile.tile_type != "start":
+                        Grid.set(x, y - 1, None)
+                        missing_tiles_present = True
+                if y < Grid.height - 1:
+                    south_tile = Grid.get(x, y + 1)
+                    if south_tile and south_tile.tile_type != "start":
+                        Grid.set(x, y + 1, None)
+                        missing_tiles_present = True
+                if x > 0:
+                    west_tile = Grid.get(x - 1, y)
+                    if west_tile and west_tile.tile_type != "start":
+                        Grid.set(x - 1, y, None)
+                        missing_tiles_present = True
+                if x < Grid.width - 1:
+                    east_tile = Grid.get(x + 1, y)
+                    if east_tile and east_tile.tile_type != "start":
+                        Grid.set(x + 1, y, None)
+                        missing_tiles_present = True
+    return missing_tiles_present
+
+'''Main loop'''
+Second_Pass = False
+Third_Pass = False
+while running:
+
+    #Second pass - delete all tiles adjacent to empty, and try again
+    if Second_Pass:
+        Third_Pass = SecondPass() #Returns True once there are no more white (empty) tiles to fix
+        Second_Pass = False
+
+    #First pass - place down all tiles according to rules
+    screen.fill((0, 0, 0)) #Clear the screen with a black background
+    tile_dim = pygame_tile_start.get_height()
+    max_y = screen_size[1] - tile_dim  # Handles display Y inversion
+
+    HandleEvents()
+    min_entropy_x_y, min_entropy = FirstPass(tile_dim, max_y) #Computes entropy and draws present tiles
+
+    if min_entropy != 999: #The board isn't filled entirely with tiles (including empty tiles)
+        connections = ChooseAndPlaceTile(min_entropy_x_y[0], min_entropy_x_y[1])
+        text_x = (tile_dim * min_entropy_x_y[0]) + tile_dim // 3
+        text_y = (max_y - tile_dim * min_entropy_x_y[1]) + tile_dim // 3
+        draw_text(screen, str(connections), (text_x, text_y), font)
         pygame.display.flip()
-        First_Pass = False
-        time.sleep(0.5)
-        continue
 
-    connections = ChooseTileToPlace(min_entropy_x_y[0], min_entropy_x_y[1])
-    text_x = (tile_dim * min_entropy_x_y[0]) + tile_dim // 3
-    text_y = (max_y - tile_dim * min_entropy_x_y[1]) + tile_dim // 3
-    draw_text(screen, str(connections), (text_x, text_y), font)
-    # Update the display
-    pygame.display.flip()
+    else:
+        Second_Pass = True
+        pygame.display.flip()
+        time.sleep(0.5)
+
     time.sleep(0.05)
+
+    # if not Third_Pass or empty_tiles:
+    #     continue
+    # for y in range(Grid.height):
+    #     for x in range(Grid.width):
+    #         for local_y in range(12):
+    #             for loyal_x in range(12):
+    #                 Grid.get(x, y).CanPlaceObject(loyal_x, local_y)
+    Third_Pass = False
