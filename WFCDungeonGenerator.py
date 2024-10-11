@@ -7,6 +7,9 @@ from typing import Literal, List
 
 Tilemap = Image.open("WFC tiles 4k.jpg")
 Tilemap_mask = Image.open("WFC tiles mask 4k.jpg")
+Decoratormap = Image.open("WFC objects decorators 4k transparent.png")
+
+
 
 class Tile:
     def __init__(self, grid_x:int, grid_y:int, orientations:Literal[1, 2, 4]=1, mirror=False, ltop=0, lmid=0, lbot=0, topl=0, topm=0, topr=0, rtop=0, rmid=0, rbot=0, botl=0,
@@ -33,6 +36,11 @@ class Tile:
         self.mirror = mirror
         self.variations = [self] #Will store itself + rotations/mirrors
 
+        self.valid_decorator_locations: List[tuple] = [] #Decorator - items which make map prettier but are not interractible or tangible
+        self.valid_obstacles_locations: List[tuple] = [] #Obstacle - items which cannot be passed through
+        self.obstacles: List = []
+        self.decorators = []
+
     def GenerateVariations(self) -> List[object]:
         '''Generates the mirrors and rotations of the tile, since __init__ can't return values'''
         if (self.orientations == 2 or self.orientations == 4):
@@ -48,7 +56,8 @@ class Tile:
             self.variations.extend(rotations)
         return self.variations
 
-    def _extract_tile(self, tilemap: Image, global_grid_x: int, global_grid_y: int, grid_pixel_size:float=25.6) -> Image:
+    def _extract_tile(self, tilemap: Image, global_grid_x: int, global_grid_y: int, grid_pixel_size:float=26,
+                      blocks_in_tile: int = 12) -> Image:
         """
     Extracts a tile from the specified position in a tilemap image.
 
@@ -68,7 +77,7 @@ class Tile:
     """
         x = global_grid_x * grid_pixel_size
         y = global_grid_y * grid_pixel_size
-        width = height = 12 * grid_pixel_size
+        width = height = blocks_in_tile * grid_pixel_size
         return tilemap.crop((x, y, x + width, y + height))
 
     def _rotate90CounterClockwise(self, tile_obj: object) -> None:
@@ -159,27 +168,32 @@ class Tile:
             current_tile = new_tile  # Set the current tile to the newly rotated tile for the next iteration
         return rotations
 
-    def CanPlaceObject(self, local_tile_grid_x: int, local_tile_grid_y: int,):
+    def CanPlaceObject(self, local_tile_grid_x: int, local_tile_grid_y: int, item: Literal["obstacle, decorator"]):
         """ Check mask to see if an object can be placed at (x, y)
-         :param local_tile_grid_x This means the blocks on the LOCAL tile grid, from 0 to tile width/height"""
+         :param local_tile_grid_x This means the blocks on the LOCAL tile grid, from 0 to tile width/height
+         :param item: What to search for - green is obstacle, decorator is blue"""
         block_length = self.tile_mask.size[0] // 12
         middle_x = local_tile_grid_x * block_length + block_length // 2
         middle_y = local_tile_grid_y * block_length + block_length // 2
         block_mask_pixel = self.tile_mask.getpixel((middle_x, middle_y))
+        blue = (23, 73, 141)
+        green = (22, 199, 49)
+        color = blue if item == "decorator" else green
+        result = self._is_color_within_tolerance(block_mask_pixel, color)
+        return result
+
+    def DrawRedSquare(self, local_tile_grid_x: int, local_tile_grid_y: int):
+        '''Draws a red square on tilemask for debugging'''
+        block_length = self.tile_mask.size[0] // 12
         self.draw = ImageDraw.Draw(self.tile_mask)  # Allows drawing on the mask
 
         # draw red square
-        top_left = (local_tile_grid_x * block_length +block_length//2, local_tile_grid_y * block_length+block_length//2)
-        bottom_right = (top_left[0] + block_length//2, top_left[1] + block_length//2)
+        top_left = (
+        local_tile_grid_x * block_length + int(block_length * 0.25), local_tile_grid_y * block_length + int(block_length * 0.25))
+        bottom_right = (top_left[0] + block_length // 2, top_left[1] + block_length // 2)
         self.draw.rectangle([top_left, bottom_right], fill=(255, 0, 0))  # Red for visibility
 
-        result = self._is_color_within_tolerance(block_mask_pixel, (22, 199, 49))
-
-        return result
-
-
-
-    def _is_color_within_tolerance(self, pixel_color: tuple, target_color: tuple, tolerance=2) -> bool:
+    def _is_color_within_tolerance(self, pixel_color: tuple, target_color: tuple, tolerance=5) -> bool:
         """
         Check if the pixel color is within the tolerance range of the target color.
 
@@ -191,16 +205,60 @@ class Tile:
         """
         return all(abs(pixel_color[i] - target_color[i]) <= tolerance for i in range(3))
 
-def __str__(self):
-    return self.name
+    def __str__(self):
+        return self.name
 
-def __repr__(self):
-    return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-def Pil_image_to_pygame(pil_image) -> pygame.image:
+class Decorator:
+    def __init__(self, name: str, dimensions: tuple, type: Literal["decorator", "obstacle"], grid_x, grid_y):
+        '''Decorators, obstacles and the like to be placed onto individual tiles
+
+        :param name: the name of the decorator (chest, rug, pillar etc)
+        :param dimensions: (width, height)
+        :param type: What type of item this is, basically what color to dump it on
+        :param grid_x: On tilemap where is this (same for grid_y)'''
+        self.width: int = dimensions[0]
+        self.height: int = dimensions[1]
+        self.type: str = type #decorator (blue), obstacle (green)
+        self.x: int = None
+        self.y: int = None
+        self.image = self._extract_tile(Decoratormap, global_grid_x=grid_x, global_grid_y=grid_y)
+        self.name: str = name
+
+    def _extract_tile(self, tilemap: Image, global_grid_x: int, global_grid_y: int, grid_pixel_size:float=26,
+                      blocks_in_tile: int = 6) -> Image:
+        """
+    Extracts a tile from the specified position in a tilemap image.
+
+    :param tilemap: The image from which to extract the tile.
+    :type tilemap: Image
+    :param global_grid_x: The x-coordinate of the tile in the GLOBAL grid.
+    :type global_grid_x: int
+    :param global_grid_y: The y-coordinate of the tile in the GLOBAL grid.
+    :type global_grid_y: int
+    :param grid_pixel_size: The size of one grid square in pixels, defaults to 25.6.
+    :type grid_pixel_size: float
+    :return: A cropped image of the tile.
+    :rtype: Image
+
+    This method calculates the pixel coordinates to extract based on the grid position and pixel size,
+    then returns the cropped portion of the image.
+    """
+        x = global_grid_x * grid_pixel_size
+        y = global_grid_y * grid_pixel_size
+        width = height = blocks_in_tile * grid_pixel_size
+        return tilemap.crop((x, y, x + width, y + height))
+
+def Pil_image_to_pygame(pil_image, is_tile=True) -> pygame.image:
     shorter_dim = min(screen.get_width(), screen.get_height())
     tile_size_pixels = shorter_dim // max(Grid.width, Grid.height)
-    resized_pil_image = pil_image.resize((tile_size_pixels, tile_size_pixels))
+    if is_tile: #Is main tile using 12x12 blocks
+        resized_pil_image = pil_image.resize((tile_size_pixels, tile_size_pixels))
+    else: #Is decorator using 6x6 blocks
+        resized_pil_image = pil_image.resize((tile_size_pixels//2, tile_size_pixels//2))
+
 
     mode = resized_pil_image.mode
     size = resized_pil_image.size
@@ -381,7 +439,7 @@ class TileObjectsFactory:
         self.tile_empty = Tile(**empty_constructor)
 
 TileObj = TileObjectsFactory()
-Grid = Grid(6, 6)
+Grid = Grid(6, 6) #Keep it square
 Grid.set(x=random.randint(1, Grid.width-2), y=random.randint(1, Grid.height-2), tile=TileObj.start_tile)
 
 pygame.init()
@@ -568,7 +626,11 @@ def FirstPass(tile_dim: int, max_y: int) -> (tuple, int):
                 text_y = (max_y - tile_dim * y) + tile_dim // 2
                 draw_text(screen, str(tile_entropy), (text_x, text_y), font)
                 continue
-            pygame_tile = Pil_image_to_pygame(Grid.get(x, y).tile)  # Draw tile to screen
+            global Debug
+            if Debug:
+                pygame_tile = Pil_image_to_pygame(Grid.get(x, y).tile_mask)  # Draw tile mask to screen
+            else:
+                pygame_tile = Pil_image_to_pygame(Grid.get(x, y).tile)  # Draw tile to screen
             screen.blit(pygame_tile, (tile_dim * x, max_y - tile_dim * y))
 
     return min_entropy_x_y, min_entropy
@@ -606,14 +668,67 @@ def SecondPass() -> bool:
                         missing_tiles_present = True
     return missing_tiles_present
 
+def ThirdPass(tile_dim):
+    '''Identifies placeable areas, stores them as tuples
+
+    :param tile_dim: Dimension of the individual tile (must be square), passed from main loop
+    '''
+    #Identify placeable areas
+    for y in range(Grid.height):
+        for x in range(Grid.width):
+            tile = Grid.get(x, y)
+            for local_y in range(12):
+                for local_x in range(12):
+                    if tile.CanPlaceObject(local_x, local_y, "obstacle"):
+                        local_y = 11 - local_y
+                        tile.valid_obstacles_locations.append((local_x, local_y))
+                    elif tile.CanPlaceObject(local_x, local_y, "decorator"):
+                        # tile.DrawRedSquare(local_x, local_y)
+                        local_y = 11 - local_y
+                        tile.valid_decorator_locations.append((local_x, local_y))
+
+    #Place decorators
+    n_decorations = 3
+    n_obstacles = 2
+    grid_pixel_size = screen_size[0] // (Grid.width * 12)
+
+    data = {"name": "bear_trap", "dimensions": (1, 2), "type":"decorator", "grid_x":3, "grid_y":11} #TODO: make it automatic factory in another file
+    bear_trap = Decorator(**data)
+    # bear_trap.image.show()
+    for y in range(Grid.height):
+        for x in range(Grid.width):
+            tile = Grid.get(x, y)
+
+            if not tile.valid_decorator_locations:
+                continue
+
+            random_pos = random.choice(tile.valid_decorator_locations)
+            tile.valid_decorator_locations.remove(random_pos)
+            bear_trap.x, bear_trap.y = random_pos[0], random_pos[1]
+            tile.decorators.append(bear_trap)
+
+            pygame_decorator = Pil_image_to_pygame(bear_trap.image, is_tile=False)  # Draw tile to screen
+
+            global_decorator_x = tile_dim * x + bear_trap.x * grid_pixel_size
+            global_decorator_y = screen_size[1] - (tile_dim * y + (bear_trap.y * grid_pixel_size + grid_pixel_size))
+
+            screen.blit(pygame_decorator, (global_decorator_x, global_decorator_y))#global_decorator_y))
+            # tile.DrawRedSquare(bear_trap.x, bear_trap.y)
+            # pygame.draw.rect(screen, "red", (global_decorator_x, global_decorator_y, 10, 10))
+            print(f"Tile: ({x}, {y}) - pos: ({bear_trap.x}, {bear_trap.y}) - pixel: ({global_decorator_x},{global_decorator_y})")
+            pygame.display.flip()
+            # time.sleep(0.1)
+
+
 '''Main loop'''
 Second_Pass = False
 Third_Pass = False
+Debug = False
 while running:
 
     #Second pass - delete all tiles adjacent to empty, and try again
     if Second_Pass:
-        Third_Pass = SecondPass() #Returns True once there are no more white (empty) tiles to fix
+        Third_Pass = not SecondPass() #Returns True once there are no more white (empty) tiles to fix
         Second_Pass = False
 
     #First pass - place down all tiles according to rules
@@ -634,15 +749,21 @@ while running:
     else:
         Second_Pass = True
         pygame.display.flip()
-        time.sleep(0.5)
+        # time.sleep(0.5)
 
-    time.sleep(0.05)
+    # time.sleep(0.5)
 
-    # if not Third_Pass or empty_tiles:
-    #     continue
-    # for y in range(Grid.height):
-    #     for x in range(Grid.width):
-    #         for local_y in range(12):
-    #             for loyal_x in range(12):
-    #                 Grid.get(x, y).CanPlaceObject(loyal_x, local_y)
+    if Third_Pass:
+        ThirdPass(tile_dim)
+        # screen.fill((0, 0, 0))  # Clear the screen with a black background
+        # tile_dim = pygame_tile_start.get_height()
+        # max_y = screen_size[1] - tile_dim  # Handles display Y inversion
+        #
+        # HandleEvents()
+        # min_entropy_x_y, min_entropy = FirstPass(tile_dim, max_y)  # Computes entropy and draws present tiles
+        while True:
+            HandleEvents()
+            pygame.display.flip()
+        pass
+
     Third_Pass = False
