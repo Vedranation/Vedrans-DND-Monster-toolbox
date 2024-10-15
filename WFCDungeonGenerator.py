@@ -680,42 +680,84 @@ def ThirdPass(tile_dim):
             for local_y in range(12):
                 for local_x in range(12):
                     if tile.CanPlaceObject(local_x, local_y, "obstacle"):
+
                         local_y = 11 - local_y
                         tile.valid_obstacles_locations.append((local_x, local_y))
                     elif tile.CanPlaceObject(local_x, local_y, "decorator"):
                         # tile.DrawRedSquare(local_x, local_y)
-                        local_y = 11 - local_y
+
+                        local_y = 11 - local_y  # invert Y for displaying
+
+                        grid_pixel_size = screen_size[0] // (Grid.width * 12)
+                        global_decorator_x = tile_dim * x + local_x * grid_pixel_size
+                        global_decorator_y = screen_size[1] - (
+                                    tile_dim * y + (local_y * grid_pixel_size + grid_pixel_size))
+                        # pygame.draw.rect(screen, "red", (global_decorator_x, global_decorator_y, 10, 10))
+
+
                         tile.valid_decorator_locations.append((local_x, local_y))
 
     #Place decorators
     n_decorations = 3
     n_obstacles = 2
-    grid_pixel_size = screen_size[0] // (Grid.width * 12)
+    grid_pixel_size = screen_size[0] // (Grid.width * 12) #Compute DISPLAY size of each pixel (this is different to export picture)
 
-    data = {"name": "bear_trap", "dimensions": (1, 2), "type":"decorator", "grid_x":3, "grid_y":11} #TODO: make it automatic factory in another file
+    data = {"name": "bear_trap", "dimensions": (1, 1), "type":"decorator", "grid_x":3, "grid_y":11} #TODO: make it automatic factory in another file
     bear_trap = Decorator(**data)
-    # bear_trap.image.show()
+    data = {"name": "stone_rubble_1", "dimensions": (3, 2), "type": "decorator", "grid_x": 27,
+            "grid_y": 11}
+    stone_rubble_1 = Decorator(**data)
+
+    def _is_valid_decorator_placement(start_pos, decorator, tile):
+        """Check if the decorator can be placed starting at start_pos."""
+        start_x, start_y = start_pos
+
+        # Collect all positions the decorator will occupy
+        required_positions = [
+            (start_x + dx, start_y + dy)
+            for dx in range(decorator.width)  # Width of the decorator
+            for dy in range(decorator.height)  # Height of the decorator
+        ]
+
+        # Check if all required positions are available
+        for pos in required_positions:
+            if pos not in tile.valid_decorator_locations:
+                return False  # One or more required positions are invalid
+
+        return True  # All positions are valid
+
     for y in range(Grid.height):
         for x in range(Grid.width):
             tile = Grid.get(x, y)
 
-            if not tile.valid_decorator_locations:
+            if not tile.valid_decorator_locations: #Tile has no locations to place it on
                 continue
 
             random_pos = random.choice(tile.valid_decorator_locations)
-            tile.valid_decorator_locations.remove(random_pos)
-            bear_trap.x, bear_trap.y = random_pos[0], random_pos[1]
-            tile.decorators.append(bear_trap)
+            if not _is_valid_decorator_placement(random_pos, stone_rubble_1, tile):
+                continue
 
-            pygame_decorator = Pil_image_to_pygame(bear_trap.image, is_tile=False)  # Draw tile to screen
+            # Remove all positions that the decorator will occupy from valid locations
+            for dx in range(bear_trap.width):
+                for dy in range(bear_trap.height):
+                    occupied_pos = (random_pos[0] + dx, random_pos[1] + dy)
+                    tile.valid_decorator_locations.remove(occupied_pos)
 
-            global_decorator_x = tile_dim * x + bear_trap.x * grid_pixel_size
-            global_decorator_y = screen_size[1] - (tile_dim * y + (bear_trap.y * grid_pixel_size + grid_pixel_size))
 
-            screen.blit(pygame_decorator, (global_decorator_x, global_decorator_y))#global_decorator_y))
-            # tile.DrawRedSquare(bear_trap.x, bear_trap.y)
-            # pygame.draw.rect(screen, "red", (global_decorator_x, global_decorator_y, 10, 10))
-            print(f"Tile: ({x}, {y}) - pos: ({bear_trap.x}, {bear_trap.y}) - pixel: ({global_decorator_x},{global_decorator_y})")
+            stone_rubble_1.x, stone_rubble_1.y = random_pos[0], random_pos[1]
+            tile.decorators.append(stone_rubble_1)
+
+            pygame_decorator = Pil_image_to_pygame(stone_rubble_1.image, is_tile=False)  # Draw tile to screen
+
+            global_decorator_x = tile_dim * x + stone_rubble_1.x * grid_pixel_size
+            global_decorator_y = screen_size[1] - (tile_dim * y + (stone_rubble_1.y * grid_pixel_size + grid_pixel_size))
+
+            screen.blit(pygame_decorator, (global_decorator_x, global_decorator_y))
+
+            if Debug:
+                # pygame.draw.rect(screen, "red", (global_decorator_x, global_decorator_y, 10, 10))
+                pass
+            # print(f"Tile: ({x}, {y}) - pos: ({bear_trap.x}, {bear_trap.y}) - pixel: ({global_decorator_x},{global_decorator_y})")
             pygame.display.flip()
             # time.sleep(0.1)
 
