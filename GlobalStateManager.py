@@ -102,3 +102,6 @@ class GlobalsManager:
     Roll_Treeview = None
     Tree_item_id = 0
     Treeview_target_id_list = []
+
+GSM = GlobalsManager()
+

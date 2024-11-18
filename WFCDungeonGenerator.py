@@ -519,6 +519,7 @@ def ChooseAndPlaceTile(x:int, y:int) -> list:
                     forced_connections.append("lbot")
                 else:
                     blocked_connections.append("lbot")
+
     else: # World edge, no connection allowed
         blocked_connections.append("ltop")
         blocked_connections.append("lmid")
