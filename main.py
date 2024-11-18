@@ -11,7 +11,7 @@ from tabs.Spellcasters import SpellCasters
 from tabs.MainSettings import Settings
 from tabs.ROLL import ROLL
 from tabs.RandomGenerator import RandomGenerator
-from utilities import RelativePositionTracker, Row_track, RollDice, ReturnMaxPossibleDie
+from utilities import Row_track, RollDice, ReturnMaxPossibleDie
 
 #label - just text to display
 #entry - type in something
@@ -21,28 +21,19 @@ from utilities import RelativePositionTracker, Row_track, RollDice, ReturnMaxPos
 
 Row = Row_track()
 
-RelPosSettings = RelativePositionTracker()
-RelPosMonsters = RelativePositionTracker()
-RelPosTargets = RelativePositionTracker()
-RelPosMassroll = RelativePositionTracker()
-RelPosRandGen = RelativePositionTracker()
-RelPosROLL = RelativePositionTracker()
-RelPosSpellCast = RelativePositionTracker()
-
-CreateMonster(RelPosMonsters)
-Settings(RelPosSettings)
-CreatePlayers(RelPosTargets)
-MassRoll(RelPosMassroll, RelPosMonsters)
-SpellCasters(RelPosSpellCast)
-RandomGenerator(RelPosRandGen)
-# ROLL(RelPosROLL)
+CreateMonster(GSM.RelPosMonsters)
+Settings(GSM.RelPosSettings)
+CreatePlayers(GSM.RelPosTargets)
+MassRoll(GSM.RelPosMassroll, GSM.RelPosMonsters)
+SpellCasters(GSM.RelPosSpellCast)
+RandomGenerator(GSM.RelPosRandGen)
 
 #ROLL button
 random_generator_text_label = tk.Label(GSM.ROLL_frame, text="Roll attacks", font=GSM.Title_font)
-random_generator_text_label.place(x=RelPosROLL.reset("x"), y=RelPosROLL.reset("y"))
-ROLL_button = tk.Button(GSM.ROLL_frame, text="ROLL", state="normal", command=lambda: ROLL(RelPosROLL), font=GSM.Title_font,
+random_generator_text_label.place(x=GSM.RelPosROLL.reset("x"), y=GSM.RelPosROLL.reset("y"))
+ROLL_button = tk.Button(GSM.ROLL_frame, text="ROLL", state="normal", command=lambda: ROLL(GSM.RelPosROLL), font=GSM.Title_font,
                                            padx=9, background="red")
-ROLL_button.place(x=RelPosROLL.increase("x", 10), y=RelPosROLL.increase("y", RelPosROLL.constant_y*1.5))
+ROLL_button.place(x=GSM.RelPosROLL.increase("x", 10), y=GSM.RelPosROLL.increase("y", GSM.RelPosROLL.constant_y*1.5))
 
 
 #TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc

@@ -2,6 +2,7 @@ from typing import List, Union, Tuple
 import tkinter as tk
 from tkinter import font as tkfont  # Import tkfont for font definitions
 from tkinter import ttk
+from utilities import RelativePositionTracker
 
 #TODO: Create a way to save and load presets which automatically loads in monsters, targets etc5
 class GlobalsManager:
@@ -102,6 +103,15 @@ class GlobalsManager:
     Roll_Treeview = None
     Tree_item_id = 0
     Treeview_target_id_list = []
+
+    #Widget position trackers
+    RelPosSettings = RelativePositionTracker()
+    RelPosSpellCast = RelativePositionTracker()
+    RelPosMonsters = RelativePositionTracker()
+    RelPosTargets = RelativePositionTracker()
+    RelPosMassroll = RelativePositionTracker()
+    RelPosRandGen = RelativePositionTracker()
+    RelPosROLL = RelativePositionTracker()
 
 GSM = GlobalsManager()
 

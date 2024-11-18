@@ -1,5 +1,8 @@
-from GlobalStateManager import GSM
 import tkinter as tk
+import json
+
+from GlobalStateManager import GSM
+from tabs.Spellcasters import CreateSpellCasters
 
 def Settings(RelPosSettings) -> None:
 
@@ -36,3 +39,22 @@ def Settings(RelPosSettings) -> None:
     checkbox_label5 = tk.Checkbutton(GSM.Settings_frame, text='2 Advantages combine into 1 Super Advantage', variable=GSM.Adv_combine_bool,
                                      onvalue=True, offvalue=False)
     checkbox_label5.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
+
+    #Save and load presets
+    save_button = tk.Button(GSM.Settings_frame, text="Save preset", state="normal", command=Save, background="green")
+    save_button.place(x=RelPosSettings.increase("x", 10), y=RelPosSettings.increase("y", RelPosSettings.constant_y * 1.5))
+
+    load_button = tk.Button(GSM.Settings_frame, text="Load preset", state="normal", command=Load, background="green")
+    load_button.place(x=RelPosSettings.increase("x", 80), y=RelPosSettings.same("y"))
+
+def Save() -> None:
+    with open("preset1.json", "w") as file:
+        json.dump({"N_casters_int": GSM.N_casters_int.get()}, file)
+
+def Load() -> None:
+
+    with open("preset1.json", "r") as file:
+        loaded_data = json.load(file)
+        GSM.N_casters_int.set(loaded_data["N_casters_int"])
+        CreateSpellCasters(GSM.N_casters_int.get(), GSM.RelPosSpellCast)
+        print(loaded_data)
