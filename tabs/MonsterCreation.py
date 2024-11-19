@@ -240,6 +240,21 @@ def CreateMonster(RelPosMonsters) -> None:
             GSM.Monsters_list.append(monster1)
             CreateMonsterUI(monster1, i)
 
+    def OpenMonsterWindow():
+        # Create a new Toplevel window
+        new_window = tk.Toplevel(GSM.Monsters_frame)
+        new_window.title("Monster Details")
+        new_window.geometry("400x300")  # Set the size of the new window
+
+        # Add content to the new window
+        tk.Label(new_window, text="Monster Details").pack(pady=10)
+        tk.Label(new_window, text="Name: Dragon").pack()
+        tk.Label(new_window, text="HP: 200").pack()
+        tk.Label(new_window, text="Attack: 50").pack()
+
+        # Add a button to close the new window
+        tk.Button(new_window, text="Close", command=new_window.destroy).pack(pady=20)
+
     'Setup'
     # Monster settings text
     monster_settings_text_label = tk.Label(GSM.Monsters_frame, text="Monster settings", font=GSM.Title_font)
@@ -250,3 +265,7 @@ def CreateMonster(RelPosMonsters) -> None:
     n_monsters_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
     n_monsters_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.N_monsters_int, *[1, 2, 3], command=CreateMonsterObject)
     n_monsters_dropdown.place(x=RelPosMonsters.increase("x", 120), y=RelPosMonsters.increase("y", -4))
+
+    # Button to open the new window
+    create_monster_button = tk.Button(GSM.Monsters_frame, text="Create monster", command=OpenMonsterWindow)
+    create_monster_button.place(x=RelPosMonsters.increase("x", 120), y=RelPosMonsters.increase("y", -4))

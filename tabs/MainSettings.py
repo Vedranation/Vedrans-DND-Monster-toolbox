@@ -48,13 +48,31 @@ def Settings(RelPosSettings) -> None:
     load_button.place(x=RelPosSettings.increase("x", 80), y=RelPosSettings.same("y"))
 
 def Save() -> None:
-    with open("preset1.json", "w") as file:
-        json.dump({"N_casters_int": GSM.N_casters_int.get()}, file)
+    with open("Presets\preset1.json", "w") as file:
+
+        json.dump({# Main settings
+                    "Meets_it_beats_it_bool": GSM.Meets_it_beats_it_bool.get(),
+                   "Crits_double_dmg_bool": GSM.Crits_double_dmg_bool.get(),
+                   "Crits_extra_die_is_max_bool": GSM.Crits_extra_die_is_max_bool.get(),
+                   "Nat1_always_miss_bool": GSM.Nat1_always_miss_bool.get(),
+                   "Adv_combine_bool": GSM.Adv_combine_bool.get(),
+
+                    #Spellcasters
+                    "N_casters_int": GSM.N_casters_int.get()}, file)
 
 def Load() -> None:
 
-    with open("preset1.json", "r") as file:
+    with open("Presets\preset1.json", "r") as file:
         loaded_data = json.load(file)
+
+        #Main settings
+        GSM.Meets_it_beats_it_bool.set(loaded_data["Meets_it_beats_it_bool"])
+        GSM.Crits_double_dmg_bool.set(loaded_data["Crits_double_dmg_bool"])
+        GSM.Crits_extra_die_is_max_bool.set(loaded_data["Crits_extra_die_is_max_bool"])
+        GSM.Nat1_always_miss_bool.set(loaded_data["Nat1_always_miss_bool"])
+        GSM.Adv_combine_bool.set(loaded_data["Adv_combine_bool"])
+
+        #Spellcasters
         GSM.N_casters_int.set(loaded_data["N_casters_int"])
         CreateSpellCasters(GSM.N_casters_int.get(), GSM.RelPosSpellCast)
         print(loaded_data)
