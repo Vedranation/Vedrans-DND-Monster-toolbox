@@ -239,33 +239,16 @@ def ROLL(RelPosROLL) -> None:
         return dmg1, dmg2
 
     for TargetObj in GSM.Target_obj_list:
-        if len(GSM.Monsters_list) == 1: #Brute force way to create proper size nested lists but it works for only 3 monsters
-            hits = [[]]
-            dmgs1 = [[]]
-            dmgs2 = [[]]
-            dmgs1_type = [[]]
-            dmgs2_type = [[]]
-            monster_names_list = [[]]
-            n_monsters_list = [[]]
-            saving_throw_package = [[]]
-        elif len(GSM.Monsters_list) == 2:
-            hits = [[], []]
-            dmgs1 = [[], []]
-            dmgs2 = [[], []]
-            dmgs1_type = [[], []]
-            dmgs2_type = [[], []]
-            monster_names_list = [[], []]
-            n_monsters_list = [[], []]
-            saving_throw_package = [[], []]
-        else:
-            hits = [[], [], []]
-            dmgs1 = [[], [], []]
-            dmgs2 = [[], [], []]
-            dmgs1_type = [[], [], []]
-            dmgs2_type = [[], [], []]
-            monster_names_list = [[], [], []]
-            n_monsters_list = [[], [], []]
-            saving_throw_package = [[], [], []]
+        n_monsters = len(GSM.Monsters_list)  # Number of monsters dynamically
+        #Created nested lists with number of lists inside the big one depending on how many monsters, [[]] for 1, [[], []] for 2 etc.
+        hits = [[] for _ in range(n_monsters)]
+        dmgs1 = [[] for _ in range(n_monsters)]
+        dmgs2 = [[] for _ in range(n_monsters)]
+        dmgs1_type = [[] for _ in range(n_monsters)]
+        dmgs2_type = [[] for _ in range(n_monsters)]
+        monster_names_list = [[] for _ in range(n_monsters)]
+        n_monsters_list = [[] for _ in range(n_monsters)]
+        saving_throw_package = [[] for _ in range(n_monsters)]
 
         ac = int(TargetObj.ac_int.get())
         print(f"-----{TargetObj.name_str.get()}-----")
