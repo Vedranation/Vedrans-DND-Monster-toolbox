@@ -7,9 +7,8 @@ class PlayerStats():
         #TODO: Make a setting to pick between PP and rolling percep for mass percep check
         self.name_str: str = tk.StringVar()
         self.ac_int = tk.IntVar(value=13)
-        self.n_monsters_1_int = tk.IntVar(value=1)
-        self.n_monsters_2_int = tk.IntVar(value=0)
-        self.n_monsters_3_int = tk.IntVar(value=0)
+        self.n_monsters_list_ints = [tk.IntVar() for _ in GSM.Monsters_list] #Creates a list holding how many monsters attack this target
+
         self.monster_roll_type_against_str = tk.StringVar(value="Normal") #If dodging or is flanked
 
         self.adamantine: int = False #turn crits into normal attacks
@@ -43,6 +42,8 @@ def CreatePlayers(RelPosTargets) -> None:
                 pass
             else:
                 TargetObj.name_str.set(f"Target {i + 1}")
+
+            TargetObj.n_monsters_list_ints = [tk.IntVar() for _ in GSM.Monsters_list] #Regenerate proper length list holding all monsters
             RelPosTargets.set("x", current_create_targets_button_x)
             RelPosTargets.increase("y", 25)
             #Display name
@@ -73,19 +74,26 @@ def CreatePlayers(RelPosTargets) -> None:
                 column_increase = 45
                 target_n_monsters_text_label = tk.Label(GSM.Targets_frame, text=f"{monster.name_str.get()}:")
 
+                # Create a Spinbox for each monster, binding it to the corresponding IntVar
+                target_n_monster_spinbox = ttk.Spinbox(
+                    GSM.Targets_frame,
+                    width=3,
+                    textvariable=TargetObj.n_monsters_list_ints[i],
+                    from_=0,
+                    to=50
+                )
 
+                # Place the label and Spinbox dynamically
                 if i == 0:
-                    target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, width=3, textvariable=TargetObj.n_monsters_1_int, from_=0, to=50)
                     target_n_monsters_text_label.place(x=RelPosTargets.increase("x", 70), y=RelPosTargets.same("y"))
-                elif i == 1:
-                    target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, from_=0, to=50, textvariable=TargetObj.n_monsters_2_int, width=3)
-                    target_n_monsters_text_label.place(x=RelPosTargets.increase("x", column_increase), y=RelPosTargets.same("y"))
+                    target_n_monster_spinbox.place(x=RelPosTargets.increase("x", 70), y=RelPosTargets.same("y") + 20)
                 else:
-                    target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, from_=0, to=50, textvariable=TargetObj.n_monsters_3_int, width=3)
-                    target_n_monsters_text_label.place(x=RelPosTargets.increase("x", column_increase), y=RelPosTargets.same("y"))
+                    target_n_monsters_text_label.place(x=RelPosTargets.increase("x", column_increase),
+                                                       y=RelPosTargets.same("y"))
+                    target_n_monster_spinbox.place(x=RelPosTargets.increase("x", column_increase),
+                                                   y=RelPosTargets.same("y") + 20)
 
-                target_n_monster_spinbox.place(x=RelPosTargets.increase("x", 90), y=RelPosTargets.same("y"))
-                #TODO: Add the target individual rolltype
+                target_n_monster_spinbox.place(x=RelPosTargets.increase("x", 60), y=RelPosTargets.same("y"))
                 GSM.Target_widgets_list.append(target_n_monsters_text_label)
                 GSM.Target_widgets_list.append(target_n_monster_spinbox)# packs all Target Settings widgets (input and display) into one list so it can be cleared from window
 

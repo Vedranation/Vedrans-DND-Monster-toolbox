@@ -281,34 +281,36 @@ def ROLL(RelPosROLL) -> None:
 
             final_rolltype =  CombineRollTypes(monster_roll_type, TargetObj.monster_roll_type_against_str.get())
 
-            if i == 0: #Grabs the corrent number for each monster amount
-                n_monsters = TargetObj.n_monsters_1_int.get()
-            elif i == 1:
-                n_monsters = TargetObj.n_monsters_2_int.get()
-            elif i == 2:
-                n_monsters = TargetObj.n_monsters_3_int.get()
+            #Grabs the correct number for each monster amount
+            n_monsters = TargetObj.n_monsters_list_ints[i].get()
 
             for j in range(n_monsters):
                 for attack in range(monster_n_attacks):
 
-                    roll = RollToHit(final_rolltype)
+                    roll = RollToHit(final_rolltype) #Roll a d20
 
                     if roll == 1 and monster_halfling_luck: #reroll halfling luck (1 to hit)
                         roll = RollToHit(final_rolltype)
 
-                    if roll >= monster_crit_number: #and GSM.Crits_always_hit_bool.get():
+                    if roll >= monster_crit_number: #Rolled a crit? and GSM.Crits_always_hit_bool.get():
                         dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                             monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=True)
                         hits[i].append("crit" + str(roll))
                         dmgs1[i].append(dmg1)
-                        dmgs2[i].append(dmg2)
+                        dmgs2[i].append(dmg2) #Rolled a crit
 
                     elif roll == 1 and GSM.Nat1_always_miss_bool.get():
                         hits[i].append("nat1")
 
+                    final_tohit_roll = roll + monster_to_hit_mod
+                    if monster_object.bless:
+                        final_tohit_roll += RollDice("d4")
+                    if monster_object.bane:
+                        final_tohit_roll -= RollDice("d4")
+
                     elif (GSM.Meets_it_beats_it_bool.get()):
-                        if roll + monster_to_hit_mod >= ac:
+                        if final_tohit_roll >= ac:
                             dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                             monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=False)
@@ -316,7 +318,7 @@ def ROLL(RelPosROLL) -> None:
                             dmgs1[i].append(dmg1)
                             dmgs2[i].append(dmg2)
                     else:
-                        if roll + monster_to_hit_mod > ac:
+                        if final_tohit_roll > ac:
                             dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                             monster_GW_fighting_style, monster_brut_crit, monster_savage_attacker, crit=False)
