@@ -33,7 +33,7 @@ class MonsterStats():
         self.bless: bool = tk.BooleanVar(value=False)
 
         'Monsters Frame display widgets in row like dmg types'
-        self.my_button = None #Stores his own button
+        self._my_button = None #Stores his own button
         self._monster_dmg1_extra_text_label2 = None
         self._monster_dmg2_extra_text_label2 = None
 
@@ -216,7 +216,7 @@ def CreateMonster(RelPosMonsters) -> None:
                                     y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
 
         # Add a button to close the new window
-        close_button = tk.Button(new_window, text="Save and exit", command=lambda: (new_window.destroy(), monster_obj.my_button.config(text=monster_obj.name_str.get())),
+        close_button = tk.Button(new_window, text="Save and exit", command=lambda: (new_window.destroy(), monster_obj._my_button.config(text=monster_obj.name_str.get())),
                                  background="red")
         close_button.place(x=RelPosMonsters.set("x", 310), y=RelPosMonsters.reset("y"))
 
@@ -226,11 +226,11 @@ def CreateMonster(RelPosMonsters) -> None:
         for i in range(GSM.N_monsters_int.get()):
             monster_obj = MonsterStats(i)
             GSM.Monsters_list.append(monster_obj)
-            # CreateMonsterUI(monster1, i)
+
             # Button to open the new window
-            monster_obj.my_button = tk.Button(GSM.Monsters_frame, text=monster_obj.name_str.get(), command=lambda m=monster_obj: OpenMonsterWindow(m))
-            monster_obj.my_button.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 40))
-            GSM.Monsters_widgets_list.append(monster_obj.my_button)
+            monster_obj._my_button = tk.Button(GSM.Monsters_frame, text=monster_obj.name_str.get(), command=lambda m=monster_obj: OpenMonsterWindow(m))
+            monster_obj._my_button.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 40))
+            GSM.Monsters_widgets_list.append(monster_obj._my_button)
 
     def OpenMonsterWindow(monster_obj) -> None:
         # Create a new Toplevel window

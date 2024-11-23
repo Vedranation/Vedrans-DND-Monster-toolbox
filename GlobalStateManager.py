@@ -20,9 +20,9 @@ class GlobalsManager:
     Monsters_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Monsters_frame, text="Monster creation")
 
-    # Targets tab
+    # Player (Targets) tab
     Targets_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
-    Notebook.add(Targets_frame, text="Target creation")
+    Notebook.add(Targets_frame, text="Player creation")
 
     # ROLL tab
     ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )

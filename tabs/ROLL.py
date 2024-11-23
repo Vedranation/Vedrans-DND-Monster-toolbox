@@ -309,7 +309,7 @@ def ROLL(RelPosROLL) -> None:
                     if monster_object.bane:
                         final_tohit_roll -= RollDice("d4")
 
-                    elif (GSM.Meets_it_beats_it_bool.get()):
+                    if (GSM.Meets_it_beats_it_bool.get()):
                         if final_tohit_roll >= ac:
                             dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                             monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
