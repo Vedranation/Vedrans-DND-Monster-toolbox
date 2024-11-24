@@ -11,7 +11,11 @@ class PlayerStats():
 
         self.monster_roll_type_against_str = tk.StringVar(value="Normal") #If dodging or is flanked
 
-        self.adamantine: int = False #turn crits into normal attacks
+        self.adamantine: BoolVal = tk.BooleanVar(value=False) #turn crits into normal attacks
+        self.perception_mod: IntVar = tk.IntVar(value=0)
+        self.investigation_mod: IntVar = tk.IntVar(value=0)
+        self.arcana_mod: IntVar = tk.IntVar(value=0)
+        self.insight_mod: IntVar = tk.IntVar(value=0)
 
         self._my_button = None  # Stores his own button reference
 
@@ -102,7 +106,6 @@ def CreatePlayers(RelPosTargets) -> None:
 
 
     def CreatePlayerUI(TargetObj, new_window):
-        #TODO: Make it that pressing ENTER automatically clicks SAVE & EXIT button
 
         # Display name
         monster_name_label = tk.Label(new_window, text="Players name:")
@@ -123,12 +126,19 @@ def CreatePlayers(RelPosTargets) -> None:
                                                   *GSM.Roll_types)
         target_roll_type_dropdown.place(x=RelPosTargets.increase("x", 60),
                                         y=RelPosTargets.increase("y", -4))
+        # Adamantine
+        target_adamantine_checkbox = tk.Checkbutton(new_window, text='Adamantine (Turn crits into normal hits)',
+                                                variable=TargetObj.adamantine, onvalue=True, offvalue=False)
+        target_adamantine_checkbox.place(x=RelPosTargets.reset("x"),
+                                     y=RelPosTargets.increase("y", RelPosTargets.constant_y + 5))
 
         # Add a button to close the new window
         close_button = tk.Button(new_window, text="Save and exit", command=lambda: (
         new_window.destroy(), TargetObj._my_button.config(text=TargetObj.name_str.get())),
                                  background="red")
         close_button.place(x=RelPosTargets.set("x", 310), y=RelPosTargets.reset("y"))
+        # Bind the Enter key to the close_button's command
+        new_window.bind("<Return>", lambda event: close_button.invoke())
 
     def OpenPlayerWindow(player_obj) -> None:
         # Create a new Toplevel window

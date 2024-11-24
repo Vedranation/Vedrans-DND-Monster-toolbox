@@ -219,6 +219,8 @@ def CreateMonster(RelPosMonsters) -> None:
         close_button = tk.Button(new_window, text="Save and exit", command=lambda: (new_window.destroy(), monster_obj._my_button.config(text=monster_obj.name_str.get())),
                                  background="red")
         close_button.place(x=RelPosMonsters.set("x", 310), y=RelPosMonsters.reset("y"))
+        # Bind the Enter key to the close_button's command
+        new_window.bind("<Return>", lambda event: close_button.invoke())
 
     def CreateMonsterObject(n_monsters) -> None:
         #I have no idea why it automatically passes n_monsters in but no harm
