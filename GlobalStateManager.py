@@ -10,11 +10,11 @@ class GlobalsManager:
     Root = tk.Tk()
     Root.title("Vedran's D&D monster toolbox")
     Root.iconbitmap("Gearhands-corrupted-soldier.ico")
-    Root.geometry("850x620")
+    Root.geometry("850x645")
     Notebook = ttk.Notebook(Root)
     Notebook.place(x=10, y=10)
     _frame_width = 825
-    _frame_height = 575
+    _frame_height = 600
 
     # Monsters tab
     Monsters_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
@@ -23,6 +23,8 @@ class GlobalsManager:
     # Player (Targets) tab
     Targets_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Targets_frame, text="Player creation")
+    Targets_canvas = tk.Canvas(Targets_frame, width=_frame_width, height=_frame_height)
+    Targets_canvas.pack(fill="both", expand=True)
 
     # ROLL tab
     ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )
