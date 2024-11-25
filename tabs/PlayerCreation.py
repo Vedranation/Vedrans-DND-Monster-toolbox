@@ -12,10 +12,18 @@ class PlayerStats():
         self.monster_roll_type_against_str = tk.StringVar(value="Normal") #If dodging or is flanked
 
         self.adamantine: BoolVal = tk.BooleanVar(value=False) #turn crits into normal attacks
-        self.perception_mod: IntVar = tk.IntVar(value=0)
-        self.investigation_mod: IntVar = tk.IntVar(value=0)
-        self.arcana_mod: IntVar = tk.IntVar(value=0)
-        self.insight_mod: IntVar = tk.IntVar(value=0)
+
+        self.perception_roll_type_str = tk.StringVar(value="Normal")
+        self.perception_mod_int: IntVar = tk.IntVar(value=0)
+        self.investigation_mod_int: IntVar = tk.IntVar(value=0)
+        self.investigation_roll_type_str = tk.StringVar(value="Normal")
+        self.arcana_mod_int: IntVar = tk.IntVar(value=0)
+        self.arcana_roll_type_str = tk.StringVar(value="Normal")
+        self.insight_mod_int: IntVar = tk.IntVar(value=0)
+        self.insight_roll_type_str = tk.StringVar(value="Normal")
+        self.stealth_mod_int: IntVar = tk.IntVar(value=0)
+        self.stealth_roll_type_str = tk.StringVar(value="Normal")
+        self.passiveperception_int: IntVar = tk.IntVar(value=10)
 
         self._my_button = None  # Stores his own button reference
 
@@ -107,31 +115,92 @@ def CreatePlayers(RelPosTargets) -> None:
 
     def CreatePlayerUI(TargetObj, new_window):
 
+        target_title_label = tk.Label(new_window, text="Combat details:", font=GSM.Title_font)
+        target_title_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.reset("y"))
         # Display name
-        monster_name_label = tk.Label(new_window, text="Players name:")
-        monster_name_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.reset("y"))
-        monster_name_entry = tk.Entry(new_window, borderwidth=2, textvariable=TargetObj.name_str, width=18)
-        monster_name_entry.place(x=RelPosTargets.increase("x", 93), y=RelPosTargets.increase("y", 2))
+        target_name_label = tk.Label(new_window, text="Players name:", font=GSM.Target_font)
+        target_name_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+        target_name_entry = tk.Entry(new_window, borderwidth=2, textvariable=TargetObj.name_str, width=18)
+        target_name_entry.place(x=RelPosTargets.increase("x", 93), y=RelPosTargets.increase("y", 2))
         # AC
-        target_ac_text_label = tk.Label(new_window, text="AC:")
+        target_ac_text_label = tk.Label(new_window, text="AC:", font=GSM.Target_font)
         target_ac_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
         target_ac_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.ac_int, from_=0, to=30)
         target_ac_spinbox.place(x=RelPosTargets.increase("x", 28), y=RelPosTargets.same("y"))
 
         # Roll type (normal, adv, disadv...)
-        target_roll_type_text_label = tk.Label(new_window, text="Imposes: ")
+        target_roll_type_text_label = tk.Label(new_window, text="Imposes:", font=GSM.Target_font)
         target_roll_type_text_label.place(x=RelPosTargets.reset("x"),
                                           y=RelPosTargets.increase("y", 30))
         target_roll_type_dropdown = tk.OptionMenu(new_window, TargetObj.monster_roll_type_against_str,
                                                   *GSM.Roll_types)
-        target_roll_type_dropdown.place(x=RelPosTargets.increase("x", 60),
-                                        y=RelPosTargets.increase("y", -4))
+        target_roll_type_dropdown.place(x=RelPosTargets.increase("x", 60), y=RelPosTargets.increase("y", -4))
+
         # Adamantine
         target_adamantine_checkbox = tk.Checkbutton(new_window, text='Adamantine (Turn crits into normal hits)',
                                                 variable=TargetObj.adamantine, onvalue=True, offvalue=False)
         target_adamantine_checkbox.place(x=RelPosTargets.reset("x"),
                                      y=RelPosTargets.increase("y", RelPosTargets.constant_y + 5))
 
+        'Skills'
+        def Skills() -> None:
+            #Just grouped skills so they can be compressed
+            nonlocal new_window, RelPosTargets
+            target_title_label = tk.Label(new_window, text="Skill modifiers:", font=GSM.Title_font)
+            target_title_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 40))
+            spinbox_x_distance = 80
+            #Perception
+            target_perception_text_label = tk.Label(new_window, text="Perception:")
+            target_perception_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+            target_perception_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.perception_mod_int, from_=-10, to=20)
+            target_perception_spinbox.place(x=RelPosTargets.increase("x", spinbox_x_distance), y=RelPosTargets.increase("y", 2))
+            target_perception_roll_type_dropdown = tk.OptionMenu(new_window, TargetObj.perception_roll_type_str,
+                                                      *GSM.Roll_types)
+            target_perception_roll_type_dropdown.place(x=RelPosTargets.increase("x", 40),
+                                            y=RelPosTargets.increase("y", -4))
+            # Investigation
+            target_investigation_text_label = tk.Label(new_window, text="Investigation:")
+            target_investigation_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+            target_investigation_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.investigation_mod_int,
+                                                       from_=-10, to=20)
+            target_investigation_spinbox.place(x=RelPosTargets.increase("x", spinbox_x_distance), y=RelPosTargets.increase("y", 2))
+            target_investigation_roll_type_dropdown = tk.OptionMenu(new_window, TargetObj.investigation_roll_type_str,
+                                                                    *GSM.Roll_types)
+            target_investigation_roll_type_dropdown.place(x=RelPosTargets.increase("x", 40),
+                                                          y=RelPosTargets.increase("y", -4))
+            # Arcana
+            target_arcana_text_label = tk.Label(new_window, text="Arcana:")
+            target_arcana_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+            target_arcana_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.arcana_mod_int, from_=-10,
+                                                to=20)
+            target_arcana_spinbox.place(x=RelPosTargets.increase("x", spinbox_x_distance), y=RelPosTargets.increase("y", 2))
+            target_arcana_roll_type_dropdown = tk.OptionMenu(new_window, TargetObj.arcana_roll_type_str, *GSM.Roll_types)
+            target_arcana_roll_type_dropdown.place(x=RelPosTargets.increase("x", 40), y=RelPosTargets.increase("y", -4))
+            # Insight
+            target_insight_text_label = tk.Label(new_window, text="Insight:")
+            target_insight_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+            target_insight_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.insight_mod_int, from_=-10,
+                                                 to=20)
+            target_insight_spinbox.place(x=RelPosTargets.increase("x", spinbox_x_distance), y=RelPosTargets.increase("y", 2))
+            target_insight_roll_type_dropdown = tk.OptionMenu(new_window, TargetObj.insight_roll_type_str, *GSM.Roll_types)
+            target_insight_roll_type_dropdown.place(x=RelPosTargets.increase("x", 40), y=RelPosTargets.increase("y", -4))
+            # Stealth
+            target_stealth_text_label = tk.Label(new_window, text="Stealth:")
+            target_stealth_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+            target_stealth_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.stealth_mod_int, from_=-10,
+                                                 to=20)
+            target_stealth_spinbox.place(x=RelPosTargets.increase("x", spinbox_x_distance), y=RelPosTargets.increase("y", 2))
+            target_stealth_roll_type_dropdown = tk.OptionMenu(new_window, TargetObj.stealth_roll_type_str, *GSM.Roll_types)
+            target_stealth_roll_type_dropdown.place(x=RelPosTargets.increase("x", 40), y=RelPosTargets.increase("y", -4))
+            # Passive perception
+            target_passiveperception_text_label = tk.Label(new_window, text="Passive perception:")
+            target_passiveperception_text_label.place(x=RelPosTargets.reset("x"), y=RelPosTargets.increase("y", 30))
+            target_passiveperception_spinbox = ttk.Spinbox(new_window, width=3, textvariable=TargetObj.passiveperception_int,
+                                                           from_=0, to=25)
+            target_passiveperception_spinbox.place(x=RelPosTargets.increase("x", spinbox_x_distance*1.5),
+                                         y=RelPosTargets.increase("y", 2))
+
+        Skills()
         # Add a button to close the new window
         close_button = tk.Button(new_window, text="Save and exit", command=lambda: (
         new_window.destroy(), TargetObj._my_button.config(text=TargetObj.name_str.get())),

@@ -40,6 +40,8 @@ def Settings(RelPosSettings) -> None:
                                      onvalue=True, offvalue=False)
     checkbox_label5.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
+    #TODO: Roll stealth detection using passive perception or active perception
+
     #Save and load presets
     save_button = tk.Button(GSM.Settings_frame, text="Save preset", state="normal", command=Save, background="green")
     save_button.place(x=RelPosSettings.increase("x", 10), y=RelPosSettings.increase("y", RelPosSettings.constant_y * 1.5))

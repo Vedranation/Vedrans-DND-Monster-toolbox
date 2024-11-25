@@ -4,7 +4,9 @@ from tkinter import ttk
 from utilities import RollDice, ReturnMaxPossibleDie
 
 def ROLL(RelPosROLL) -> None:
-    #TODO: Add a "Copy results to clipboard" button!
+    # TODO: Add a "Copy results to clipboard" button!
+    # TODO: Rename tab to ATTACK tab
+    # TODO: Add a single monster attack, such as for reaction or whatever
     print("")
     print("NEW ROLL")
     RelPosROLL.reset("x")
