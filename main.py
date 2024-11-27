@@ -22,8 +22,8 @@ from utilities import Row_track, RollDice, ReturnMaxPossibleDie
 Row = Row_track()
 
 Settings(GSM.RelPosSettings)
-CreateMonster(GSM.RelPosMonsters)
 CreatePlayers(GSM.RelPosTargets)
+CreateMonster(GSM.RelPosMonsters) #FIXME: Switching pos of monster and target fucks with n_monsters dropdown at PlayerCreation
 MassRoll(GSM.RelPosMassroll, GSM.RelPosMonsters)
 SpellCasters(GSM.RelPosSpellCast)
 RandomGenerator(GSM.RelPosRandGen)

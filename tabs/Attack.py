@@ -166,6 +166,86 @@ def Attack(RelPosROLL):
                                + ReturnMaxPossibleDie(dmg_1_die_type)
         return dmg1, dmg2
 
+
+    def ComputeSingleAttack(target_obj: object, monster_object: object) -> (list, list, list, str, str, list):
+        hits = []
+        dmgs1 = []
+        dmgs2 = []
+        ac = int(target_obj.ac_int.get())
+
+        monster_n_attacks = monster_object.n_attacks.get()
+        monster_to_hit_mod = monster_object.to_hit_mod.get()
+        monster_roll_type = monster_object.roll_type.get()
+
+        monster_dmg_1_n_die = monster_object.dmg_n_die_1.get()
+        monster_dmg_1_die_type = monster_object.dmg_die_type_1.get()
+        monster_dmg_1_flat = monster_object.dmg_flat_1.get()
+
+        monster_dmg_2_n_die = monster_object.dmg_n_die_2.get()
+        monster_dmg_2_die_type = monster_object.dmg_die_type_2.get()
+        monster_dmg_2_flat = monster_object.dmg_flat_2.get()
+
+        monster_halfling_luck = monster_object.reroll_1_on_hit.get()
+        monster_GW_fighting_style = monster_object.reroll_1_2_dmg.get()
+        monster_brut_crit = monster_object.brutal_critical.get()
+        monster_crit_number = monster_object.crit_number.get()
+        monster_savage_attacker = monster_object.savage_attacker.get()
+
+        final_rolltype = CombineRollTypes(monster_roll_type, target_obj.monster_roll_type_against_str.get())
+
+        'Actual attack logic'
+        for attack in range(monster_n_attacks):
+            roll = RollToHit(final_rolltype)  # Roll a d20
+            if roll == 1 and monster_halfling_luck:  # reroll halfling luck (1 to hit)
+                roll = RollToHit(final_rolltype)
+            final_tohit_roll = roll + monster_to_hit_mod  # Compute the final roll to hit
+            if monster_object.bless.get():
+                final_tohit_roll += RollDice("d4")
+            if monster_object.bane.get():
+                final_tohit_roll -= RollDice("d4")
+
+            if roll >= monster_crit_number:  # Rolled a crit? and GSM.Crits_always_hit_bool.get():
+                adamantine_crit = True if not target_obj.adamantine.get() else False  # Adamantine overrides crit dmg
+                dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
+                                           monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
+                                           monster_GW_fighting_style, monster_brut_crit,
+                                           monster_savage_attacker, crit=adamantine_crit)
+                hits.append("crit" + str(roll))
+                dmgs1.append(dmg1)
+                dmgs2.append(dmg2)  # Rolled a crit
+
+            elif roll == 1 and GSM.Nat1_always_miss_bool.get():
+                hits.append("nat1")
+
+            elif GSM.Meets_it_beats_it_bool.get():
+                if final_tohit_roll >= ac:
+                    dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type,
+                                               monster_dmg_1_flat,
+                                               monster_dmg_2_n_die, monster_dmg_2_die_type,
+                                               monster_dmg_2_flat,
+                                               monster_GW_fighting_style, monster_brut_crit,
+                                               monster_savage_attacker, crit=False)
+                    hits.append(final_tohit_roll)
+                    dmgs1.append(dmg1)
+                    dmgs2.append(dmg2)
+            else:
+                if final_tohit_roll > ac:
+                    dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type,
+                                               monster_dmg_1_flat,
+                                               monster_dmg_2_n_die, monster_dmg_2_die_type,
+                                               monster_dmg_2_flat,
+                                               monster_GW_fighting_style, monster_brut_crit,
+                                               monster_savage_attacker, crit=False)
+                    hits.append(final_tohit_roll)
+                    dmgs1.append(dmg1)
+                    dmgs2.append(dmg2)
+
+        result_package = (hits, dmgs1, dmgs2, monster_object.dmg_type_1.get(), monster_object.dmg_type_2.get(),
+                          [monster_object.on_hit_force_saving_throw_bool.get(), monster_object.on_hit_save_dc.get(),
+                 monster_object.on_hit_save_type.get()])
+        print(result_package)
+        return result_package
+
     def DisplayResults(hits: list, dmgs1: list, dmgs1_type: list, dmgs2: list, dmgs2_type: list, target_name: str,
                        monster_names: list, n_monsters_list: list, saving_throw_package: list) -> None:
         '''Index of lists is a sublist of individual monster related hits/dmgs etc,
@@ -206,7 +286,7 @@ def Attack(RelPosROLL):
                                          text=monster, values=(hits[i], dmgs1[i], sum(dmgs1[i]), dmgs1_type[i],
                                                                dmgs2[i], sum(dmgs2[i]), dmgs2_type[i]), tags=tag)
             GSM.Roll_Treeview.item(GSM.Treeview_target_id_list[-1], open=expand)  # This expands the parent node
-    def ComputeAllAttacks():
+    def ComputeAllAttacks() -> None:
         for TargetObj in GSM.Target_obj_list:
             n_monsters = len(GSM.Monsters_list)  # Number of monsters dynamically
             # Created nested lists with number of lists inside the big one depending on how many monsters, [[]] for 1, [[], []] for 2 etc.
@@ -219,94 +299,25 @@ def Attack(RelPosROLL):
             n_monsters_list = [[] for _ in range(n_monsters)]
             saving_throw_package = [[] for _ in range(n_monsters)]
 
-            ac = int(TargetObj.ac_int.get())
             print(f"-----{TargetObj.name_str.get()}-----")
 
             for i, monster_object in enumerate(GSM.Monsters_list):
-                monster_name = monster_object.name_str.get()
-                monster_n_attacks = monster_object.n_attacks.get()
-                monster_to_hit_mod = monster_object.to_hit_mod.get()
-                monster_roll_type = monster_object.roll_type.get()
-
-                monster_dmg_1_type = monster_object.dmg_type_1.get()
-                monster_dmg_1_n_die = monster_object.dmg_n_die_1.get()
-                monster_dmg_1_die_type = monster_object.dmg_die_type_1.get()
-                monster_dmg_1_flat = monster_object.dmg_flat_1.get()
-
-                monster_dmg_2_type = monster_object.dmg_type_2.get()
-                monster_dmg_2_n_die = monster_object.dmg_n_die_2.get()
-                monster_dmg_2_die_type = monster_object.dmg_die_type_2.get()
-                monster_dmg_2_flat = monster_object.dmg_flat_2.get()
-
-                monster_on_hit_force_saving_throw_bool = monster_object.on_hit_force_saving_throw_bool.get()
-                monster_on_hit_save_dc = monster_object.on_hit_save_dc.get()
-                monster_on_hit_save_type = monster_object.on_hit_save_type.get()
-
-                monster_halfling_luck = monster_object.reroll_1_on_hit.get()
-                monster_GW_fighting_style = monster_object.reroll_1_2_dmg.get()
-                monster_brut_crit = monster_object.brutal_critical.get()
-                monster_crit_number = monster_object.crit_number.get()
-                monster_savage_attacker = monster_object.savage_attacker.get()
-
-                final_rolltype = CombineRollTypes(monster_roll_type, TargetObj.monster_roll_type_against_str.get())
-
                 # Grabs the correct number for each monster amount
                 n_monsters = TargetObj.n_monsters_list_ints[i].get()
-
                 for j in range(n_monsters):
-                    for attack in range(monster_n_attacks):
+                    (_hits, _dmgs1, _dmgs2, _monster_dmg_1_type, _monster_dmg_2_type,
+                     _saving_throw_package) = ComputeSingleAttack(TargetObj, monster_object)
+                    hits[i] = _hits
+                    dmgs1[i] = _dmgs1
+                    dmgs2[i] = _dmgs2
 
-                        roll = RollToHit(final_rolltype)  # Roll a d20
-                        if roll == 1 and monster_halfling_luck:  # reroll halfling luck (1 to hit)
-                            roll = RollToHit(final_rolltype)
-                        final_tohit_roll = roll + monster_to_hit_mod  # Compute the final roll to hit
-                        if monster_object.bless.get():
-                            final_tohit_roll += RollDice("d4")
-                        if monster_object.bane.get():
-                            final_tohit_roll -= RollDice("d4")
 
-                        if roll >= monster_crit_number:  # Rolled a crit? and GSM.Crits_always_hit_bool.get():
-                            adamantine_crit = True if not TargetObj.adamantine.get() else False  # Adamantine overrides crit dmg
-                            dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
-                                                       monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
-                                                       monster_GW_fighting_style, monster_brut_crit,
-                                                       monster_savage_attacker, crit=adamantine_crit)
-                            hits[i].append("crit" + str(roll))
-                            dmgs1[i].append(dmg1)
-                            dmgs2[i].append(dmg2)  # Rolled a crit
-
-                        elif roll == 1 and GSM.Nat1_always_miss_bool.get():
-                            hits[i].append("nat1")
-
-                        elif GSM.Meets_it_beats_it_bool.get():
-                            if final_tohit_roll >= ac:
-                                dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type,
-                                                           monster_dmg_1_flat,
-                                                           monster_dmg_2_n_die, monster_dmg_2_die_type,
-                                                           monster_dmg_2_flat,
-                                                           monster_GW_fighting_style, monster_brut_crit,
-                                                           monster_savage_attacker, crit=False)
-                                hits[i].append(final_tohit_roll)
-                                dmgs1[i].append(dmg1)
-                                dmgs2[i].append(dmg2)
-                        else:
-                            if final_tohit_roll > ac:
-                                dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type,
-                                                           monster_dmg_1_flat,
-                                                           monster_dmg_2_n_die, monster_dmg_2_die_type,
-                                                           monster_dmg_2_flat,
-                                                           monster_GW_fighting_style, monster_brut_crit,
-                                                           monster_savage_attacker, crit=False)
-                                hits[i].append(final_tohit_roll)
-                                dmgs1[i].append(dmg1)
-                                dmgs2[i].append(dmg2)
                 # Pack things to send to display
-                dmgs1_type[i] = monster_dmg_1_type
-                dmgs2_type[i] = monster_dmg_2_type
-                monster_names_list[i] = monster_name
+                dmgs1_type[i] = _monster_dmg_1_type
+                dmgs2_type[i] = _monster_dmg_2_type
+                monster_names_list[i] = monster_object.name_str.get()
                 n_monsters_list[i] = n_monsters
-                saving_throw_package[i] = [monster_on_hit_force_saving_throw_bool, monster_on_hit_save_dc,
-                                           monster_on_hit_save_type]
+                saving_throw_package[i] = _saving_throw_package
 
             DisplayResults(hits, dmgs1, dmgs1_type, dmgs2, dmgs2_type, TargetObj.name_str.get(), monster_names_list,
                            n_monsters_list, saving_throw_package)
@@ -327,7 +338,8 @@ def Attack(RelPosROLL):
         GSM.OneDefender_pointer.set("None")
         defender_dropdown.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", -4))
 
-        RollAttack_button = tk.Button(GSM.Attack_frame, text="Roll attack", state="normal", command=OneAttack,
+        RollAttack_button = tk.Button(GSM.Attack_frame, text="Roll attack", state="normal",
+                                      command=lambda: ComputeSingleAttack(GSM.OneDefender_pointer, GSM.OneAttacker_pointer),
                                      font=GSM.Target_font, padx=3, background="grey")
         RollAttack_button.place(x=GSM.RelPosROLL.increase("x", -90), y=GSM.RelPosROLL.increase("y", 25))
 
@@ -343,9 +355,7 @@ def Attack(RelPosROLL):
         # TODO: Add a single monster attack, such as for reaction or whatever
         print("")
         print("NEW ROLL")
-
         ClearUI()
-
         def CreateTreeview():
 
             GSM.Tree_item_id = 0
@@ -383,10 +393,7 @@ def Attack(RelPosROLL):
             GSM.Roll_Treeview.heading("Total dmg 2", anchor="center", text="Total dmg 2")
             GSM.Roll_Treeview.heading("Dmg Type 2", anchor="center", text="Dmg Type 2")
             GSM.Roll_Treeview.heading("Save", anchor="center", text="Save")
-
         CreateTreeview()
-
-
         ComputeAllAttacks()
 
     #Resolve combat button
