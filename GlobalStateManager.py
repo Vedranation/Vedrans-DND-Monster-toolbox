@@ -107,8 +107,10 @@ class GlobalsManager:
     Roll_Treeview = None
     Tree_item_id = 0
     Treeview_target_id_list = []
-    OneAttacker_pointer: object = tk.Variable()
-    OneDefender_pointer: Union[object, object] = tk.Variable()
+    OneAttacker_str = tk.StringVar()
+    OneDefender_str = tk.StringVar()
+    Override_roll_type_str = tk.StringVar() #Overrides all rolltypes for OneAttackRoll
+    OneAttackLogResults = [] #Stores all OneAttack results
 
     #Widget position trackers
     RelPosSettings = RelativePositionTracker()
