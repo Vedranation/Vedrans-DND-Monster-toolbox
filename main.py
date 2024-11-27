@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import font as tkfont  # Import tkfont for font definitions
 from tkinter import ttk
+
+import tabs.PlayerCreation
 #import pyperclip
 
 from GlobalStateManager import GSM

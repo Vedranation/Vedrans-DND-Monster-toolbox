@@ -87,7 +87,6 @@ def CreatePlayers(RelPosTargets) -> None:
                                                y=RelPosTargets.set("y", 130 + j * row_increase))
                 GSM.Target_widgets_list.append(target_n_monster_spinbox)# packs all Target Settings widgets (input and display) into one list so it can be cleared from window
 
-
     def PreservePreviousTargets(n_targets) -> None:
         current_count = len(GSM.Target_obj_list)
         preserve_data = []

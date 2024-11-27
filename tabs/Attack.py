@@ -178,23 +178,22 @@ def Attack(RelPosROLL):
         dmgs2 = []
 
         if override_rolltype: # Called by a OneAttack function
-            adamantine_crit = False
+            crit_extra_dmg = True
             if target_obj:  # Is not None,
                 ac = int(target_obj.ac_int.get())
                 if isinstance(target_obj, PlayerStats):
-                    adamantine_crit = True if not target_obj.adamantine.get() else False  # Adamantine overrides crit dmg
+                    crit_extra_dmg = not target_obj.adamantine.get()  # Adamantine overrides crit dmg
             else: #Display all results
                 ac = 0
             final_rolltype = override_rolltype
             monster_n_attacks = 1
         else: #Called by ResolveAll, behave normally
             ac = int(target_obj.ac_int.get())
-            final_rolltype = CombineRollTypes(monster_roll_type, target_obj.monster_roll_type_against_str.get())
-            adamantine_crit = True if not target_obj.adamantine.get() else False  # Adamantine overrides crit dmg
+            final_rolltype = CombineRollTypes(monster_object.roll_type.get(), target_obj.monster_roll_type_against_str.get())
+            crit_extra_dmg = not target_obj.adamantine.get()  # Adamantine overrides crit dmg
             monster_n_attacks = monster_object.n_attacks.get()
 
         monster_to_hit_mod = monster_object.to_hit_mod.get()
-        monster_roll_type = monster_object.roll_type.get()
 
         monster_dmg_1_n_die = monster_object.dmg_n_die_1.get()
         monster_dmg_1_die_type = monster_object.dmg_die_type_1.get()
@@ -225,7 +224,7 @@ def Attack(RelPosROLL):
                 dmg1, dmg2 = ComputeDamage(monster_dmg_1_n_die, monster_dmg_1_die_type, monster_dmg_1_flat,
                                            monster_dmg_2_n_die, monster_dmg_2_die_type, monster_dmg_2_flat,
                                            monster_GW_fighting_style, monster_brut_crit,
-                                           monster_savage_attacker, crit=adamantine_crit)
+                                           monster_savage_attacker, crit=crit_extra_dmg)
                 hits.append("crit" + str(roll))
                 dmgs1.append(dmg1)
                 dmgs2.append(dmg2)  # Rolled a crit
@@ -285,26 +284,22 @@ def Attack(RelPosROLL):
             defender_obj = None
         # tuple(To hit, dmg1, dmg2, dmg_type_1, dmg_type_2, [has_save_bool, dc, type])
         result = list(ComputeSingleAttack(defender_obj, monster_obj, override_rolltype))
-        # Fixme: Crits don't deal extra dmg??????
 
         # Filter out the trash from results
         if (result[0] and result[0][0] == "nat1") or result[0] == []: #Critical fail or no hits (brings empty lists)
             result[1] = [0] #Put zeroes into nat1 dmg's
             result[2] = [0]
             result[0] = ["miss"] if result[0] == [] else ["nat1"]
-        print(result[0])
-        print(result[1])
-        print(result[3])
         first_row = f"{result[0][0]} to hit,  {result[1][0]} {result[3]} damage,\n"
         if result[2][0] == 0: #no secondary dmg, no need to display
             second_row = ""
         else:
             second_row = f"{result[2][0]} {result[4]} damage; "
         if result[5][0]: #Has saving throw:
-            if result[0][0]:
-                n_throws = 1
-            else:
+            if result[0][0] == "miss" or result[0][0] == "nat1": #Don't roll on miss
                 n_throws = 0
+            else:
+                n_throws = 1
             third_row = f"{n_throws}x DC {result[5][1]} {result[5][2]} save"
         else:
             third_row = ""
@@ -391,6 +386,11 @@ def Attack(RelPosROLL):
             for i, monster_object in enumerate(GSM.Monsters_list):
                 # Grabs the correct number for each monster amount
                 n_monsters = TargetObj.n_monsters_list_ints[i].get()
+                # Gets this stuff in case 0 monsters so it can be passed on to display
+                _monster_dmg_1_type = monster_object.dmg_die_type_1.get()
+                _monster_dmg_2_type = monster_object.dmg_die_type_2.get()
+                _saving_throw_package = [monster_object.on_hit_force_saving_throw_bool.get(), monster_object.on_hit_save_dc.get(),
+                 monster_object.on_hit_save_type.get()]
                 for j in range(n_monsters):
                     (_hits, _dmgs1, _dmgs2, _monster_dmg_1_type, _monster_dmg_2_type,
                      _saving_throw_package) = ComputeSingleAttack(TargetObj, monster_object)

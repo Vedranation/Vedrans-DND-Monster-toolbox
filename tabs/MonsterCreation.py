@@ -40,6 +40,7 @@ class MonsterStats():
     def __str__(self):
         return self.name_str.get()
 
+#TODO: Add ability to make complex attacks, like 2x claw and 1x bite
 
 def CreateMonster(RelPosMonsters) -> None:
 
