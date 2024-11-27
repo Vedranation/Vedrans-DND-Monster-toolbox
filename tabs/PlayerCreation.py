@@ -26,6 +26,8 @@ class PlayerStats():
         self.passiveperception_int: IntVar = tk.IntVar(value=10)
 
         self._my_button = None  # Stores his own button reference
+    def __str__(self):
+        return self.name_str.get()
 
 def CreatePlayers(RelPosTargets) -> None:
 

@@ -9,6 +9,7 @@ class MonsterStats():
         self.n_attacks: int = tk.IntVar(value=1)
         self.to_hit_mod: int = tk.IntVar(value=5)
         self.roll_type: str = tk.StringVar(value="Normal")  # Normal
+        self.ac_int = tk.IntVar(value=13)
         #dmg 1
         self.dmg_type_1: str = tk.StringVar(value="bludgeoning")
         self.dmg_n_die_1: int = tk.IntVar(value=1)
@@ -36,6 +37,8 @@ class MonsterStats():
         self._my_button = None #Stores his own button
         self._monster_dmg1_extra_text_label2 = None
         self._monster_dmg2_extra_text_label2 = None
+    def __str__(self):
+        return self.name_str.get()
 
 
 def CreateMonster(RelPosMonsters) -> None:
@@ -234,6 +237,8 @@ def CreateMonster(RelPosMonsters) -> None:
             monster_obj._my_button.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 40))
             GSM.Monsters_widgets_list.append(monster_obj._my_button)
 
+
+
     def OpenMonsterWindow(monster_obj) -> None:
         # Create a new Toplevel window
         new_window = tk.Toplevel(GSM.Monsters_frame)
@@ -253,3 +258,5 @@ def CreateMonster(RelPosMonsters) -> None:
     n_monsters_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
     n_monsters_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.N_monsters_int, *[1,2,3,4,5,6,7,8,9,10], command=CreateMonsterObject)
     n_monsters_dropdown.place(x=RelPosMonsters.increase("x", 120), y=RelPosMonsters.increase("y", -4))
+
+    CreateMonsterObject(GSM.N_monsters_int.get())

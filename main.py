@@ -9,7 +9,7 @@ from tabs.PlayerCreation import CreatePlayers
 from tabs.MassRoll import MassRoll
 from tabs.Spellcasters import SpellCasters
 from tabs.MainSettings import Settings
-from tabs.ROLL import ROLL
+from tabs.Attack import Attack
 from tabs.RandomGenerator import RandomGenerator
 from utilities import Row_track, RollDice, ReturnMaxPossibleDie
 
@@ -21,19 +21,16 @@ from utilities import Row_track, RollDice, ReturnMaxPossibleDie
 
 Row = Row_track()
 
-CreateMonster(GSM.RelPosMonsters)
 Settings(GSM.RelPosSettings)
+CreateMonster(GSM.RelPosMonsters)
 CreatePlayers(GSM.RelPosTargets)
 MassRoll(GSM.RelPosMassroll, GSM.RelPosMonsters)
 SpellCasters(GSM.RelPosSpellCast)
 RandomGenerator(GSM.RelPosRandGen)
+Attack(GSM.RelPosROLL)
 
-#ROLL button
-random_generator_text_label = tk.Label(GSM.ROLL_frame, text="Roll attacks", font=GSM.Title_font)
-random_generator_text_label.place(x=GSM.RelPosROLL.reset("x"), y=GSM.RelPosROLL.reset("y"))
-ROLL_button = tk.Button(GSM.ROLL_frame, text="ROLL", state="normal", command=lambda: ROLL(GSM.RelPosROLL), font=GSM.Title_font,
-                                           padx=9, background="red")
-ROLL_button.place(x=GSM.RelPosROLL.increase("x", 10), y=GSM.RelPosROLL.increase("y", GSM.RelPosROLL.constant_y*1.5))
+#TODO: Initiative tracker
+
 
 
 #TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc

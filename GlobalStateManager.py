@@ -2,6 +2,7 @@ from typing import List, Union, Tuple
 import tkinter as tk
 from tkinter import font as tkfont  # Import tkfont for font definitions
 from tkinter import ttk
+
 from utilities import RelativePositionTracker
 
 #TODO: Create a way to save and load presets which automatically loads in monsters, targets etc5
@@ -26,9 +27,9 @@ class GlobalsManager:
     Targets_canvas = tk.Canvas(Targets_frame, width=_frame_width, height=_frame_height)
     Targets_canvas.pack(fill="both", expand=True)
 
-    # ROLL tab
-    ROLL_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )
-    Notebook.add(ROLL_frame, text="ROLL")
+    # Attack tab
+    Attack_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height, )
+    Notebook.add(Attack_frame, text="Attacks")
 
     # Mass roll tab
     Mass_roll_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
@@ -55,6 +56,7 @@ class GlobalsManager:
     Dice_types = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"]
     Saving_throw_types = ["STR", "DEX", "CON", "WIS", "INT", "CHAR"]
 
+    #Fonts
     Title_font = tkfont.Font(family="Helvetica", size=12, weight="bold")
     Target_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
 
@@ -105,6 +107,8 @@ class GlobalsManager:
     Roll_Treeview = None
     Tree_item_id = 0
     Treeview_target_id_list = []
+    OneAttacker_pointer: object = tk.Variable()
+    OneDefender_pointer: Union[object, object] = tk.Variable()
 
     #Widget position trackers
     RelPosSettings = RelativePositionTracker()
