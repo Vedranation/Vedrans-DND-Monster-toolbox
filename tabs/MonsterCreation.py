@@ -1,4 +1,6 @@
 import tkinter as tk
+from tkinter import StringVar, ttk
+
 from GlobalStateManager import GSM
 
 class MonsterStats():
@@ -33,6 +35,27 @@ class MonsterStats():
         self.bane: bool = tk.BooleanVar(value=False)
         self.bless: bool = tk.BooleanVar(value=False)
 
+        #speed
+        self.walking_speed_int: IntVar = tk.IntVar(value=20)
+        self.flying_speed_int: IntVar = tk.IntVar(value=0)
+        self.climbing_speed_int: IntVar = tk.IntVar(value=0)
+        self.burrowing_speed_int: IntVar = tk.IntVar(value=0)
+
+        #saving throws
+        self.savingthrow_str_mod_int: IntVar = tk.IntVar(value=1)
+        self.savingthrow_str_roll_type_str = tk.StringVar(value="Normal")
+        self.savingthrow_dex_mod_int: IntVar = tk.IntVar(value=-2)
+        self.savingthrow_dex_roll_type_str: StringVar = tk.StringVar(value="Normal")
+        self.savingthrow_con_mod_int: IntVar = tk.IntVar(value=3)
+        self.savingthrow_con_roll_type_str: StringVar = tk.StringVar(value="Normal")
+        self.savingthrow_int_mod_int: IntVar = tk.IntVar(value=-4)
+        self.savingthrow_int_roll_type_str: StringVar = tk.StringVar(value="Normal")
+        self.savingthrow_wis_mod_int: IntVar = tk.IntVar(value=-2)
+        self.savingthrow_wis_roll_type_str: StringVar = tk.StringVar(value="Normal")
+        self.savingthrow_cha_mod_int: IntVar = tk.IntVar(value=-3)
+        self.savingthrow_cha_roll_type_str: StringVar = tk.StringVar(value="Normal")
+        self.passiveperception_int: IntVar = tk.IntVar(value=8)
+
         'Monsters Frame display widgets in row like dmg types'
         self._my_button = None #Stores his own button
         self._monster_dmg1_extra_text_label2 = None
@@ -53,10 +76,11 @@ def CreateMonster(RelPosMonsters) -> None:
         GSM.Monsters_widgets_list.clear()
 
     def CreateMonsterUI(monster_obj, new_window) -> None:
-
+        attack_title_label = tk.Label(new_window, text="Attack details:", font=GSM.Title_font)
+        attack_title_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
         # Name
         monster_name_label = tk.Label(new_window, text="Monsters name:")
-        monster_name_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
+        monster_name_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
         monster_name_entry = tk.Entry(new_window, borderwidth=2, textvariable=monster_obj.name_str, width=18)
         monster_name_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
@@ -219,10 +243,96 @@ def CreateMonster(RelPosMonsters) -> None:
         monster_bless_checkbox.place(x=RelPosMonsters.reset("x"),
                                     y=RelPosMonsters.increase("y", RelPosMonsters.constant_y))
 
+        #Information for DM (speeds, saving throws, pp etc)
+        RelPosMonsters.checkpoint_set("x", 330)
+        info_title_label = tk.Label(new_window, text="Saving throws:", font=GSM.Title_font)
+        info_title_label.place(x=RelPosMonsters.checkpoint_get("x"), y=RelPosMonsters.reset("y"))
+        def SavingThrows() -> None:
+            #Just grouped saving throws so they can be compressed
+            nonlocal new_window, RelPosMonsters
+            spinbox_x_distance = 35
+            # STR
+            monster_str_save_text_label = tk.Label(new_window, text="STR:")
+            monster_str_save_text_label.place(x=RelPosMonsters.set("x", RelPosMonsters.checkpoint_get("x")), y=RelPosMonsters.increase("y", 30))
+            monster_str_save_spinbox = ttk.Spinbox(new_window, width=3, textvariable=monster_obj.savingthrow_str_mod_int,
+                                                    from_=-10, to=20)
+            monster_str_save_spinbox.place(x=RelPosMonsters.increase("x", spinbox_x_distance),
+                                            y=RelPosMonsters.increase("y", 2))
+            monster_str_save_roll_type_dropdown = tk.OptionMenu(new_window, monster_obj.savingthrow_str_roll_type_str,
+                                                                 *GSM.Roll_types)
+            monster_str_save_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 40),
+                                                       y=RelPosMonsters.increase("y", -5))
+            # DEX
+            monster_dex_save_text_label = tk.Label(new_window, text="DEX:")
+            monster_dex_save_text_label.place(x=RelPosMonsters.set("x", RelPosMonsters.checkpoint_get("x")),
+                                              y=RelPosMonsters.increase("y", 30))
+            monster_dex_save_spinbox = ttk.Spinbox(new_window, width=3,
+                                                   textvariable=monster_obj.savingthrow_dex_mod_int,
+                                                   from_=-10, to=20)
+            monster_dex_save_spinbox.place(x=RelPosMonsters.increase("x", spinbox_x_distance),
+                                           y=RelPosMonsters.increase("y", 2))
+            monster_dex_save_roll_type_dropdown = tk.OptionMenu(new_window, monster_obj.savingthrow_dex_roll_type_str,
+                                                                *GSM.Roll_types)
+            monster_dex_save_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 40),
+                                                      y=RelPosMonsters.increase("y", -5))
+            # CON
+            monster_con_save_text_label = tk.Label(new_window, text="CON:")
+            monster_con_save_text_label.place(x=RelPosMonsters.set("x", RelPosMonsters.checkpoint_get("x")),
+                                              y=RelPosMonsters.increase("y", 30))
+            monster_con_save_spinbox = ttk.Spinbox(new_window, width=3,
+                                                   textvariable=monster_obj.savingthrow_con_mod_int,
+                                                   from_=-10, to=20)
+            monster_con_save_spinbox.place(x=RelPosMonsters.increase("x", spinbox_x_distance),
+                                           y=RelPosMonsters.increase("y", 2))
+            monster_con_save_roll_type_dropdown = tk.OptionMenu(new_window, monster_obj.savingthrow_con_roll_type_str,
+                                                                *GSM.Roll_types)
+            monster_con_save_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 40),
+                                                      y=RelPosMonsters.increase("y", -5))
+            # INT
+            monster_int_save_text_label = tk.Label(new_window, text="INT:")
+            monster_int_save_text_label.place(x=RelPosMonsters.set("x", RelPosMonsters.checkpoint_get("x")),
+                                              y=RelPosMonsters.increase("y", 30))
+            monster_int_save_spinbox = ttk.Spinbox(new_window, width=3,
+                                                   textvariable=monster_obj.savingthrow_int_mod_int,
+                                                   from_=-10, to=20)
+            monster_int_save_spinbox.place(x=RelPosMonsters.increase("x", spinbox_x_distance),
+                                           y=RelPosMonsters.increase("y", 2))
+            monster_int_save_roll_type_dropdown = tk.OptionMenu(new_window, monster_obj.savingthrow_int_roll_type_str,
+                                                                *GSM.Roll_types)
+            monster_int_save_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 40),
+                                                      y=RelPosMonsters.increase("y", -5))
+            # WIS
+            monster_wis_save_text_label = tk.Label(new_window, text="WIS:")
+            monster_wis_save_text_label.place(x=RelPosMonsters.set("x", RelPosMonsters.checkpoint_get("x")),
+                                              y=RelPosMonsters.increase("y", 30))
+            monster_wis_save_spinbox = ttk.Spinbox(new_window, width=3,
+                                                   textvariable=monster_obj.savingthrow_wis_mod_int,
+                                                   from_=-10, to=20)
+            monster_wis_save_spinbox.place(x=RelPosMonsters.increase("x", spinbox_x_distance),
+                                           y=RelPosMonsters.increase("y", 2))
+            monster_wis_save_roll_type_dropdown = tk.OptionMenu(new_window, monster_obj.savingthrow_wis_roll_type_str,
+                                                                *GSM.Roll_types)
+            monster_wis_save_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 40),
+                                                      y=RelPosMonsters.increase("y", -5))
+            # CHA
+            monster_cha_save_text_label = tk.Label(new_window, text="CHA:")
+            monster_cha_save_text_label.place(x=RelPosMonsters.set("x", RelPosMonsters.checkpoint_get("x")),
+                                              y=RelPosMonsters.increase("y", 30))
+            monster_cha_save_spinbox = ttk.Spinbox(new_window, width=3,
+                                                   textvariable=monster_obj.savingthrow_cha_mod_int,
+                                                   from_=-10, to=20)
+            monster_cha_save_spinbox.place(x=RelPosMonsters.increase("x", spinbox_x_distance),
+                                           y=RelPosMonsters.increase("y", 2))
+            monster_cha_save_roll_type_dropdown = tk.OptionMenu(new_window, monster_obj.savingthrow_cha_roll_type_str,
+                                                                *GSM.Roll_types)
+            monster_cha_save_roll_type_dropdown.place(x=RelPosMonsters.increase("x", 40),
+                                                      y=RelPosMonsters.increase("y", -5))
+        SavingThrows()
         # Add a button to close the new window
         close_button = tk.Button(new_window, text="Save and exit", command=lambda: (new_window.destroy(), monster_obj._my_button.config(text=monster_obj.name_str.get())),
                                  background="red")
-        close_button.place(x=RelPosMonsters.set("x", 310), y=RelPosMonsters.reset("y"))
+
+        close_button.place(x=RelPosMonsters.set("x", 600), y=RelPosMonsters.reset("y"))
         # Bind the Enter key to the close_button's command
         new_window.bind("<Return>", lambda event: close_button.invoke())
 
@@ -244,7 +354,7 @@ def CreateMonster(RelPosMonsters) -> None:
         # Create a new Toplevel window
         new_window = tk.Toplevel(GSM.Monsters_frame)
         new_window.title("Monster Details")
-        new_window.geometry("400x600")  # Set the size of the new window
+        new_window.geometry("700x600")  # Set the size of the new window
 
         CreateMonsterUI(monster_obj, new_window)
 
