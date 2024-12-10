@@ -1,3 +1,5 @@
+from logging import exception
+
 from GlobalStateManager import GSM
 import tkinter as tk
 from tkinter import ttk
@@ -285,6 +287,8 @@ def Attack(RelPosROLL):
         # tuple(To hit, dmg1, dmg2, dmg_type_1, dmg_type_2, [has_save_bool, dc, type])
         result = list(ComputeSingleAttack(defender_obj, monster_obj, override_rolltype))
 
+        # TODO: Make nat20 green and nat1 red
+
         # Filter out the trash from results
         if (result[0] and result[0][0] == "nat1") or result[0] == []: #Critical fail or no hits (brings empty lists)
             result[1] = [0] #Put zeroes into nat1 dmg's
@@ -304,9 +308,20 @@ def Attack(RelPosROLL):
         else:
             third_row = ""
 
+        #Determine text color for nat1 or nat20
+        if type(result[0][0]) == int or result[0][0] == "miss": #Default case
+            text_colour = "black"
+        elif result[0][0] == "nat1":
+            text_colour = "red"
+        elif result[0][0].startswith("crit"):
+            text_colour = "green"
+        else:
+            raise Exception("Invalid roll - must be int, nat1 or crit")
+
+
 
         result_label = tk.Label(GSM.Attack_frame, text=f"{attacker_name} >>> {defender_name}:", font=GSM.Target_font)
-        result_label2 = tk.Label(GSM.Attack_frame, text=(first_row + second_row + third_row))
+        result_label2 = tk.Label(GSM.Attack_frame, text=(first_row + second_row + third_row), fg=text_colour)
         GSM.OneAttackLogResults.append(result_label) #Stores just one attack results for queue
         GSM.OneAttackLogResults.append(result_label2)
 
@@ -433,12 +448,14 @@ def Attack(RelPosROLL):
         rolltype_dropdown.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", -4))
         one_attack_label4 = tk.Label(GSM.Attack_frame, text="Note: this overrides ALL rolltypes")
         one_attack_label4.place(x=GSM.RelPosROLL.increase("x", 100), y=GSM.RelPosROLL.increase("y", 4))
+        one_attack_label5 = tk.Label(GSM.Attack_frame, text="Note: Ignores multiattack")
+        one_attack_label5.place(x=GSM.RelPosROLL.set("x", 20), y=GSM.RelPosROLL.increase("y", 30))
 
         RollAttack_button = tk.Button(GSM.Attack_frame, text="Roll attack", state="normal",
                                       command=lambda: ButtonSingleAttackAndDisplay(GSM.OneDefender_str.get(),
                                         GSM.OneAttacker_str.get(), GSM.Override_roll_type_str.get()),
                                       font=GSM.Target_font, padx=3, background="grey")
-        RollAttack_button.place(x=GSM.RelPosROLL.increase("x", -90), y=GSM.RelPosROLL.increase("y", 30))
+        RollAttack_button.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", 30))
 
         GSM.RelPosROLL.checkpoint_set("x", 420) # set a checkpoint for displaying results
         GSM.RelPosROLL.checkpoint_set("y", 100)
@@ -447,6 +464,7 @@ def Attack(RelPosROLL):
         GSM.Results_display_widgets_list.append(one_attack_label2)
         GSM.Results_display_widgets_list.append(one_attack_label3)
         GSM.Results_display_widgets_list.append(one_attack_label4)
+        GSM.Results_display_widgets_list.append(one_attack_label5)
         GSM.Results_display_widgets_list.append(attacker_dropdown)
         GSM.Results_display_widgets_list.append(defender_dropdown)
         GSM.Results_display_widgets_list.append(rolltype_dropdown)
