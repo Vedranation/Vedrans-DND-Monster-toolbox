@@ -287,8 +287,6 @@ def Attack(RelPosROLL):
         # tuple(To hit, dmg1, dmg2, dmg_type_1, dmg_type_2, [has_save_bool, dc, type])
         result = list(ComputeSingleAttack(defender_obj, monster_obj, override_rolltype))
 
-        # TODO: Make nat20 green and nat1 red
-
         # Filter out the trash from results
         if (result[0] and result[0][0] == "nat1") or result[0] == []: #Critical fail or no hits (brings empty lists)
             result[1] = [0] #Put zeroes into nat1 dmg's

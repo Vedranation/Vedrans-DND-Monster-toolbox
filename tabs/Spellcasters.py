@@ -1,7 +1,9 @@
 import tkinter as tk
 from GlobalStateManager import GSM
 
-
+# FIXME: Bug when saving and loading makes it unable to delete checkboxes
+# TODO: Merge this into monster creation
+# TODO: Add a list of spells to store for easy retrieval
 def CreateSpellCasters(n_casters: int, RelPosSpellCast) -> None:
     for widget in GSM.Spell_casters_widgets_list:
         widget.destroy()

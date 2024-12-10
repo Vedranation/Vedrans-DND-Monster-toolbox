@@ -54,7 +54,7 @@ class GlobalsManager:
                  "magic slashing", "acid", "cold", "fire", "force", "lightning", "thunder", "necrotic",
                  "poison", "psychic", "radiant"]
     Dice_types = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"]
-    Saving_throw_types = ["STR", "DEX", "CON", "WIS", "INT", "CHAR"]
+    Saving_throw_types = ["STR", "DEX", "CON", "WIS", "INT", "CHA"]
 
     #Fonts
     Title_font = tkfont.Font(family="Helvetica", size=12, weight="bold")
@@ -95,7 +95,13 @@ class GlobalsManager:
     Mass_save_DC_int = tk.IntVar()
     Mass_save_n_monsters_int = tk.IntVar()
     Mass_save_roll_type_str = tk.StringVar()
-    Results_random_gen_widgets_to_clear = []
+    Results_mass_save_widgets_to_clear = []
+
+    Quick_monster_save_rolltype_str = tk.StringVar(value="Monster default")
+    Quick_save_which_mob_str = tk.StringVar()
+    Quick_save_which_save = tk.StringVar(value="STR")
+    Results_quick_mob_save_widgets_to_clear = []
+
     WhichSkillToCheck = tk.StringVar(value="Perception")
     SkillCheckDC = tk.IntVar(value=15)
     PartySkillCheckResults = []
