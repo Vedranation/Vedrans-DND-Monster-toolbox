@@ -140,13 +140,16 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         elif rolltype == "Super Disadvantage":
             roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
         roll_total = roll + modifier
+        text_colour = "black"
         if roll == 1 and GSM.Nat1_always_miss_bool.get():
             roll_total = f"nat1 ({roll_total})"
+            text_colour = "red"
         elif roll == 20:
             roll_total = f"nat20 ({roll_total})"
+            text_colour = "green"
 
         quick_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(
-            f"{monster_obj.name_str.get()} rolled a {roll_total}"))
+            f"{monster_obj.name_str.get()} rolled a {roll_total}"), fg=text_colour)
         quick_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", current_button_y + 30))
         GSM.Results_quick_mob_save_widgets_to_clear.append(quick_save_results_label)
 
@@ -296,7 +299,7 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
 
     UndefinedMassSkillCheck()
 
-    def PartySkillCheckRoll() -> None:
+    def PartySkillCheckRoll(button_pos) -> None:
         for widget in GSM.PartySkillCheckResults:
             widget.destroy()
         results = []
@@ -324,19 +327,36 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
                 passed = "Failed"
             results.append([Player.name_str.get(), roll_total, passed])
 
-        GSM.RelPosMassroll.checkpoint_set("x", 580)
-        GSM.RelPosMassroll.checkpoint_set("y", GSM.RelPosMassroll.same("y") + 27)
+        button_x = int(button_pos["x"])
+        button_y = int(button_pos["y"])
+        GSM.RelPosMassroll.checkpoint_set("x", button_x)
+        GSM.RelPosMassroll.checkpoint_set("y", button_y + 30)
         for i, result in enumerate(results):
+            # Determine text color for nat1 or nat20
+            if result[2] == "Nat1":
+                text_colour2 = "red"
+                text_colour3 = "gray"
+            elif result[2] == "Nat20":
+                text_colour2 = "green"
+                text_colour3 = "black"
+            elif result[2] == "Failed":
+                text_colour2 = "gray"
+                text_colour3 = "gray"
+            else:
+                text_colour2 = "black"
+                text_colour3 = "black"
 
-            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[0]))
+
+
+            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[0]), fg=text_colour3)
             results_label1.place(x=GSM.RelPosMassroll.checkpoint_get("x"), y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
             GSM.PartySkillCheckResults.append(results_label1)
 
-            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[1]))
+            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[1]), fg=text_colour2)
             results_label1.place(x=GSM.RelPosMassroll.checkpoint_get("x") + 80, y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
             GSM.PartySkillCheckResults.append(results_label1)
 
-            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[2]))
+            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[2]), fg=text_colour3)
             results_label1.place(x=GSM.RelPosMassroll.checkpoint_get("x") + 120, y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
             GSM.PartySkillCheckResults.append(results_label1)
 
@@ -358,7 +378,8 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         mass_save_mod_spinbox = ttk.Spinbox(GSM.Mass_roll_frame, textvariable=GSM.SkillCheckDC, width=3, from_=5, to=30)
         mass_save_mod_spinbox.place(x=RelPosMassroll.increase("x", 30), y=RelPosMassroll.increase("y", 2))
 
-        rollskillcheck_button = tk.Button(GSM.Mass_roll_frame, text="Party skill check", state="normal", command=PartySkillCheckRoll,
-                                     padx=9, background="grey")
+        rollskillcheck_button = tk.Button(GSM.Mass_roll_frame, text="Party skill check", state="normal",
+                                          command=lambda: PartySkillCheckRoll(rollskillcheck_button.place_info()),
+                                          padx=9, background="grey")
         rollskillcheck_button.place(x=RelPosMassroll.set("x", RelPosMassroll.checkpoint_get("x")), y=RelPosMassroll.increase("y", 28))
     PartySkillCheckUI()
