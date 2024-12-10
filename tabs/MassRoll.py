@@ -346,8 +346,6 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
                 text_colour2 = "black"
                 text_colour3 = "black"
 
-
-
             results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[0]), fg=text_colour3)
             results_label1.place(x=GSM.RelPosMassroll.checkpoint_get("x"), y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
             GSM.PartySkillCheckResults.append(results_label1)

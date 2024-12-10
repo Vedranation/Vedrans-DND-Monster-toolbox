@@ -111,7 +111,7 @@ class GlobalsManager:
     Mass_skill_check_dc_int = tk.IntVar(value=15)
     Mass_skill_enable_checkboxes_list = []
 
-    #ROLL globals
+    #Attack globals
     Results_display_widgets_list = []
     Roll_Treeview = None
     Tree_item_id = 0
@@ -120,6 +120,8 @@ class GlobalsManager:
     OneDefender_str = tk.StringVar()
     Override_roll_type_str = tk.StringVar() #Overrides all rolltypes for OneAttackRoll
     OneAttackLogResults = [] #Stores all OneAttack results
+
+    OnTab_Attack_reset_widgets = []  # Widgets to be remade when tab changes to Attack (dropdowns)
 
     #Widget position trackers
     RelPosSettings = RelativePositionTracker()

@@ -15,6 +15,7 @@ def Attack(RelPosROLL):
             widget.destroy()
         GSM.Results_display_widgets_list.clear()
         GSM.Treeview_target_id_list.clear()
+        GSM.OnTab_Attack_reset_widgets.clear()
 
     def CombineRollTypes(monster_type: str, target_type: str) -> str:
         # Combines 2 roll types to get what to actually use (like adv + disadv = normal)
@@ -316,8 +317,6 @@ def Attack(RelPosROLL):
         else:
             raise Exception("Invalid roll - must be int, nat1 or crit")
 
-
-
         result_label = tk.Label(GSM.Attack_frame, text=f"{attacker_name} >>> {defender_name}:", font=GSM.Target_font)
         result_label2 = tk.Label(GSM.Attack_frame, text=(first_row + second_row + third_row), fg=text_colour)
         GSM.OneAttackLogResults.append(result_label) #Stores just one attack results for queue
@@ -427,9 +426,11 @@ def Attack(RelPosROLL):
         one_attack_label = tk.Label(GSM.Attack_frame, text="Select attacker: ")
         one_attack_label.place(x=GSM.RelPosROLL.set("x", 20), y=GSM.RelPosROLL.set("y", 150))
 
+
         attacker_dropdown = tk.OptionMenu(GSM.Attack_frame, GSM.OneAttacker_str, *GSM.Monsters_list )
         GSM.OneAttacker_str.set(GSM.Monsters_list[0])
         attacker_dropdown.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", -4))
+        GSM.OnTab_Attack_reset_widgets.append([attacker_dropdown, GSM.RelPosROLL.same("x"), GSM.RelPosROLL.same("y"), "attacker_dropdown"])
 
         one_attack_label2 = tk.Label(GSM.Attack_frame, text="Select defender: ")
         one_attack_label2.place(x=GSM.RelPosROLL.set("x", 20), y=GSM.RelPosROLL.increase("y", 40))
@@ -437,6 +438,8 @@ def Attack(RelPosROLL):
                                           *[*GSM.Monsters_list, *GSM.Target_obj_list, "None"])
         GSM.OneDefender_str.set("None")
         defender_dropdown.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", -4))
+        GSM.OnTab_Attack_reset_widgets.append([defender_dropdown, GSM.RelPosROLL.same("x"), GSM.RelPosROLL.same("y"), "defender_dropdown"])
+
 
         one_attack_label3 = tk.Label(GSM.Attack_frame, text="Roll with:")
         one_attack_label3.place(x=GSM.RelPosROLL.set("x", 20), y=GSM.RelPosROLL.increase("y", 40))
