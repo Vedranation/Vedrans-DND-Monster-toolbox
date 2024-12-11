@@ -33,7 +33,7 @@ class GlobalsManager:
 
     # Mass roll tab
     Mass_roll_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
-    Notebook.add(Mass_roll_frame, text="Mass roll")
+    Notebook.add(Mass_roll_frame, text="Skills/Saves")
 
     # Spell casters tab
     Spell_caster_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
@@ -101,6 +101,7 @@ class GlobalsManager:
     Quick_save_which_mob_str = tk.StringVar()
     Quick_save_which_save = tk.StringVar(value="STR")
     Results_quick_mob_save_widgets_to_clear = []
+    OnTab_MassSaves_reset_widgets = []  # Widgets to be remade when tab changes to Saves (dropdowns)
 
     WhichSkillToCheck = tk.StringVar(value="Perception")
     SkillCheckDC = tk.IntVar(value=15)

@@ -163,6 +163,8 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         quick_monster_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monsters_list)
         GSM.Quick_save_which_mob_str.set(GSM.Monsters_list[0])
         quick_monster_dropdown.place(x=RelPosMassroll.increase("x", 90), y=RelPosMassroll.increase("y", -4))
+        GSM.OnTab_MassSaves_reset_widgets.append([quick_monster_dropdown, GSM.RelPosMassroll.same("x"),
+                                                  GSM.RelPosMassroll.same("y"), "which_monster"])
         #Which save
         quick_monster_save_label3 = tk.Label(GSM.Mass_roll_frame, text="Which save:")
         quick_monster_save_label3.place(x=RelPosMassroll.reset("x"),

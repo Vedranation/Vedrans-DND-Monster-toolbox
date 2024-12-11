@@ -25,11 +25,10 @@ def On_tab_change(event):
     #This procs every tab change, for resetting dropdown lists
     selected_tab = GSM.Notebook.tab(GSM.Notebook.index("current"), "text")
     if selected_tab == "Attacks":
-        print(GSM.OnTab_Attack_reset_widgets)
         list_of_widgets = GSM.OnTab_Attack_reset_widgets.copy()
         GSM.OnTab_Attack_reset_widgets.clear()
         for package in list_of_widgets:
-
+            #package = [widget_obj, widget_x, widget_y, widget_identifier]
             widget = package[0]
             x = package[1]
             y = package[2]
@@ -55,14 +54,33 @@ def On_tab_change(event):
             GSM.OnTab_Attack_reset_widgets.append([new_widget, x, y, identifier])
             GSM.Results_display_widgets_list.append(new_widget)
 
-    elif selected_tab == "Mass roll":
-        pass
+    elif selected_tab == "Skills/Saves":
+        list_of_widgets = GSM.OnTab_MassSaves_reset_widgets.copy()
+        GSM.OnTab_MassSaves_reset_widgets.clear()
+        for package in list_of_widgets:
+
+            widget = package[0]
+            x = package[1]
+            y = package[2]
+            identifier = package[3]
+
+            # purge old widget from all lists so garbage collecter reclaims it
+            widget.destroy()
+
+            if identifier == "which_monster":
+                # Check if the selected attacker exists in the monsters list by comparing strings
+                if GSM.Quick_save_which_mob_str.get() not in [str(monster) for monster in GSM.Monsters_list]:
+                    # If the selected monster was removed, select the first one
+                    GSM.Quick_save_which_mob_str.set(str(GSM.Monsters_list[0]))
+                new_widget = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monsters_list)
+
+            # make a new widget
+            new_widget.place(x=x, y=y)
+            # Re-add it to relevant lists
+            GSM.OnTab_MassSaves_reset_widgets.append([new_widget, x, y, identifier])
 
 
 GSM.Notebook.bind("<<NotebookTabChanged>>", On_tab_change)
-
-
-# Row = Row_track()
 
 Settings(GSM.RelPosSettings)
 CreatePlayers(GSM.RelPosTargets)
