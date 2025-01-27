@@ -10,7 +10,7 @@ adjectives = ["Abandoned", "Ancient", "Arcane", "Bewitched", "Blazing", "Celesti
               "White", "Grey", "Red", "Pink", "Multi-racial", "Metalic", "Underground", "Undead", "Underwater", "Dark",
               "Fleshy", "Tentacly", "Shadowy", "Rainbow", "Astral", "Elemental", "Bloody", "Sunken", "Gargantuan",
               "Glowing", "Wise", "Dumb", "Stupid", "Beautiful", "Pretty", "Ugly", "Starfall", "Invisible",
-              "Ghostly", "Possessed", "Druidic", "Inverted", "Bandit", "Pirate", "Criminal", "Flying"]
+              "Ghostly", "Possessed", "Druidic", "Inverted", "Bandit", "Pirate", "Criminal", "Flying", "Cloudy"]
 
 nouns = ["Abbey", "Archipelago", "Bastion", "Castle", "Cave", "Citadel", "Cliffs", "Crypt", "Dungeon", "Forest",
          "Fortress", "Garden", "Gorge", "Grove", "Harbor", "Island", "Lake", "Labyrinth", "Mountain", "Oasis",
@@ -20,7 +20,8 @@ nouns = ["Abbey", "Archipelago", "Bastion", "Castle", "Cave", "Citadel", "Cliffs
          "Dragon", "School", "University", "City", "Gem", "Library", "Fairy", "Abyss", "Mines", "Pirate", "Cove",
          "Beach", "Dimension", "Grassland", "Goblin", "Market", "Unicorn", "Monster", "Shadow", "Observatory", "Fire",
          "Water", "Stone", "Metal", "Tree", "Ice", "Lantern", "Meteor", "Devil", "Demon", "Vampire", "Valley",
-         "Illusion", "Marsh", "Ghost", "Circle", "Ring", "Square", "Druid", "Caravan", "Bandit", "Criminal", "Cloud"]
+         "Illusion", "Marsh", "Ghost", "Circle", "Ring", "Square", "Druid", "Caravan", "Bandit", "Criminal", "Cloud",
+         "Plateau", "House", "Treehouse"]
 
 def check_for_repetition_item(item, item_list):
     if item in item_list:
@@ -41,13 +42,13 @@ def generate_landmark():
 
 # Example usage to add new items
 print("------")
-check_for_repetition_item("Cloudy", adjectives)
-check_for_repetition_item("Flying", adjectives)
-check_for_repetition_item("Criminal", adjectives)
+check_for_repetition_item("Shadow", adjectives)
+check_for_repetition_item("Shadowy", adjectives)
+check_for_repetition_item("Dark", adjectives)
 print("------")
-check_for_repetition_item("Cloud", nouns)
-check_for_repetition_item("Bandit", nouns)
-check_for_repetition_item("Criminal", nouns)
+check_for_repetition_item("Shadow", nouns)
+check_for_repetition_item("Rock", nouns)
+check_for_repetition_item("Treehouse", nouns)
 print("------")
 print(len(adjectives), len(nouns))
 # Generate a landmark to see how it works

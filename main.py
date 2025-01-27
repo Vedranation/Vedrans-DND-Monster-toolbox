@@ -91,9 +91,6 @@ RandomGenerator(GSM.RelPosRandGen)
 Attack(GSM.RelPosROLL)
 
 #TODO: Initiative tracker
-
-
-
 #TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc
 #TODO: Add automated rolling for random encounter table. Let players import a list, saying chance of each encounter,
 #   which happen per night and which per day, how often to check, and how long PC's travelled and then determine the outcome
