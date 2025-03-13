@@ -95,8 +95,9 @@ def CreateMonster(RelPosMonsters) -> None:
         # To hit
         monster_to_hit_label = tk.Label(new_window, text="Monster to hit: +")
         monster_to_hit_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
-        monster_to_hit_entry = tk.Entry(new_window, borderwidth=2, textvariable=monster_obj.to_hit_mod, width=3)
-        monster_to_hit_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_to_hit_spinbox = ttk.Spinbox(new_window, width=3, textvariable=monster_obj.to_hit_mod,
+                                             from_=0, to=13)
+        monster_to_hit_spinbox.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
         # Roll type (normal, adv, disadv...)
         monster_roll_type_text_label = tk.Label(new_window, text="Roll type: ")
@@ -109,12 +110,12 @@ def CreateMonster(RelPosMonsters) -> None:
         'Dmg 1'
         monster_dmg1_text_label = tk.Label(new_window, text="Damage type 1:")
         monster_dmg1_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
-        monster_dmg1_number_dice_entry = tk.Entry(new_window, borderwidth=2, textvariable=monster_obj.dmg_n_die_1,
-                                                  width=3)
-        monster_dmg1_number_dice_entry.place(x=RelPosMonsters.increase("x", 93),
+        monster_dmg1_number_dice_spinbox = ttk.Spinbox(new_window, textvariable=monster_obj.dmg_n_die_1,
+                                                  width=3, from_=0, to=10)
+        monster_dmg1_number_dice_spinbox.place(x=RelPosMonsters.increase("x", 93),
                                              y=RelPosMonsters.same("y"))
         monster_dmg1_dice_type_dropdown = tk.OptionMenu(new_window, monster_obj.dmg_die_type_1, *GSM.Dice_types)
-        monster_dmg1_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27),
+        monster_dmg1_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 35),
                                               y=RelPosMonsters.increase("y", -5))
 
         def UpdateMonsterDmg1FlatText(selected_dmg_type) -> None:
@@ -123,7 +124,7 @@ def CreateMonster(RelPosMonsters) -> None:
                 current_box_xy = monster_dmg1_flat_text_label.place_info()
                 current_box_x = int(current_box_xy["x"])
                 current_box_y = int(current_box_xy["y"])
-                monster_obj._monster_dmg1_extra_text_label2.place(x=current_box_x + 120, y=current_box_y)
+                monster_obj._monster_dmg1_extra_text_label2.place(x=current_box_x + 130, y=current_box_y)
             else:
                 monster_obj._monster_dmg1_extra_text_label2.config(text=monster_obj.dmg_type_1.get())
 
@@ -135,19 +136,19 @@ def CreateMonster(RelPosMonsters) -> None:
         monster_dmg1_flat_text_label = tk.Label(new_window, text="Damage 1 flat:  +")
         monster_dmg1_flat_text_label.place(x=RelPosMonsters.reset("x"),
                                            y=RelPosMonsters.increase("y", 30))
-        monster_dmg1_extra_entry = tk.Entry(new_window, borderwidth=2, textvariable=monster_obj.dmg_flat_1,
-                                            width=3)
-        monster_dmg1_extra_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_dmg1_extra_spinbox = ttk.Spinbox(new_window, textvariable=monster_obj.dmg_flat_1,
+                                                       width=3, from_=-5, to=30)
+        monster_dmg1_extra_spinbox.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
         'Dmg 2'
         monster_dmg2_text_label = tk.Label(new_window, text="Damage type 2:")
         monster_dmg2_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 40))
-        monster_dmg2_n_dice_entry = tk.Entry(new_window, borderwidth=2,
-                                             textvariable=monster_obj.dmg_n_die_2, width=3)
-        monster_dmg2_n_dice_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_dmg2_n_dice_spinbox = ttk.Spinbox(new_window, textvariable=monster_obj.dmg_n_die_2,
+                                                 width=3, from_=0, to=10)
+        monster_dmg2_n_dice_spinbox.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
         monster_dmg2_dice_type_dropdown = tk.OptionMenu(new_window, monster_obj.dmg_die_type_2,
                                                         *GSM.Dice_types)
-        monster_dmg2_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 27),
+        monster_dmg2_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 35),
                                               y=RelPosMonsters.increase("y", -5))
 
         def UpdateMonsterDmg2FlatText(selected_dmg_type) -> None:
@@ -156,7 +157,7 @@ def CreateMonster(RelPosMonsters) -> None:
                 current_box_xy = monster_dmg2_flat_text_label.place_info()
                 current_box_x = int(current_box_xy["x"])
                 current_box_y = int(current_box_xy["y"])
-                monster_obj._monster_dmg2_extra_text_label2.place(x=current_box_x + 120, y=current_box_y)
+                monster_obj._monster_dmg2_extra_text_label2.place(x=current_box_x + 130, y=current_box_y)
             else:
                 monster_obj._monster_dmg2_extra_text_label2.config(text=monster_obj.dmg_type_2.get())
 
@@ -168,19 +169,20 @@ def CreateMonster(RelPosMonsters) -> None:
         monster_dmg2_flat_text_label = tk.Label(new_window, text="Damage 2 flat:  +")
         monster_dmg2_flat_text_label.place(x=RelPosMonsters.reset("x"),
                                            y=RelPosMonsters.increase("y", 30))
-        monster_dmg2_extra_entry = tk.Entry(new_window, borderwidth=2, textvariable=monster_obj.dmg_flat_2,
-                                            width=3)
-        monster_dmg2_extra_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_dmg2_extra_spinbox = ttk.Spinbox(new_window, textvariable=monster_obj.dmg_flat_2,
+                                                  width=3, from_=-5, to=30)
+        monster_dmg2_extra_spinbox.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
 
         # Force saving throw on hit:
         def EnableDisableForceSaveWidget():
+
             if monster_obj.on_hit_force_saving_throw_bool.get():
                 monster_save_throw_dc_label.config(state="normal")
-                monster_save_throw_dc_entry.config(state="normal")
+                monster_save_throw_dc_spinbox.config(state="normal")
                 monster_save_throw_type_dropdown.config(state="normal")
             else:
                 monster_save_throw_dc_label.config(state="disabled")
-                monster_save_throw_dc_entry.config(state="disabled")
+                monster_save_throw_dc_spinbox.config(state="disabled")
                 monster_save_throw_type_dropdown.config(state="disabled")
 
         monster_force_save_throw_checkbox = tk.Checkbutton(new_window, text='On hit, force saving throw',
@@ -189,16 +191,15 @@ def CreateMonster(RelPosMonsters) -> None:
 
         monster_save_throw_dc_label = tk.Label(new_window, text="DC: ")
         monster_save_throw_dc_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 25))
-        monster_save_throw_dc_label.config(state="disabled")
-        monster_save_throw_dc_entry = tk.Entry(new_window, borderwidth=2,
+        monster_save_throw_dc_spinbox = ttk.Spinbox(new_window, from_=5, to=32,
                                                textvariable=monster_obj.on_hit_save_dc, width=3)
-        monster_save_throw_dc_entry.place(x=RelPosMonsters.increase("x", 35), y=RelPosMonsters.same("y"))
-        monster_save_throw_dc_entry.config(state="disabled")
+        monster_save_throw_dc_spinbox.place(x=RelPosMonsters.increase("x", 35), y=RelPosMonsters.same("y"))
+        monster_save_throw_dc_spinbox.unbind("<MouseWheel>")  # Disables mouse scroll on Windows/Mac OS
         monster_save_throw_type_dropdown = tk.OptionMenu(new_window, monster_obj.on_hit_save_type,
                                                          *GSM.Saving_throw_types)
-        monster_save_throw_type_dropdown.place(x=RelPosMonsters.increase("x", 27),
+        monster_save_throw_type_dropdown.place(x=RelPosMonsters.increase("x", 32),
                                               y=RelPosMonsters.increase("y", -5))
-        monster_save_throw_type_dropdown.config(state="disabled")
+        EnableDisableForceSaveWidget()
 
         # Halfling luck (reroll ones)
         monster_halfling_luck_checkbox = tk.Checkbutton(new_window, text='Halfling luck (reroll nat 1)',
