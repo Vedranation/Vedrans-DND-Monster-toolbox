@@ -4,9 +4,8 @@ from tkinter import StringVar, ttk
 from GlobalStateManager import GSM
 
 class MonsterStats():
-    def __init__(self, index):
+    def __init__(self):
         self.name_str: str = tk.StringVar()
-        self.name_str.set("Zombie " + str(index+1))
         #to hit modifiers and multiattack
         self.n_attacks: int = tk.IntVar(value=1)
         self.to_hit_mod: int = tk.IntVar(value=5)
@@ -70,7 +69,6 @@ def CreateMonster(RelPosMonsters) -> None:
     def ClearMonsterUI() -> None:
         RelPosMonsters.set("y", 80)
         RelPosMonsters.reset("x")
-        GSM.Monsters_list.clear()
         for widget in GSM.Monsters_widgets_list:
             widget.destroy()
         GSM.Monsters_widgets_list.clear()
@@ -337,18 +335,41 @@ def CreateMonster(RelPosMonsters) -> None:
         # Bind the Enter key to the close_button's command
         new_window.bind("<Return>", lambda event: close_button.invoke())
 
-    def CreateMonsterObject(n_monsters) -> None:
-        #I have no idea why it automatically passes n_monsters in but no harm
+    def CreateMonsterObject() -> None:
         ClearMonsterUI()
-        for i in range(GSM.N_monsters_int.get()):
-            monster_obj = MonsterStats(i)
-            GSM.Monsters_list.append(monster_obj)
+        for j, monsterObj in enumerate(GSM.Monster_obj_list):
+            if monsterObj.name_str.get():  # string not empty
+                pass
+            else:
+                monsterObj.name_str.set(f"Zombie {j + 1}")
 
             # Button to open the new window
-            monster_obj._my_button = tk.Button(GSM.Monsters_frame, text=monster_obj.name_str.get(), command=lambda m=monster_obj: OpenMonsterWindow(m))
-            monster_obj._my_button.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 40))
-            GSM.Monsters_widgets_list.append(monster_obj._my_button)
+            monsterObj._my_button = tk.Button(GSM.Monsters_frame, text=monsterObj.name_str.get(), command=lambda m=monsterObj: OpenMonsterWindow(m))
+            monsterObj._my_button.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 40))
+            GSM.Monsters_widgets_list.append(monsterObj._my_button)
 
+
+    def PreservePreviousMonsters(n_monsters) -> None:
+        current_count = len(GSM.Monster_obj_list)
+        preserve_data = []
+
+        # Preserve existing data
+        for monster_obj in GSM.Monster_obj_list:
+            preserve_data.append(monster_obj.name_str.get())
+        # Adjust the number of MonsterStats objects
+        if n_monsters < current_count:
+            GSM.Monster_obj_list = GSM.Monster_obj_list[:n_monsters]
+        elif n_monsters > current_count:
+            for i in range(current_count, n_monsters):
+                monsterObj = MonsterStats()
+                GSM.Monster_obj_list.append(monsterObj)
+
+        # Redraw labels and entries
+        for i in range(n_monsters):
+            # Repopulate entries with preserved data if exists
+            if i < len(preserve_data):
+                GSM.Monster_obj_list[i].name_str.set(preserve_data[i])
+        CreateMonsterObject()
 
 
     def OpenMonsterWindow(monster_obj) -> None:
@@ -368,7 +389,7 @@ def CreateMonster(RelPosMonsters) -> None:
     #Number of monsters
     n_monsters_label = tk.Label(GSM.Monsters_frame, text="How many monsters:")
     n_monsters_label.place(x=RelPosMonsters.same("x"), y=RelPosMonsters.increase("y", 35))
-    n_monsters_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.N_monsters_int, *[1,2,3,4,5,6,7,8,9,10], command=CreateMonsterObject)
+    n_monsters_dropdown = tk.OptionMenu(GSM.Monsters_frame, GSM.N_monsters_int, *[1,2,3,4,5,6,7,8,9,10], command=PreservePreviousMonsters)
     n_monsters_dropdown.place(x=RelPosMonsters.increase("x", 120), y=RelPosMonsters.increase("y", -4))
 
-    CreateMonsterObject(GSM.N_monsters_int.get())
+    PreservePreviousMonsters(GSM.N_monsters_int.get())

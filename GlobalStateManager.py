@@ -69,8 +69,8 @@ class GlobalsManager:
     Adv_combine_bool = tk.BooleanVar(value=False)
 
     Roll_type_str = tk.StringVar()
-    N_targets_int = tk.IntVar()
 
+    N_targets_int = tk.IntVar(value=4)
     Target_obj_list: List[str] = []
     Target_widgets_list: List[str] = []
 
@@ -78,9 +78,9 @@ class GlobalsManager:
     Create_targets_button = None #Button defined properly in Targets function
 
     #Monster creation variables
-    Monsters_list = []  #Holds the created 1-3 monster types
+    Monster_obj_list: List[str] = []  #Holds the created monster objects
     Monsters_widgets_list = []
-    N_monsters_int = tk.IntVar(value=1)
+    N_monsters_int = tk.IntVar(value=2)
 
     Monster_dmg1_extra_text_label2 = None #the text that appears next line depending on your choice of dmg type
     Monster_dmg2_extra_text_label2 = None

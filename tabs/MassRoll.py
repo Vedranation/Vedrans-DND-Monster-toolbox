@@ -96,7 +96,7 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         rolltype = GSM.Quick_monster_save_rolltype_str.get()
 
         #Get the monster obj from string since Tkinker can only hold strings
-        monster_map = {monster.name_str.get(): monster for monster in GSM.Monsters_list}
+        monster_map = {monster.name_str.get(): monster for monster in GSM.Monster_obj_list}
         monster_obj = monster_map.get(GSM.Quick_save_which_mob_str.get(), None)  # Retrieve attacker object
         which_save = GSM.Quick_save_which_save.get()
         if monster_obj is None:
@@ -160,8 +160,8 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         #Which monster
         quick_monster_save_label2 = tk.Label(GSM.Mass_roll_frame, text="Which monster: ")
         quick_monster_save_label2.place(x=RelPosMassroll.same("x"), y=RelPosMassroll.increase("y", 45))
-        quick_monster_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monsters_list)
-        GSM.Quick_save_which_mob_str.set(GSM.Monsters_list[0])
+        quick_monster_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monster_obj_list)
+        GSM.Quick_save_which_mob_str.set(GSM.Monster_obj_list[0])
         quick_monster_dropdown.place(x=RelPosMassroll.increase("x", 90), y=RelPosMassroll.increase("y", -4))
         GSM.OnTab_MassSaves_reset_widgets.append([quick_monster_dropdown, GSM.RelPosMassroll.same("x"),
                                                   GSM.RelPosMassroll.same("y"), "which_monster"])

@@ -39,14 +39,14 @@ def On_tab_change(event):
 
             if identifier == "attacker_dropdown":
                 # Check if the selected attacker exists in the monsters list by comparing strings
-                if GSM.OneAttacker_str.get() not in [str(monster) for monster in GSM.Monsters_list]:
+                if GSM.OneAttacker_str.get() not in [str(monster) for monster in GSM.Monster_obj_list]:
                     # If the selected monster was removed, select the first one
-                    GSM.OneAttacker_str.set(str(GSM.Monsters_list[0]))
-                new_widget = tk.OptionMenu(GSM.Attack_frame, GSM.OneAttacker_str, *GSM.Monsters_list)
+                    GSM.OneAttacker_str.set(str(GSM.Monster_obj_list[0]))
+                new_widget = tk.OptionMenu(GSM.Attack_frame, GSM.OneAttacker_str, *GSM.Monster_obj_list)
             elif identifier == "defender_dropdown":
-                if GSM.OneDefender_str.get() not in [str(obj) for obj in (*GSM.Monsters_list, *GSM.Target_obj_list, "None")]:
+                if GSM.OneDefender_str.get() not in [str(obj) for obj in (*GSM.Monster_obj_list, *GSM.Target_obj_list, "None")]:
                     GSM.OneDefender_str.set("None")
-                new_widget = tk.OptionMenu(GSM.Attack_frame, GSM.OneDefender_str, *[*GSM.Monsters_list, *GSM.Target_obj_list, "None"])
+                new_widget = tk.OptionMenu(GSM.Attack_frame, GSM.OneDefender_str, *[*GSM.Monster_obj_list, *GSM.Target_obj_list, "None"])
 
             #make a new widget
             new_widget.place(x=x, y=y)
@@ -69,10 +69,10 @@ def On_tab_change(event):
 
             if identifier == "which_monster":
                 # Check if the selected attacker exists in the monsters list by comparing strings
-                if GSM.Quick_save_which_mob_str.get() not in [str(monster) for monster in GSM.Monsters_list]:
+                if GSM.Quick_save_which_mob_str.get() not in [str(monster) for monster in GSM.Monster_obj_list]:
                     # If the selected monster was removed, select the first one
-                    GSM.Quick_save_which_mob_str.set(str(GSM.Monsters_list[0]))
-                new_widget = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monsters_list)
+                    GSM.Quick_save_which_mob_str.set(str(GSM.Monster_obj_list[0]))
+                new_widget = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monster_obj_list)
 
             # make a new widget
             new_widget.place(x=x, y=y)

@@ -7,7 +7,7 @@ class PlayerStats():
         #TODO: Make a setting to pick between PP and rolling percep for mass percep check
         self.name_str: str = tk.StringVar()
         self.ac_int = tk.IntVar(value=13)
-        self.n_monsters_list_ints = [tk.IntVar() for _ in GSM.Monsters_list] #Creates a list holding how many monsters attack this target
+        self.n_monsters_list_ints = [tk.IntVar() for _ in GSM.Monster_obj_list] #Creates a list holding how many monsters attack this target
 
         self.monster_roll_type_against_str = tk.StringVar(value="Normal") #If dodging or is flanked
 
@@ -48,7 +48,7 @@ def CreatePlayers(RelPosTargets) -> None:
                 pass
             else:
                 TargetObj.name_str.set(f"Player {j + 1}")
-            TargetObj.n_monsters_list_ints = [tk.IntVar() for _ in GSM.Monsters_list]  # Regenerate proper length list holding all monsters
+            TargetObj.n_monsters_list_ints = [tk.IntVar() for _ in GSM.Monster_obj_list]  # Regenerate proper length list holding all monsters
 
             # Button to open the new window
             TargetObj._my_button = tk.Button(GSM.Targets_frame, text=TargetObj.name_str.get(),
@@ -66,7 +66,7 @@ def CreatePlayers(RelPosTargets) -> None:
                                            button_y + row_increase - 7, fill=color)
 
             if j == 0: #Place headers down once
-                for k, monster in enumerate(GSM.Monsters_list):
+                for k, monster in enumerate(GSM.Monster_obj_list):
                     height = 80 if k % 2 else 100
                     # Calculate the x-position for centering
                     text_width = GSM.Target_font.measure(monster.name_str.get() + ":")
@@ -78,7 +78,7 @@ def CreatePlayers(RelPosTargets) -> None:
                     GSM.Target_widgets_list.append(header_label)
 
             #Place spinboxes
-            for k, monster in enumerate(GSM.Monsters_list):
+            for k, monster in enumerate(GSM.Monster_obj_list):
                 # Create a Spinbox for each monster, binding it to the corresponding IntVar
                 target_n_monster_spinbox = ttk.Spinbox(GSM.Targets_frame, width=3,
                                                        textvariable=TargetObj.n_monsters_list_ints[k], from_=0,
@@ -91,7 +91,6 @@ def CreatePlayers(RelPosTargets) -> None:
         current_count = len(GSM.Target_obj_list)
         preserve_data = []
 
-        #TODO: Copy over the preservation logic to monster creation part
         # Preserve existing data
         for target_obj in GSM.Target_obj_list:
             preserve_data.append(target_obj.name_str.get())
@@ -101,8 +100,8 @@ def CreatePlayers(RelPosTargets) -> None:
             GSM.Target_obj_list = GSM.Target_obj_list[:n_targets]
         elif n_targets > current_count:
             for i in range(current_count, n_targets):
-                TargetObj = PlayerStats()
-                GSM.Target_obj_list.append(TargetObj)
+                targetObj = PlayerStats()
+                GSM.Target_obj_list.append(targetObj)
 
         # Redraw labels and entries
         for i in range(n_targets):
@@ -225,7 +224,6 @@ def CreatePlayers(RelPosTargets) -> None:
     # Number of targets
     n_targets_text_label = tk.Label(GSM.Targets_frame, text="How many players: ")
     n_targets_text_label.place(x=RelPosTargets.same("x"), y=RelPosTargets.increase("y", 35))
-    GSM.N_targets_int.set(4)
 
     # Button to update targets
     GSM.Target_widgets_list = []

@@ -268,7 +268,7 @@ def Attack(RelPosROLL):
         log_size = 7
         log_result_space = 55
         #For single attacking button, calls a function to display result
-        monster_map = {monster.name_str.get(): monster for monster in GSM.Monsters_list}
+        monster_map = {monster.name_str.get(): monster for monster in GSM.Monster_obj_list}
         target_map = {target.name_str.get(): target for target in GSM.Target_obj_list}
 
         #Attacker (monster only)
@@ -382,7 +382,7 @@ def Attack(RelPosROLL):
             GSM.Roll_Treeview.item(GSM.Treeview_target_id_list[-1], open=expand)  # This expands the parent node
     def ComputeAllAttacks() -> None:
         for TargetObj in GSM.Target_obj_list:
-            n_monsters = len(GSM.Monsters_list)  # Number of monsters dynamically
+            n_monsters = len(GSM.Monster_obj_list)  # Number of monsters dynamically
             # Created nested lists with number of lists inside the big one depending on how many monsters, [[]] for 1, [[], []] for 2 etc.
             hits = [[] for _ in range(n_monsters)]
             dmgs1 = [[] for _ in range(n_monsters)]
@@ -395,7 +395,7 @@ def Attack(RelPosROLL):
 
             print(f"-----{TargetObj.name_str.get()}-----")
 
-            for i, monster_object in enumerate(GSM.Monsters_list):
+            for i, monster_object in enumerate(GSM.Monster_obj_list):
                 # Grabs the correct number for each monster amount
                 n_monsters = TargetObj.n_monsters_list_ints[i].get()
                 # Gets this stuff in case 0 monsters so it can be passed on to display
@@ -427,15 +427,15 @@ def Attack(RelPosROLL):
         one_attack_label.place(x=GSM.RelPosROLL.set("x", 20), y=GSM.RelPosROLL.set("y", 150))
 
 
-        attacker_dropdown = tk.OptionMenu(GSM.Attack_frame, GSM.OneAttacker_str, *GSM.Monsters_list )
-        GSM.OneAttacker_str.set(GSM.Monsters_list[0])
+        attacker_dropdown = tk.OptionMenu(GSM.Attack_frame, GSM.OneAttacker_str, *GSM.Monster_obj_list)
+        GSM.OneAttacker_str.set(GSM.Monster_obj_list[0])
         attacker_dropdown.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", -4))
         GSM.OnTab_Attack_reset_widgets.append([attacker_dropdown, GSM.RelPosROLL.same("x"), GSM.RelPosROLL.same("y"), "attacker_dropdown"])
 
         one_attack_label2 = tk.Label(GSM.Attack_frame, text="Select defender: ")
         one_attack_label2.place(x=GSM.RelPosROLL.set("x", 20), y=GSM.RelPosROLL.increase("y", 40))
         defender_dropdown = tk.OptionMenu(GSM.Attack_frame, GSM.OneDefender_str,
-                                          *[*GSM.Monsters_list, *GSM.Target_obj_list, "None"])
+                                          *[*GSM.Monster_obj_list, *GSM.Target_obj_list, "None"])
         GSM.OneDefender_str.set("None")
         defender_dropdown.place(x=GSM.RelPosROLL.increase("x", 90), y=GSM.RelPosROLL.increase("y", -4))
         GSM.OnTab_Attack_reset_widgets.append([defender_dropdown, GSM.RelPosROLL.same("x"), GSM.RelPosROLL.same("y"), "defender_dropdown"])
