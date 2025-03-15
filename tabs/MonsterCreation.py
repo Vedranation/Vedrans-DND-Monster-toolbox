@@ -77,10 +77,16 @@ def CreateMonster(RelPosMonsters) -> None:
         attack_title_label = tk.Label(new_window, text="Attack details:", font=GSM.Title_font)
         attack_title_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
         # Name
-        monster_name_label = tk.Label(new_window, text="Monsters name:")
+        monster_name_label = tk.Label(new_window, text="Monsters name:", font=GSM.Target_font)
         monster_name_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
         monster_name_entry = tk.Entry(new_window, borderwidth=2, textvariable=monster_obj.name_str, width=18)
-        monster_name_entry.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_name_entry.place(x=RelPosMonsters.increase("x", 98), y=RelPosMonsters.same("y"))
+        # AC
+        target_ac_text_label = tk.Label(new_window, text="AC:", font=GSM.Target_font)
+        target_ac_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 30))
+        target_ac_spinbox = ttk.Spinbox(new_window, width=3, textvariable=monster_obj.ac_int, from_=0, to=30)
+        target_ac_spinbox.place(x=RelPosMonsters.increase("x", 29), y=RelPosMonsters.same("y"))
+        #There is no reason to add imposes rolltype because Attack Once type overrides it anyway
 
         # Number of attacks
         monster_n_attacks_text_label = tk.Label(new_window, text="Number of attacks: ")
@@ -91,11 +97,11 @@ def CreateMonster(RelPosMonsters) -> None:
                                          y=RelPosMonsters.increase("y", -4))
 
         # To hit
-        monster_to_hit_label = tk.Label(new_window, text="Monster to hit: +")
+        monster_to_hit_label = tk.Label(new_window, text="Monster to hit: +", font=GSM.Target_font)
         monster_to_hit_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
         monster_to_hit_spinbox = ttk.Spinbox(new_window, width=3, textvariable=monster_obj.to_hit_mod,
                                              from_=0, to=13)
-        monster_to_hit_spinbox.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_to_hit_spinbox.place(x=RelPosMonsters.increase("x", 95), y=RelPosMonsters.same("y"))
 
         # Roll type (normal, adv, disadv...)
         monster_roll_type_text_label = tk.Label(new_window, text="Roll type: ")
@@ -106,11 +112,11 @@ def CreateMonster(RelPosMonsters) -> None:
                                          y=RelPosMonsters.increase("y", -4))
 
         'Dmg 1'
-        monster_dmg1_text_label = tk.Label(new_window, text="Damage type 1:")
+        monster_dmg1_text_label = tk.Label(new_window, text="Damage type 1:", font=GSM.Target_font)
         monster_dmg1_text_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.increase("y", 35))
         monster_dmg1_number_dice_spinbox = ttk.Spinbox(new_window, textvariable=monster_obj.dmg_n_die_1,
                                                   width=3, from_=0, to=10)
-        monster_dmg1_number_dice_spinbox.place(x=RelPosMonsters.increase("x", 93),
+        monster_dmg1_number_dice_spinbox.place(x=RelPosMonsters.increase("x", 95),
                                              y=RelPosMonsters.same("y"))
         monster_dmg1_dice_type_dropdown = tk.OptionMenu(new_window, monster_obj.dmg_die_type_1, *GSM.Dice_types)
         monster_dmg1_dice_type_dropdown.place(x=RelPosMonsters.increase("x", 35),
@@ -131,12 +137,12 @@ def CreateMonster(RelPosMonsters) -> None:
         monster_dmg1_dmg_type_dropdown.place(x=RelPosMonsters.increase("x", 60),
                                              y=RelPosMonsters.same("y"))
 
-        monster_dmg1_flat_text_label = tk.Label(new_window, text="Damage 1 flat:  +")
+        monster_dmg1_flat_text_label = tk.Label(new_window, text="Damage 1 flat: +", font=GSM.Target_font)
         monster_dmg1_flat_text_label.place(x=RelPosMonsters.reset("x"),
                                            y=RelPosMonsters.increase("y", 30))
         monster_dmg1_extra_spinbox = ttk.Spinbox(new_window, textvariable=monster_obj.dmg_flat_1,
                                                        width=3, from_=-5, to=30)
-        monster_dmg1_extra_spinbox.place(x=RelPosMonsters.increase("x", 93), y=RelPosMonsters.same("y"))
+        monster_dmg1_extra_spinbox.place(x=RelPosMonsters.increase("x", 95), y=RelPosMonsters.same("y"))
 
         'Dmg 2'
         monster_dmg2_text_label = tk.Label(new_window, text="Damage type 2:")
