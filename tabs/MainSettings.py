@@ -16,15 +16,16 @@ def Settings(RelPosSettings) -> None:
 
     #Extra crit die is max possible roll
     def EnableDisableMaxDiceRoll() -> None:
-
         if GSM.Crits_double_dmg_bool.get() == False:
-            checkbox_label21.config(state="normal")
+            Checkbox_CritExtraDiceMaxDmg.config(state="normal")
         else:
-            checkbox_label21.config(state="disabled")
-    checkbox_label21 = tk.Checkbutton(GSM.Settings_frame, text='Crit extra roll is max possible', variable=GSM.Crits_extra_die_is_max_bool,
+            Checkbox_CritExtraDiceMaxDmg.config(state="disabled")
+            GSM.Crits_extra_die_is_max_bool.set(False)
+    Checkbox_CritExtraDiceMaxDmg = tk.Checkbutton(GSM.Settings_frame, text='Crit extra roll is max possible', variable=GSM.Crits_extra_die_is_max_bool,
                                      onvalue=True, offvalue=False)
-    checkbox_label21.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
-    checkbox_label21.config(state="disabled")
+    Checkbox_CritExtraDiceMaxDmg.place(x=RelPosSettings.same("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
+    Checkbox_CritExtraDiceMaxDmg.config(state="disabled")
+    GSM.Load_widgets_mainsettings_dict["Checkbox_CritExtraDiceMaxDmg"] = Checkbox_CritExtraDiceMaxDmg #Save widget into dict to be able to find it when loading data
 
     #Crits double dice checkbox
     checkbox_label2 = tk.Checkbutton(GSM.Settings_frame, text='Crits double TOTAL dmg instead of dice',variable=GSM.Crits_double_dmg_bool,
@@ -70,11 +71,19 @@ def Load() -> None:
         #Main settings
         GSM.Meets_it_beats_it_bool.set(loaded_data["Meets_it_beats_it_bool"])
         GSM.Crits_double_dmg_bool.set(loaded_data["Crits_double_dmg_bool"])
+        if GSM.Crits_double_dmg_bool.get() == False: #Disable checkbox when it should be
+            GSM.Load_widgets_mainsettings_dict["Checkbox_CritExtraDiceMaxDmg"].config(state="normal")
+        else:
+            GSM.Load_widgets_mainsettings_dict["Checkbox_CritExtraDiceMaxDmg"].config(state="disabled")
         GSM.Crits_extra_die_is_max_bool.set(loaded_data["Crits_extra_die_is_max_bool"])
         GSM.Nat1_always_miss_bool.set(loaded_data["Nat1_always_miss_bool"])
         GSM.Adv_combine_bool.set(loaded_data["Adv_combine_bool"])
 
         #Spellcasters
+        #TODO: Incorporate spellcasters into monsters tab
         GSM.N_casters_int.set(loaded_data["N_casters_int"])
         CreateSpellCasters(GSM.N_casters_int.get(), GSM.RelPosSpellCast)
+
+        #Players
+
         print(loaded_data)

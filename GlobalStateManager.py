@@ -124,6 +124,9 @@ class GlobalsManager:
 
     OnTab_Attack_reset_widgets = []  # Widgets to be remade when tab changes to Attack (dropdowns)
 
+    #Save/Load widgets which need to be kept track off
+    Load_widgets_mainsettings_dict = {}
+
     #Widget position trackers
     RelPosSettings = RelativePositionTracker()
     RelPosSpellCast = RelativePositionTracker()
