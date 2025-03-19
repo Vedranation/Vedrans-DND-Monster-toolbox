@@ -139,5 +139,5 @@ def Load() -> None:
                 playerObj.stealth_mod_int.set(player_data["stealth_mod_int"])
                 playerObj.stealth_roll_type_str.set(player_data["stealth_roll_type_str"])
                 playerObj.passiveperception_int.set(player_data["passiveperception_int"])
-
+                playerObj._my_button.config(text=playerObj.name_str.get())
         print(loaded_data)
