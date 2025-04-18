@@ -171,9 +171,20 @@ def CreatePlayerUI(TargetObj, new_window, RelPosTargets):
 
     Skills(new_window, RelPosTargets)
     # Add a button to close the new window
+    def chooseButtonColor(targetObj) -> str:
+        # Recolours button color depending on Advantage/Disadvantage
+        if targetObj.monster_roll_type_against_str.get() == "Advantage" or \
+           targetObj.monster_roll_type_against_str.get() == "Super Advantage":
+            background = "#ff6661"
+        elif targetObj.monster_roll_type_against_str.get() == "Disadvantage" or \
+             targetObj.monster_roll_type_against_str.get() == "Super Disadvantage":
+            background = "#80f05b"
+        else:
+            background = "SystemButtonFace"
+        return background
     close_button = tk.Button(new_window, text="Save and exit", command=lambda: (
-    new_window.destroy(), TargetObj._my_button.config(text=TargetObj.name_str.get())),
-                             background="red")
+    new_window.destroy(), TargetObj._my_button.config(text=TargetObj.name_str.get(),
+                                  background=chooseButtonColor(TargetObj))), background="red")
     close_button.place(x=RelPosTargets.set("x", 310), y=RelPosTargets.reset("y"))
     # Bind the Enter key to the close_button's command
     new_window.bind("<Return>", lambda event: close_button.invoke())

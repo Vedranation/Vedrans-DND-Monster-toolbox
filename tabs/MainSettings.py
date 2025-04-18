@@ -2,6 +2,7 @@ import tkinter as tk
 import json
 
 from GlobalStateManager import GSM
+from tabs.MonsterCreation import PreservePreviousMonsters
 from tabs.PlayerCreation import PreservePreviousTargets
 from tabs.Spellcasters import CreateSpellCasters
 
@@ -84,6 +85,60 @@ def Save() -> None:
                 "passiveperception_int": playerObj.passiveperception_int.get(),
             }
             for playerObj in GSM.Target_obj_list
+        ],
+
+        #Monsters
+        "N_monsters_int": GSM.N_monsters_int.get(),
+        "Monster_obj_list": [
+            {
+                "name_str": monsterObj.name_str.get(),
+                "ac_int": monsterObj.ac_int.get(),
+                "roll_type": monsterObj.roll_type.get(),
+                "n_attacks": monsterObj.n_attacks.get(),
+                "to_hit_mod": monsterObj.to_hit_mod.get(),
+
+                "dmg_type_1": monsterObj.dmg_type_1.get(),
+                "dmg_n_die_1": monsterObj.dmg_n_die_1.get(),
+                "dmg_die_type_1": monsterObj.dmg_die_type_1.get(),
+                "dmg_flat_1": monsterObj.dmg_flat_1.get(),
+
+                "dmg_type_2": monsterObj.dmg_type_2.get(),
+                "dmg_die_type_2": monsterObj.dmg_die_type_2.get(),
+                "dmg_n_die_2": monsterObj.dmg_n_die_2.get(),
+                "dmg_flat_2": monsterObj.dmg_flat_2.get(),
+
+                "on_hit_force_saving_throw_bool": monsterObj.on_hit_force_saving_throw_bool.get(),
+                "on_hit_save_dc": monsterObj.on_hit_save_dc.get(),
+                "on_hit_save_type": monsterObj.on_hit_save_type.get(),
+
+                "reroll_1_on_hit": monsterObj.reroll_1_on_hit.get(),
+                "reroll_1_2_dmg": monsterObj.reroll_1_2_dmg.get(),
+                "brutal_critical": monsterObj.brutal_critical.get(),
+                "crit_number": monsterObj.crit_number.get(),
+                "savage_attacker": monsterObj.savage_attacker.get(),
+                "bane": monsterObj.bane.get(),
+                "bless": monsterObj.bless.get(),
+
+                "walking_speed_int": monsterObj.walking_speed_int.get(),
+                "flying_speed_int": monsterObj.flying_speed_int.get(),
+                "climbing_speed_int": monsterObj.climbing_speed_int.get(),
+                "burrowing_speed_int": monsterObj.burrowing_speed_int.get(),
+
+                "savingthrow_str_mod_int": monsterObj.savingthrow_str_mod_int.get(),
+                "savingthrow_str_roll_type_str": monsterObj.savingthrow_str_roll_type_str.get(),
+                "savingthrow_dex_mod_int": monsterObj.savingthrow_dex_mod_int.get(),
+                "savingthrow_dex_roll_type_str": monsterObj.savingthrow_dex_roll_type_str.get(),
+                "savingthrow_con_mod_int": monsterObj.savingthrow_con_mod_int.get(),
+                "savingthrow_con_roll_type_str": monsterObj.savingthrow_con_roll_type_str.get(),
+                "savingthrow_int_mod_int": monsterObj.savingthrow_int_mod_int.get(),
+                "savingthrow_int_roll_type_str": monsterObj.savingthrow_int_roll_type_str.get(),
+                "savingthrow_wis_mod_int": monsterObj.savingthrow_wis_mod_int.get(),
+                "savingthrow_wis_roll_type_str": monsterObj.savingthrow_wis_roll_type_str.get(),
+                "savingthrow_cha_mod_int": monsterObj.savingthrow_cha_mod_int.get(),
+                "savingthrow_cha_roll_type_str": monsterObj.savingthrow_cha_roll_type_str.get(),
+                "passiveperception_int": monsterObj.passiveperception_int.get(),
+            }
+            for monsterObj in GSM.Monster_obj_list
         ]
     }
 
@@ -140,4 +195,61 @@ def Load() -> None:
                 playerObj.stealth_roll_type_str.set(player_data["stealth_roll_type_str"])
                 playerObj.passiveperception_int.set(player_data["passiveperception_int"])
                 playerObj._my_button.config(text=playerObj.name_str.get())
-        print(loaded_data)
+
+        #Monsters
+        GSM.N_monsters_int.set(loaded_data["N_monsters_int"])
+        PreservePreviousMonsters(GSM.N_monsters_int.get(), GSM.RelPosMonsters)
+
+        # Iterate over both GSM.Monster_obj_list and loaded data, but limit to N_monsters_int
+        for i, monsterObj in enumerate(GSM.Monster_obj_list[:GSM.N_monsters_int.get()]):
+            if i < len(loaded_data["Monster_obj_list"]):  # Prevent indexing error if JSON has fewer entries
+                monster_data = loaded_data["Monster_obj_list"][i]  # Get the corresponding loaded data
+
+                # Set values from loaded data
+                monsterObj.name_str.set(monster_data["name_str"])
+                monsterObj.ac_int.set(monster_data["ac_int"])
+                monsterObj.roll_type.set(monster_data["roll_type"])
+                monsterObj.n_attacks.set(monster_data["n_attacks"])
+                monsterObj.to_hit_mod.set(monster_data["to_hit_mod"])
+
+                monsterObj.dmg_type_1.set(monster_data["dmg_type_1"])
+                monsterObj.dmg_n_die_1.set(monster_data["dmg_n_die_1"])
+                monsterObj.dmg_die_type_1.set(monster_data["dmg_die_type_1"])
+                monsterObj.dmg_flat_1.set(monster_data["dmg_flat_1"])
+
+                monsterObj.dmg_type_2.set(monster_data["dmg_type_2"])
+                monsterObj.dmg_die_type_2.set(monster_data["dmg_die_type_2"])
+                monsterObj.dmg_n_die_2.set(monster_data["dmg_n_die_2"])
+                monsterObj.dmg_flat_2.set(monster_data["dmg_flat_2"])
+
+                monsterObj.on_hit_force_saving_throw_bool.set(monster_data["on_hit_force_saving_throw_bool"])
+                monsterObj.on_hit_save_dc.set(monster_data["on_hit_save_dc"])
+                monsterObj.on_hit_save_type.set(monster_data["on_hit_save_type"])
+
+                monsterObj.reroll_1_on_hit.set(monster_data["reroll_1_on_hit"])
+                monsterObj.reroll_1_2_dmg.set(monster_data["reroll_1_2_dmg"])
+                monsterObj.brutal_critical.set(monster_data["brutal_critical"])
+                monsterObj.crit_number.set(monster_data["crit_number"])
+                monsterObj.savage_attacker.set(monster_data["savage_attacker"])
+                monsterObj.bane.set(monster_data["bane"])
+                monsterObj.bless.set(monster_data["bless"])
+
+                monsterObj.walking_speed_int.set(monster_data["walking_speed_int"])
+                monsterObj.flying_speed_int.set(monster_data["flying_speed_int"])
+                monsterObj.climbing_speed_int.set(monster_data["climbing_speed_int"])
+                monsterObj.burrowing_speed_int.set(monster_data["burrowing_speed_int"])
+
+                monsterObj.savingthrow_str_mod_int.set(monster_data["savingthrow_str_mod_int"])
+                monsterObj.savingthrow_str_roll_type_str.set(monster_data["savingthrow_str_roll_type_str"])
+                monsterObj.savingthrow_dex_mod_int.set(monster_data["savingthrow_dex_mod_int"])
+                monsterObj.savingthrow_dex_roll_type_str.set(monster_data["savingthrow_dex_roll_type_str"])
+                monsterObj.savingthrow_con_mod_int.set(monster_data["savingthrow_con_mod_int"])
+                monsterObj.savingthrow_con_roll_type_str.set(monster_data["savingthrow_con_roll_type_str"])
+                monsterObj.savingthrow_int_mod_int.set(monster_data["savingthrow_int_mod_int"])
+                monsterObj.savingthrow_int_roll_type_str.set(monster_data["savingthrow_int_roll_type_str"])
+                monsterObj.savingthrow_wis_mod_int.set(monster_data["savingthrow_wis_mod_int"])
+                monsterObj.savingthrow_wis_roll_type_str.set(monster_data["savingthrow_wis_roll_type_str"])
+                monsterObj.savingthrow_cha_mod_int.set(monster_data["savingthrow_cha_mod_int"])
+                monsterObj.savingthrow_cha_roll_type_str.set(monster_data["savingthrow_cha_roll_type_str"])
+                monsterObj.passiveperception_int.set(monster_data["passiveperception_int"])
+                monsterObj._my_button.config(text=monsterObj.name_str.get())

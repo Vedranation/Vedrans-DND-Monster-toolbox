@@ -5,7 +5,6 @@ from tkinter import ttk
 
 from utilities import RelativePositionTracker
 
-#TODO: Create a way to save and load presets which automatically loads in monsters, targets etc5
 class GlobalsManager:
     # GUI globals
     Root = tk.Tk()
