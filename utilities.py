@@ -1,27 +1,34 @@
 import random
 
-class Row_track():
+
+class Row_track:
     def __init__(self):
         self.row = 0
+
     def same(self):
         return self.row
+
     def increase(self):
         self.row += 1
         return self.row
+
     def reset(self):
         self.row = 0
         return self.row
 
-class RelativePositionTracker():
+
+class RelativePositionTracker:
     def __init__(self):
         self.x = 5
         self.y = 10
         self.constant_y = 20
+
     def same(self, what: str):
         if what == "x":
             return self.x
         elif what == "y":
             return self.y
+
     def increase(self, what: str, how_much: int):
         if what == "x":
             self.x += how_much
@@ -29,22 +36,25 @@ class RelativePositionTracker():
         elif what == "y":
             self.y += how_much
             return self.y
+
     def reset(self, what: str):
-        #Restores to factory value
+        # Restores to factory value
         if what == "x":
             self.x = 5
             return self.x
         elif what == "y":
             self.y = 10
             return self.y
+
     def checkpoint_set(self, what, to_what):
-        #Stores temporary memory for temporary resetting or loops purposes
+        # Stores temporary memory for temporary resetting or loops purposes
         if what == "x":
             self.memory_x = to_what
             return self.memory_x
         elif what == "y":
             self.memory_y = to_what
             return self.memory_y
+
     def checkpoint_get(self, what):
         if what == "x":
             return self.memory_x
@@ -58,6 +68,7 @@ class RelativePositionTracker():
         elif what == "y":
             self.y = to_what
             return self.y
+
 
 def RollDice(die_type: str) -> int:
     if die_type == "d4":
@@ -75,6 +86,8 @@ def RollDice(die_type: str) -> int:
     elif die_type == "d100":
         die_max = 100
     return random.randint(1, die_max)
+
+
 def ReturnMaxPossibleDie(die_type: str) -> int:
     if die_type == "d4":
         die_max = 4

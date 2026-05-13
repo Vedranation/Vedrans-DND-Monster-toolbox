@@ -1,9 +1,6 @@
 import tkinter as tk
-from tkinter import font as tkfont  # Import tkfont for font definitions
-from tkinter import ttk
 
-import tabs.PlayerCreation
-#import pyperclip
+# import pyperclip
 
 from GlobalStateManager import GSM
 from tabs.MonsterCreation import CreateMonster
@@ -13,22 +10,24 @@ from tabs.Spellcasters import SpellCasters
 from tabs.MainSettings import Settings
 from tabs.Attack import Attack
 from tabs.RandomGenerator import RandomGenerator
-from utilities import Row_track, RollDice, ReturnMaxPossibleDie
+from tabs.BoardTab import BattleBoard
+from tabs.InitiativeTracker import InitiativeTracker
 
-#label - just text to display
-#entry - type in something
-#dropdown - pick one from a menu
-#space - just a placeholder to move down by X amount
-#n = number of something
+# label - just text to display
+# entry - type in something
+# dropdown - pick one from a menu
+# space - just a placeholder to move down by X amount
+# n = number of something
+
 
 def On_tab_change(event):
-    #This procs every tab change, for resetting dropdown lists
+    # This procs every tab change, for resetting dropdown lists
     selected_tab = GSM.Notebook.tab(GSM.Notebook.index("current"), "text")
     if selected_tab == "Attacks":
         list_of_widgets = GSM.OnTab_Attack_reset_widgets.copy()
         GSM.OnTab_Attack_reset_widgets.clear()
         for package in list_of_widgets:
-            #package = [widget_obj, widget_x, widget_y, widget_identifier]
+            # package = [widget_obj, widget_x, widget_y, widget_identifier]
             widget = package[0]
             x = package[1]
             y = package[2]
@@ -44,13 +43,17 @@ def On_tab_change(event):
                     GSM.OneAttacker_str.set(str(GSM.Monster_obj_list[0]))
                 new_widget = tk.OptionMenu(GSM.Attack_frame, GSM.OneAttacker_str, *GSM.Monster_obj_list)
             elif identifier == "defender_dropdown":
-                if GSM.OneDefender_str.get() not in [str(obj) for obj in (*GSM.Monster_obj_list, *GSM.Target_obj_list, "None")]:
+                if GSM.OneDefender_str.get() not in [
+                    str(obj) for obj in (*GSM.Monster_obj_list, *GSM.Target_obj_list, "None")
+                ]:
                     GSM.OneDefender_str.set("None")
-                new_widget = tk.OptionMenu(GSM.Attack_frame, GSM.OneDefender_str, *[*GSM.Monster_obj_list, *GSM.Target_obj_list, "None"])
+                new_widget = tk.OptionMenu(
+                    GSM.Attack_frame, GSM.OneDefender_str, *[*GSM.Monster_obj_list, *GSM.Target_obj_list, "None"]
+                )
 
-            #make a new widget
+            # make a new widget
             new_widget.place(x=x, y=y)
-            #Re-add it to relevant lists
+            # Re-add it to relevant lists
             GSM.OnTab_Attack_reset_widgets.append([new_widget, x, y, identifier])
             GSM.Results_display_widgets_list.append(new_widget)
 
@@ -84,17 +87,20 @@ GSM.Notebook.bind("<<NotebookTabChanged>>", On_tab_change)
 
 Settings(GSM.RelPosSettings)
 CreatePlayers(GSM.RelPosTargets)
-CreateMonster(GSM.RelPosMonsters) #FIXME: Switching pos of monster and target fucks with n_monsters dropdown at PlayerCreation
+CreateMonster(
+    GSM.RelPosMonsters
+)  # FIXME: Switching pos of monster and target fucks with n_monsters dropdown at PlayerCreation
 MassRoll(GSM.RelPosMassroll, GSM.RelPosMonsters)
 SpellCasters(GSM.RelPosSpellCast)
 RandomGenerator(GSM.RelPosRandGen)
 Attack(GSM.RelPosROLL)
+BattleBoard(GSM.Board_frame)
+InitiativeTracker(GSM.Initiative_frame)
 
-#TODO: Initiative tracker
-#TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc
-#TODO: Add automated rolling for random encounter table. Let players import a list, saying chance of each encounter,
+# TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc
+# TODO: Add automated rolling for random encounter table. Let players import a list, saying chance of each encounter,
 #   which happen per night and which per day, how often to check, and how long PC's travelled and then determine the outcome
-#TODO: Add a random store. Decide "quality" of store (distribution of item rarity), how many items, read an external list, and price range as inputs
-#TODO: Add random loot
+# TODO: Add a random store. Decide "quality" of store (distribution of item rarity), how many items, read an external list, and price range as inputs
+# TODO: Add random loot
 
 GSM.Root.mainloop()
