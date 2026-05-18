@@ -1,6 +1,8 @@
+import json
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
+from persistence.import_5etools_spell import parse_5etools_spell
 from utilities import RelativePositionTracker
 from GlobalStateManager import GSM
 
@@ -10,6 +12,8 @@ _SCHOOLS = [
     "", "Abjuration", "Conjuration", "Divination", "Enchantment",
     "Evocation", "Illusion", "Necromancy", "Transmutation", "Other",
 ]
+
+_spell_clipboard: dict = {"data": None}  # {level: [name, ...]} snapshot, or None
 
 
 # ── shared helpers ────────────────────────────────────────────────────────────
@@ -30,6 +34,62 @@ def _sorted_library() -> list[dict]:
 def _spell_label(spell: dict) -> str:
     lv = spell.get("level", 0)
     return f"Lv{'C' if lv == 0 else lv}  {spell.get('name', '')}"
+
+
+# ── 5etools spell import dialog ───────────────────────────────────────────────
+
+def _import_5etools_json_dialog(parent: tk.Toplevel, on_load) -> None:
+    """Paste 5etools spell JSON to load its data into the spell library form."""
+    dialog = tk.Toplevel(parent)
+    dialog.title("Import 5etools Spell JSON")
+    dialog.resizable(True, True)
+    dialog.geometry("560x470")
+
+    tk.Label(dialog, text="Paste 5etools spell JSON (single spell):").pack(
+        anchor="w", padx=8, pady=(8, 2)
+    )
+
+    text_frame = tk.Frame(dialog)
+    text_frame.pack(fill="both", expand=True, padx=8, pady=(0, 4))
+    scroll = tk.Scrollbar(text_frame)
+    json_text = tk.Text(text_frame, wrap="word", yscrollcommand=scroll.set)
+    scroll.config(command=json_text.yview)
+    scroll.pack(side="right", fill="y")
+    json_text.pack(side="left", fill="both", expand=True)
+
+    status_var = tk.StringVar()
+    tk.Label(dialog, textvariable=status_var, fg="#aa3333", anchor="w").pack(
+        fill="x", padx=8
+    )
+
+    def _do_import() -> None:
+        raw = json_text.get("1.0", "end-1c").strip()
+        if not raw:
+            status_var.set("Nothing to import.")
+            return
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            status_var.set(f"JSON error: {exc}")
+            return
+        if not isinstance(data, dict):
+            status_var.set("Expected a single spell JSON object.")
+            return
+        try:
+            spell = parse_5etools_spell(data)
+        except Exception as exc:
+            status_var.set(f"Parse error: {exc}")
+            return
+        on_load(spell)
+        dialog.destroy()
+
+    btn_row = tk.Frame(dialog)
+    btn_row.pack(pady=(4, 8))
+    tk.Button(btn_row, text="Import", command=_do_import, width=12,
+              bg="#554488", fg="white").pack(side="left", padx=4)
+
+    _popup_near_mouse(dialog)
+    dialog.grab_set()
 
 
 # ── global spell library window ───────────────────────────────────────────────
@@ -269,11 +329,29 @@ def _open_global_spell_library(preselect_name: str | None = None) -> None:
     lb.bind("<<ListboxSelect>>", _on_select)
     lb.bind("<Double-Button-1>", _on_select)
 
+    def _on_import_load(spell: dict) -> None:
+        _load_to_form(spell)
+        name = spell.get("name", "")
+        existing_idx = next(
+            (i for i, s in enumerate(GSM.Spell_library) if s.get("name") == name), -1
+        )
+        _sel_lib_idx[0] = existing_idx
+        lb.selection_clear(0, "end")
+        if existing_idx >= 0:
+            for i, sp in enumerate(_filtered_spells()):
+                if sp.get("name") == name:
+                    lb.selection_set(i)
+                    lb.see(i)
+                    break
+
     tk.Button(btn_row, text="New", command=_clear_form, width=10).pack(side="left", padx=4)
     tk.Button(btn_row, text="Save / Update", command=_save_spell, width=14,
               bg="#336633", fg="white").pack(side="left", padx=4)
     tk.Button(btn_row, text="Delete", command=_delete_spell, width=10,
               bg="#aa3333", fg="white").pack(side="left", padx=4)
+    tk.Button(btn_row, text="Import 5etools JSON…",
+              command=lambda: _import_5etools_json_dialog(top, _on_import_load),
+              width=18, bg="#554488", fg="white").pack(side="left", padx=4)
     tk.Button(btn_row, text="Close", command=top.destroy, width=10).pack(side="left", padx=4)
 
     _refresh(select_name=preselect_name)
@@ -289,8 +367,8 @@ def _open_global_spell_library(preselect_name: str | None = None) -> None:
 
 # ── per-caster spell list window ──────────────────────────────────────────────
 
-def _add_from_library_dialog(spell_data: dict, listboxes: dict, parent: tk.Toplevel) -> None:
-    """Modal picker: select a library spell and add it to the matching level bucket."""
+def _add_from_library_dialog(spell_data: dict, parent: tk.Toplevel, on_add) -> None:
+    """Modal picker: select a library spell and add it to the caster's spell list."""
     if not GSM.Spell_library:
         messagebox.showinfo("Empty library", "No spells in the global library yet.", parent=parent)
         return
@@ -320,11 +398,10 @@ def _add_from_library_dialog(spell_data: dict, listboxes: dict, parent: tk.Tople
         spell = sorted_spells[sel[0]]
         lv = spell.get("level", 1)
         name = spell.get("name", "")
-        spell_data.setdefault(lv, []).append(name)
-        if lv in listboxes:
-            listboxes[lv].insert("end", name)
+        if name not in spell_data.get(lv, []):
+            spell_data.setdefault(lv, []).append(name)
+        on_add()
         dialog.destroy()
-        parent.grab_set()
 
     pick_lb.bind("<Double-Button-1>", lambda _e: _confirm())
 
@@ -332,8 +409,7 @@ def _add_from_library_dialog(spell_data: dict, listboxes: dict, parent: tk.Tople
     btn_row.pack(pady=8)
     tk.Button(btn_row, text="Add", command=_confirm, width=10,
               bg="#336633", fg="white").pack(side="left", padx=4)
-    tk.Button(btn_row, text="Cancel",
-              command=lambda: (dialog.destroy(), parent.grab_set()),
+    tk.Button(btn_row, text="Cancel", command=dialog.destroy,
               width=10).pack(side="left", padx=4)
 
     _popup_near_mouse(dialog)
@@ -342,97 +418,137 @@ def _add_from_library_dialog(spell_data: dict, listboxes: dict, parent: tk.Tople
 
 def _open_spell_list(caster_index: int) -> None:
     name_entry = GSM.Spell_caster_name_entries.get(caster_index)
-    caster_name = name_entry.get().strip() if name_entry else ""
-    caster_name = caster_name or f"Caster {caster_index + 1}"
+    caster_name = (name_entry.get().strip() if name_entry else "") or f"Caster {caster_index + 1}"
 
     top = tk.Toplevel()
     top.title(f"Spells — {caster_name}")
-    top.resizable(False, False)
+    top.resizable(True, True)
+    top.geometry("500x440")
 
     spell_data = GSM.Spell_caster_spells.setdefault(caster_index, {})
-    listboxes: dict[int, tk.Listbox] = {}
+    _row_data: dict[str, tuple[int, str]] = {}  # treeview iid → (level, name)
 
-    header = tk.Frame(top)
-    header.pack(fill="x", padx=8, pady=(8, 0))
-    tk.Button(
-        header, text="Add from Library",
-        command=lambda: _add_from_library_dialog(spell_data, listboxes, top),
-        bg="#335588", fg="white",
-    ).pack(side="left")
+    # ── toolbar (rendered above the tree) ─────────────────────────────────
+    toolbar = tk.Frame(top)
+    toolbar.pack(fill="x", padx=8, pady=(8, 4))
 
-    outer = tk.Frame(top)
-    outer.pack(fill="both", expand=True)
+    # ── spell treeview ────────────────────────────────────────────────────
+    tree_frame = tk.Frame(top)
+    tree_frame.pack(fill="both", expand=True, padx=8, pady=(0, 4))
 
-    canvas = tk.Canvas(outer, width=380)
-    scrollbar = tk.Scrollbar(outer, orient="vertical", command=canvas.yview)
-    canvas.configure(yscrollcommand=scrollbar.set)
-    scrollbar.pack(side="right", fill="y")
-    canvas.pack(side="left", fill="both", expand=True)
+    cols = ("lv", "name", "cast_time", "conc")
+    tree = ttk.Treeview(tree_frame, columns=cols, show="headings", selectmode="browse")
+    tree.heading("lv", text="Lv")
+    tree.heading("name", text="Spell Name")
+    tree.heading("cast_time", text="Casting Time")
+    tree.heading("conc", text="Conc.")
+    tree.column("lv", width=35, anchor="center", stretch=False)
+    tree.column("name", width=170, stretch=True)
+    tree.column("cast_time", width=110, stretch=False)
+    tree.column("conc", width=45, anchor="center", stretch=False)
 
-    inner = tk.Frame(canvas)
-    canvas.create_window((0, 0), window=inner, anchor="nw")
+    vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=vsb.set)
+    vsb.pack(side="right", fill="y")
+    tree.pack(side="left", fill="both", expand=True)
 
-    def _on_configure(_e):
-        canvas.configure(scrollregion=canvas.bbox("all"))
+    # ── helpers ───────────────────────────────────────────────────────────
+    def _populate() -> None:
+        tree.delete(*tree.get_children())
+        _row_data.clear()
+        all_spells = sorted(
+            [(lv, nm) for lv, names in spell_data.items() for nm in names],
+            key=lambda x: (x[0], x[1].lower()),
+        )
+        for i, (level, name) in enumerate(all_spells):
+            iid = str(i)
+            _row_data[iid] = (level, name)
+            lib_spell = next((s for s in GSM.Spell_library if s.get("name") == name), None)
+            lv_display = "C" if level == 0 else str(level)
+            cast_time = lib_spell.get("casting_time", "") if lib_spell else ""
+            conc = "✓" if (lib_spell and lib_spell.get("concentration")) else ""
+            tree.insert("", "end", iid=iid, values=(lv_display, name, cast_time, conc))
 
-    inner.bind("<Configure>", _on_configure)
+    def _selected_data() -> tuple[int, str] | None:
+        sel = tree.selection()
+        return _row_data.get(sel[0]) if sel else None
 
-    def _open_in_library(spell_name: str) -> None:
-        """Open global library with the named spell pre-selected."""
-        if any(s.get("name") == spell_name for s in GSM.Spell_library):
-            _open_global_spell_library(preselect_name=spell_name)
+    def _remove_spell() -> None:
+        data = _selected_data()
+        if data is None:
+            return
+        level, name = data
+        lst = spell_data.get(level, [])
+        if name in lst:
+            lst.remove(name)
+        _populate()
 
-    for lvl in range(1, 10):
-        spells = spell_data.setdefault(lvl, [])
+    def _view_spell() -> None:
+        data = _selected_data()
+        if data is None:
+            return
+        _, name = data
+        if any(s.get("name") == name for s in GSM.Spell_library):
+            _open_global_spell_library(preselect_name=name)
 
-        frame = tk.LabelFrame(inner, text=f"Spell Level {lvl}", padx=6, pady=4)
-        frame.pack(fill="x", padx=8, pady=4)
+    def _cast_spell() -> None:
+        data = _selected_data()
+        if data is None:
+            return
+        level, name = data
+        if level == 0:
+            messagebox.showinfo("Cantrip", f"{name} is a cantrip — no slot needed.", parent=top)
+            return
+        slot_vars = GSM.Spell_slot_vars.get(caster_index, {}).get(level, [])
+        if not slot_vars:
+            messagebox.showwarning(
+                "No slots",
+                f"No level {level} slots — caster level may be too low.",
+                parent=top,
+            )
+            return
+        available = [v for v in slot_vars if not v.get()]
+        if not available:
+            messagebox.showwarning(
+                "No slots", f"All level {level} spell slots are expended.", parent=top,
+            )
+            return
+        available[0].set(True)
+        top.destroy()
 
-        lb = tk.Listbox(frame, height=4, width=28, selectmode="single")
-        lb.pack(side="left", fill="y")
-        listboxes[lvl] = lb
-        for sp in spells:
-            lb.insert("end", sp)
+    def _copy_spells() -> None:
+        _spell_clipboard["data"] = {lv: list(names) for lv, names in spell_data.items()}
 
-        # Double-click: open spell in global library if it exists there
-        lb.bind("<Double-Button-1>", lambda e, lb_ref=lb: _open_in_library(
-            lb_ref.get(lb_ref.nearest(e.y)) if lb_ref.size() else ""
-        ))
+    def _paste_spells() -> None:
+        if _spell_clipboard["data"] is None:
+            messagebox.showwarning("Nothing to paste", "Copy a spell list first.", parent=top)
+            return
+        spell_data.clear()
+        for lv, names in _spell_clipboard["data"].items():
+            spell_data[lv] = list(names)
+        _populate()
 
-        right = tk.Frame(frame)
-        right.pack(side="left", padx=6, fill="y")
+    # ── toolbar buttons (defined after helpers so lambdas are valid) ──────
+    tk.Button(toolbar, text="Add from Library",
+              command=lambda: _add_from_library_dialog(spell_data, top, _populate),
+              bg="#335588", fg="white").pack(side="left", padx=(0, 4))
+    tk.Button(toolbar, text="Remove", command=_remove_spell,
+              bg="#aa3333", fg="white", width=8).pack(side="left", padx=(0, 4))
+    tk.Button(toolbar, text="Cast", command=_cast_spell,
+              bg="#336633", fg="white", width=8).pack(side="left", padx=(0, 4))
+    tk.Button(toolbar, text="View", command=_view_spell,
+              width=8).pack(side="left", padx=(0, 4))
+    tk.Button(toolbar, text="Copy", command=_copy_spells,
+              width=7).pack(side="left", padx=(0, 4))
+    tk.Button(toolbar, text="Paste", command=_paste_spells,
+              width=7).pack(side="left", padx=(0, 4))
 
-        entry_var = tk.StringVar()
-        entry = tk.Entry(right, textvariable=entry_var, width=22)
-        entry.pack(pady=(0, 4))
+    tree.bind("<Double-Button-1>", lambda _e: _view_spell())
 
-        def _add(lv=lvl, ev=entry_var, lb_ref=lb):
-            name = ev.get().strip()
-            if not name:
-                return
-            lb_ref.insert("end", name)
-            spell_data.setdefault(lv, []).append(name)
-            ev.set("")
+    tk.Button(top, text="Close", command=top.destroy, width=10).pack(pady=(0, 8))
 
-        def _remove(lv=lvl, lb_ref=lb):
-            sel = lb_ref.curselection()
-            if not sel:
-                return
-            idx = sel[0]
-            lb_ref.delete(idx)
-            if lv in spell_data and idx < len(spell_data[lv]):
-                spell_data[lv].pop(idx)
-
-        entry.bind("<Return>", lambda e, lv=lvl, ev=entry_var, lb_ref=lb: _add(lv, ev, lb_ref))
-        tk.Button(right, text="Add", command=_add, width=10).pack()
-        tk.Button(right, text="Remove", command=_remove, width=10).pack(pady=(4, 0))
-
-    tk.Button(top, text="Close", command=top.destroy, width=10).pack(pady=6)
-
-    top.update_idletasks()
-    canvas.configure(height=min(inner.winfo_reqheight() + 20, 530))
+    _populate()
     _popup_near_mouse(top)
-    top.grab_set()
 
 
 # ── spell slot checkbox grid ──────────────────────────────────────────────────
@@ -442,61 +558,69 @@ def DrawSpellBoxes(caster_lv: int, index: int) -> None:
     for widget in GSM.Spell_checkboxes_dict.get(index, []):
         widget.destroy()
     GSM.Spell_checkboxes_dict[index] = []
+    GSM.Spell_slot_vars[index] = {}  # {spell_level: [BooleanVar, ...]}
 
     pos = RelativePositionTracker()
     col = index * _COL_W
+    _slot_level = [0]  # mutable cell tracking the current spell level
 
     def _lbl(text: str, x: int, y: int) -> None:
         w = tk.Label(GSM.Spell_caster_frame, text=text)
         w.place(x=x + col, y=y)
         GSM.Spell_checkboxes_dict[index].append(w)
 
+    def _lbl_level(text: str, level: int, x: int, y: int) -> None:
+        _slot_level[0] = level
+        _lbl(text, x, y)
+
     def _chk(x: int, y: int) -> None:
-        w = tk.Checkbutton(GSM.Spell_caster_frame)
+        var = tk.BooleanVar()
+        GSM.Spell_slot_vars[index].setdefault(_slot_level[0], []).append(var)
+        w = tk.Checkbutton(GSM.Spell_caster_frame, variable=var)
         w.place(x=x + col, y=y)
         GSM.Spell_checkboxes_dict[index].append(w)
 
     if caster_lv >= 1:
-        _lbl("Level 1:", pos.reset("x"), pos.set("y", 165))
+        _lbl_level("Level 1:", 1, pos.reset("x"), pos.set("y", 165))
         _chk(pos.set("x", 47), pos.same("y"))
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 2:
         _chk(pos.increase("x", 20), pos.same("y"))
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 3:
-        _lbl("Level 2:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 2:", 2, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 4:
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 5:
-        _lbl("Level 3:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 3:", 3, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 6:
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 7:
-        _lbl("Level 4:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 4:", 4, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
     if caster_lv >= 8:
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 9:
         _chk(pos.increase("x", 20), pos.same("y"))
-        _lbl("Level 5:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 5:", 5, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
     if caster_lv >= 10:
         _chk(pos.increase("x", 20), pos.same("y"))
     if caster_lv >= 11:
-        _lbl("Level 6:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 6:", 6, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
     if caster_lv >= 13:
-        _lbl("Level 7:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 7:", 7, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
     if caster_lv >= 15:
-        _lbl("Level 8:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 8:", 8, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
     if caster_lv >= 17:
-        _lbl("Level 9:", pos.reset("x"), pos.increase("y", 20))
+        _lbl_level("Level 9:", 9, pos.reset("x"), pos.increase("y", 20))
         _chk(pos.set("x", 47), pos.same("y"))
     if caster_lv >= 18:
         _chk(pos.set("x", 87), pos.increase("y", -80))
@@ -562,6 +686,7 @@ def CreateSpellCasters(n_casters: int, _rel_pos=None) -> None:
             w.destroy()
         GSM.Spell_caster_level_vars.pop(i, None)
         GSM.Spell_caster_name_entries.pop(i, None)
+        GSM.Spell_slot_vars.pop(i, None)
 
     for i in range(old_n, n_casters):
         _create_caster_header(i)

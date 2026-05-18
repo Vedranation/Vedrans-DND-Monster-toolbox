@@ -117,6 +117,7 @@ class GlobalsManager:
     N_casters_int = tk.IntVar(value=1)
     Spell_casters_widgets_list = []       # kept for compatibility, no longer used
     Spell_checkboxes_dict: dict = {}      # {index: [slot checkbox/label widgets]}
+    Spell_slot_vars: dict = {}            # {index: {spell_level: [tk.BooleanVar, ...]}}
     Spell_caster_header_widgets: dict = {}  # {index: [header widgets]}
     Spell_caster_level_vars: dict = {}    # {index: tk.IntVar}
     Spell_caster_name_entries: dict = {}  # {index: tk.Entry}
@@ -124,12 +125,6 @@ class GlobalsManager:
     Spell_library: list = []              # [{name, level, school, casting_time, component_v/s/m, description}]
 
     # Mass save variables
-    Mass_save_mod_int = tk.IntVar()
-    Mass_save_DC_int = tk.IntVar()
-    Mass_save_n_monsters_int = tk.IntVar()
-    Mass_save_roll_type_str = tk.StringVar()
-    Results_mass_save_widgets_to_clear = []
-
     Quick_monster_save_rolltype_str = tk.StringVar(value="Monster default")
     Quick_save_which_mob_str = tk.StringVar()
     Quick_save_which_save = tk.StringVar(value="STR")
@@ -139,11 +134,6 @@ class GlobalsManager:
     WhichSkillToCheck = tk.StringVar(value="Perception")
     SkillCheckDC = tk.IntVar(value=15)
     PartySkillCheckResults = []
-
-    Results_mass_skill_check_widgets_to_clear = []
-    Mass_skill_check_stats_list = []
-    Mass_skill_check_dc_int = tk.IntVar(value=15)
-    Mass_skill_enable_checkboxes_list = []
 
     # Attack globals
     Results_display_widgets_list = []
@@ -157,6 +147,9 @@ class GlobalsManager:
     OneAttackLogResults = []  # Stores all OneAttack results
 
     OnTab_Attack_reset_widgets = []  # Widgets to be remade when tab changes to Attack (dropdowns)
+
+    # Callable set by MassRoll — lets BoardTab load monster groups into the mass save section
+    Load_mass_saves: object = None
 
     # Save/Load widgets which need to be kept track off
     Load_widgets_mainsettings_dict = {}

@@ -17,7 +17,7 @@ _COLS = 20
 _ROWS = 20
 _CANVAS_W = _COLS * _CELL
 _CANVAS_H = _ROWS * _CELL
-_CTRL_W = 160       # left control panel width
+_CTRL_W = 175       # left control panel width
 _PAD = 5
 
 _COLOR_MONSTER = "#e05555"
@@ -26,6 +26,9 @@ _COLOR_INACTIVE = "#aaaaaa"
 _COLOR_RANGE_HL = "#ffffaa"
 _COLOR_FLANK_HL = "#aaffaa"
 _COLOR_GRID = "#cccccc"
+_COLOR_SELECTED = "#ff6600"      # orange outline for selected tokens
+_COLOR_TARGET_IN = "#22aa44"     # green arrow — target within attack range
+_COLOR_TARGET_OUT = "#cc6600"    # orange arrow — target out of attack range
 _OVAL_R = 10        # token oval radius in pixels
 _BAR_H = 4          # HP bar height in pixels
 
@@ -39,7 +42,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
     # ── left control panel ────────────────────────────────────────────────────
     ctrl = tk.Frame(board_frame, width=_CTRL_W, relief="groove", bd=1)
     ctrl.grid(row=0, column=0, sticky="ns", padx=_PAD, pady=_PAD)
-    ctrl.grid_propagate(False)
+    ctrl.pack_propagate(False)  # children use pack — this is the correct propagate call
 
     tk.Label(ctrl, text="Battle Board", font=GSM.Title_font).pack(anchor="w", padx=4, pady=(6, 2))
 
@@ -63,7 +66,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
     tk.Label(
         ctrl, textvariable=info_var, justify="left",
         wraplength=_CTRL_W - 10, font=("Helvetica", 8)
-    ).pack(anchor="w", padx=4, pady=2)
+    ).pack(anchor="w", fill="x", padx=4, pady=2)
 
     ttk.Separator(ctrl, orient="horizontal").pack(fill="x", padx=4, pady=4)
 
@@ -83,9 +86,13 @@ def BattleBoard(board_frame: tk.Frame) -> None:
     # ── state ─────────────────────────────────────────────────────────────────
     # token_id → (oval_id, label_id, [hpbar_item_ids…])
     _token_canvas: dict[str, tuple[int, int, list[int]]] = {}
-    _drag: dict = {"token_id": None, "offset_x": 0, "offset_y": 0}
-    _selected: dict = {"token_id": None}
+    _drag: dict = {"token_id": None, "offset_x": 0, "offset_y": 0, "initial_positions": {}}
+    # token_ids: full selection set; primary_id: last-clicked (drives info panel & range display)
+    _selected: dict = {"token_ids": set(), "primary_id": None}
+    # monster_token_id → player_token_id (manually set or auto-assigned)
+    _targets: dict[str, str | None] = {}
     _token_counter: list[int] = [0]
+    _last_added: dict = {"display": None}   # remembers last pick in the add-token dialog
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -119,6 +126,112 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             return _COLOR_INACTIVE
         return _subspecies_color(token.data_ref, token.kind)
 
+    # ── targeting ─────────────────────────────────────────────────────────────
+
+    def _auto_target(m_token: Token) -> str | None:
+        """Return the ID of the best player target for m_token under current board settings."""
+        board = _board()
+        p_tokens = [t for t in board.tokens if t.kind == "player" and t.active]
+        if not p_tokens:
+            return None
+        p_tokens.sort(key=lambda t: distance_ft(m_token.pos, t.pos, board.diagonal_mode))
+        if board.range_mode == "block":
+            in_range = [t for t in p_tokens
+                        if distance_ft(m_token.pos, t.pos, board.diagonal_mode) <= m_token.attack_range_ft]
+            return in_range[0].id if in_range else None
+        return p_tokens[0].id  # warn / none: nearest regardless of range
+
+    def _refresh_targets() -> None:
+        """Keep _targets consistent: remove stale refs, auto-assign missing entries."""
+        board = _board()
+        active_player_ids = {t.id for t in board.tokens if t.kind == "player" and t.active}
+        # Invalidate stale assignments
+        for mid in list(_targets.keys()):
+            if _targets[mid] is not None and _targets[mid] not in active_player_ids:
+                _targets[mid] = None
+        # Auto-assign active monsters with no valid target
+        for m_token in board.tokens:
+            if m_token.kind != "monster" or not m_token.active:
+                continue
+            if _targets.get(m_token.id) is None:
+                _targets[m_token.id] = _auto_target(m_token)
+
+    def _retarget_selected() -> None:
+        """Cycle target(s) for selected monster(s) (R hotkey).
+
+        Single selection: respects block/warn — only in-range targets cycle in block mode;
+        shows warning if none are reachable.
+        Multi-selection: computes average group position to order candidates, assigns the
+        same target to all selected monsters; in block mode silently skips monsters that
+        individually can't reach the chosen target (no warning shown).
+        """
+        board = _board()
+        primary_id = _selected["primary_id"]
+        if not primary_id:
+            return
+        primary_token = _token_by_id(primary_id)
+        if primary_token is None or primary_token.kind != "monster":
+            return
+
+        selected_monster_tids = [
+            tid for tid in _selected["token_ids"]
+            if (t := _token_by_id(tid)) is not None and t.kind == "monster" and t.active
+        ]
+        is_multi = len(selected_monster_tids) > 1
+
+        p_tokens = [t for t in board.tokens if t.kind == "player" and t.active]
+        if not p_tokens:
+            return
+
+        if is_multi:
+            # Sort players by distance from the group's average grid position
+            sel_tokens = [_token_by_id(tid) for tid in selected_monster_tids]
+            sel_tokens = [t for t in sel_tokens if t is not None]
+            avg_pos = GridPosition(
+                round(sum(t.pos.col for t in sel_tokens) / len(sel_tokens)),
+                round(sum(t.pos.row for t in sel_tokens) / len(sel_tokens)),
+            )
+            p_tokens.sort(key=lambda t: distance_ft(avg_pos, t.pos, board.diagonal_mode))
+            ids = [t.id for t in p_tokens]
+        else:
+            p_tokens.sort(key=lambda t: distance_ft(primary_token.pos, t.pos, board.diagonal_mode))
+            if board.range_mode == "block":
+                p_tokens = [
+                    t for t in p_tokens
+                    if distance_ft(primary_token.pos, t.pos, board.diagonal_mode) <= primary_token.attack_range_ft
+                ]
+                if not p_tokens:
+                    messagebox.showinfo(
+                        "Resolve Board",
+                        f"Blocked by range — no valid targets for: {primary_token.data_ref}",
+                    )
+                    return
+            ids = [t.id for t in p_tokens]
+
+        # Advance one step past the primary token's current target
+        current = _targets.get(primary_id)
+        next_idx = (ids.index(current) + 1) % len(ids) if current in ids else 0
+        chosen_id = ids[next_idx]
+        chosen_token = _token_by_id(chosen_id)
+
+        if is_multi:
+            for sel_tid in selected_monster_tids:
+                sel_token = _token_by_id(sel_tid)
+                if sel_token is None:
+                    continue
+                # In block mode skip monsters that individually can't reach the chosen target
+                if board.range_mode == "block" and chosen_token is not None:
+                    if distance_ft(sel_token.pos, chosen_token.pos, board.diagonal_mode) > sel_token.attack_range_ft:
+                        continue
+                _targets[sel_tid] = chosen_id
+        else:
+            _targets[primary_id] = chosen_id
+
+        _draw_target_lines()
+        canvas.tag_raise("target_line")
+        _raise_tokens()
+        _update_info(_token_by_id(primary_id))
+
     # ── drawing ───────────────────────────────────────────────────────────────
 
     def _draw_grid() -> None:
@@ -128,9 +241,33 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         for r in range(_ROWS + 1):
             canvas.create_line(0, r * _CELL, _CANVAS_W, r * _CELL, fill=_COLOR_GRID, tags="grid")
 
+    def _draw_target_lines() -> None:
+        canvas.delete("target_line")
+        board = _board()
+        for m_token in board.tokens:
+            if not m_token.active or m_token.kind != "monster":
+                continue
+            target_id = _targets.get(m_token.id)
+            if not target_id:
+                continue
+            p_token = _token_by_id(target_id)
+            if p_token is None or not p_token.active:
+                continue
+            mx, my = _cell_center(m_token.pos.col, m_token.pos.row)
+            px, py = _cell_center(p_token.pos.col, p_token.pos.row)
+            dist = distance_ft(m_token.pos, p_token.pos, board.diagonal_mode)
+            in_range = dist <= m_token.attack_range_ft
+            color = _COLOR_TARGET_IN if in_range else _COLOR_TARGET_OUT
+            canvas.create_line(
+                mx, my, px, py,
+                fill=color, width=1, dash=(5, 3),
+                arrow="last", arrowshape=(8, 10, 4),
+                tags="target_line",
+            )
+
     def _draw_range_highlight_if_selected() -> None:
         canvas.delete("range_hl")
-        tid = _selected["token_id"]
+        tid = _selected["primary_id"]
         if not tid:
             return
         token = _token_by_id(tid)
@@ -147,7 +284,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
 
     def _draw_flank_highlight_if_selected() -> None:
         canvas.delete("flank_hl")
-        tid = _selected["token_id"]
+        tid = _selected["primary_id"]
         if not tid:
             return
         token = _token_by_id(tid)
@@ -197,9 +334,13 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         for token in _board().tokens:
             cx, cy = _cell_center(token.pos.col, token.pos.row)
             color = _token_color(token)
+            is_sel = token.id in _selected["token_ids"]
             oid = canvas.create_oval(
                 cx - _OVAL_R, cy - _OVAL_R, cx + _OVAL_R, cy + _OVAL_R,
-                fill=color, outline="black", width=1, tags="token"
+                fill=color,
+                outline=_COLOR_SELECTED if is_sel else "black",
+                width=3 if is_sel else 1,
+                tags="token",
             )
             lid = canvas.create_text(
                 cx, cy, text=token.data_ref[:6], font=("Helvetica", 6), fill="black", tags="token_label"
@@ -219,34 +360,69 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 canvas.tag_bind(item_id, "<Button-3>",
                                  lambda e, tid=token.id: _on_token_right_click(e, tid))
 
+    def _update_selection_visuals() -> None:
+        """Update oval outlines in-place without destroying/recreating token canvas items."""
+        for t in _board().tokens:
+            ids = _token_canvas.get(t.id)
+            if ids is None:
+                continue
+            oid, _, _ = ids
+            is_sel = t.id in _selected["token_ids"]
+            canvas.itemconfig(oid,
+                              outline=_COLOR_SELECTED if is_sel else "black",
+                              width=3 if is_sel else 1)
+
     def _raise_tokens() -> None:
         canvas.tag_raise("token")
         canvas.tag_raise("token_label")
 
     def _redraw_all() -> None:
-        _draw_grid()
+        # Layer order: range_hl → flank_hl → grid → target_lines → tokens
         _draw_range_highlight_if_selected()
         _draw_flank_highlight_if_selected()
+        _draw_grid()
+        _draw_target_lines()
         _draw_tokens()
         _raise_tokens()
 
     def _redraw_highlights_only() -> None:
-        """Redraw grid + highlights WITHOUT destroying token items (preserves drag bindings)."""
-        _draw_grid()
+        """Redraw highlights + grid WITHOUT destroying token items (preserves drag bindings)."""
         _draw_range_highlight_if_selected()
         _draw_flank_highlight_if_selected()
+        _draw_grid()
+        canvas.tag_raise("target_line")
         _raise_tokens()
 
     # ── token interaction ─────────────────────────────────────────────────────
 
     def _on_token_click(event: tk.Event, tid: str) -> None:
-        _selected["token_id"] = tid
+        ctrl_held = bool(event.state & 0x4)
+        if ctrl_held:
+            if tid in _selected["token_ids"]:
+                _selected["token_ids"].discard(tid)
+                if _selected["primary_id"] == tid:
+                    _selected["primary_id"] = next(iter(_selected["token_ids"]), None)
+            else:
+                _selected["token_ids"].add(tid)
+                _selected["primary_id"] = tid
+        else:
+            _selected["token_ids"] = {tid}
+            _selected["primary_id"] = tid
+
         _drag["token_id"] = tid
         _drag["offset_x"] = event.x
         _drag["offset_y"] = event.y
-        _update_info(_token_by_id(tid))
-        canvas.focus_set()  # allow hotkeys (e.g. D) to fire on canvas
-        # Only redraw highlights — do NOT call _redraw_all (would destroy drag bindings)
+        # Snapshot positions of all selected tokens at drag start
+        _drag["initial_positions"] = {
+            sel_tid: GridPosition(t.pos.col, t.pos.row)
+            for sel_tid in _selected["token_ids"]
+            if (t := _token_by_id(sel_tid)) is not None
+        }
+
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        _update_info(primary)
+        canvas.focus_set()
+        _update_selection_visuals()
         _redraw_highlights_only()
 
     def _on_token_double_click(event: tk.Event, tid: str) -> None:
@@ -266,33 +442,46 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 OpenPlayerWindow(obj, GSM.RelPosTargets)
 
     def _toggle_active_selected() -> None:
-        """Toggle active/inactive on the currently selected token (hotkey D)."""
-        tid = _selected["token_id"]
-        if tid is None:
+        """Toggle active/inactive on all selected tokens (hotkey D)."""
+        if not _selected["token_ids"]:
             return
-        token = _token_by_id(tid)
-        if token:
-            _toggle_active(token)
+        for tid in list(_selected["token_ids"]):
+            token = _token_by_id(tid)
+            if token:
+                token.active = not token.active
+        _refresh_targets()
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        _update_info(primary)
+        _redraw_all()
 
     def _remove_selected() -> None:
-        """Remove the currently selected token (hotkey Delete/BackSpace)."""
-        tid = _selected["token_id"]
-        if tid:
-            _remove_token(tid)
+        """Remove all selected tokens (hotkey Delete/BackSpace)."""
+        ids_to_remove = set(_selected["token_ids"])
+        if not ids_to_remove:
+            return
+        _board().tokens = [t for t in _board().tokens if t.id not in ids_to_remove]
+        for tid in ids_to_remove:
+            _targets.pop(tid, None)
+        _selected["token_ids"].clear()
+        _selected["primary_id"] = None
+        _refresh_targets()
+        _update_info(None)
+        _redraw_all()
 
     def _on_token_drag(event: tk.Event, tid: str) -> None:
         if _drag["token_id"] != tid:
             return
-        ids = _token_canvas.get(tid)
-        if ids is None:
-            return
-        oid, lid, bar_ids = ids
         dx = event.x - _drag["offset_x"]
         dy = event.y - _drag["offset_y"]
-        canvas.move(oid, dx, dy)
-        canvas.move(lid, dx, dy)
-        for bid in bar_ids:
-            canvas.move(bid, dx, dy)
+        for sel_tid in _selected["token_ids"]:
+            ids = _token_canvas.get(sel_tid)
+            if ids is None:
+                continue
+            oid, lid, bar_ids = ids
+            canvas.move(oid, dx, dy)
+            canvas.move(lid, dx, dy)
+            for bid in bar_ids:
+                canvas.move(bid, dx, dy)
         _drag["offset_x"] = event.x
         _drag["offset_y"] = event.y
 
@@ -300,54 +489,169 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         if _drag["token_id"] != tid:
             return
         _drag["token_id"] = None
-        col, row = _nearest_cell(event.x, event.y)
-        token = _token_by_id(tid)
-        if token:
-            token.pos = GridPosition(col, row)
-            _update_info(token)  # refresh info panel after move
+        new_col, new_row = _nearest_cell(event.x, event.y)
+        init_pos = _drag["initial_positions"].get(tid)
+        if init_pos is not None:
+            dcol = new_col - init_pos.col
+            drow = new_row - init_pos.row
+            for sel_tid, sel_init in _drag["initial_positions"].items():
+                token = _token_by_id(sel_tid)
+                if token is None:
+                    continue
+                token.pos = GridPosition(
+                    max(0, min(_COLS - 1, sel_init.col + dcol)),
+                    max(0, min(_ROWS - 1, sel_init.row + drow)),
+                )
+        else:
+            token = _token_by_id(tid)
+            if token:
+                token.pos = GridPosition(new_col, new_row)
+        # Re-evaluate targets after movement (positions changed)
+        _refresh_targets()
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        if primary:
+            _update_info(primary)
         _redraw_all()
 
     def _on_token_right_click(event: tk.Event, tid: str) -> None:
+        # If the right-clicked token isn't in the current selection, single-select it
+        if tid not in _selected["token_ids"]:
+            _selected["token_ids"] = {tid}
+            _selected["primary_id"] = tid
+            _update_selection_visuals()
+
         token = _token_by_id(tid)
         if token is None:
             return
+
+        is_multi = len(_selected["token_ids"]) > 1
+        n = len(_selected["token_ids"])
+        primary = _token_by_id(_selected["primary_id"]) or token
+
         menu = tk.Menu(canvas, tearoff=0)
-        menu.add_command(label=f"{token.data_ref} ({token.kind})", state="disabled")
-        menu.add_separator()
-        menu.add_command(label="Set HP…", command=lambda: _set_hp(token))
+        if is_multi:
+            menu.add_command(label=f"{n} tokens selected", state="disabled")
+        else:
+            menu.add_command(label=f"{token.data_ref} ({token.kind})", state="disabled")
         menu.add_separator()
 
+        # HP
+        if is_multi:
+            menu.add_command(label="Set HP…", command=_edit_hp_selected)
+        else:
+            menu.add_command(label="Set HP…", command=lambda: _set_hp(token))
+        menu.add_separator()
+
+        # Conditions — label driven by primary token's state; applies to all selected
         cond_menu = tk.Menu(menu, tearoff=0)
         for cond in Condition:
-            label = f"✓ {cond.value}" if cond in token.conditions else f"  {cond.value}"
-            cond_menu.add_command(label=label,
-                                  command=lambda c=cond, t=token: _toggle_condition(t, c))
+            has_cond = cond in primary.conditions
+            label = f"✓ {cond.value}" if has_cond else f"  {cond.value}"
+            if is_multi:
+                cond_menu.add_command(label=label, command=lambda c=cond: _toggle_condition_selected(c))
+            else:
+                cond_menu.add_command(label=label, command=lambda c=cond, t=token: _toggle_condition(t, c))
         menu.add_cascade(label="Conditions", menu=cond_menu)
         menu.add_separator()
 
-        menu.add_command(
-            label="Deactivate" if token.active else "Activate",
-            command=lambda: _toggle_active(token)
-        )
+        # Activate / Deactivate
+        if is_multi:
+            menu.add_command(label="Toggle active", command=_toggle_active_selected)
+        else:
+            menu.add_command(
+                label="Deactivate" if token.active else "Activate",
+                command=lambda: _toggle_active(token),
+            )
         menu.add_separator()
-        menu.add_command(label="Remove token", command=lambda: _remove_token(tid))
+
+        # Remove
+        if is_multi:
+            menu.add_command(label=f"Remove {n} tokens", command=_remove_selected)
+        else:
+            menu.add_command(label="Remove token", command=lambda: _remove_token(tid))
+
+        # Mass saving throw — shown when any selected token is a monster
+        has_monsters = any(
+            _token_by_id(t) is not None and _token_by_id(t).kind == "monster"
+            for t in _selected["token_ids"]
+        )
+        if has_monsters:
+            menu.add_separator()
+            menu.add_command(label="Mass saving throw…", command=_mass_save_selected)
 
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.grab_release()
 
+    # ── HP editing ────────────────────────────────────────────────────────────
+
+    def _parse_hp_input(raw: str, current_hp: int) -> int | None:
+        """Parse '+N', '-N', or 'N'; return new absolute HP or None on bad input."""
+        raw = raw.strip()
+        try:
+            if raw.startswith("+"):
+                return current_hp + int(raw[1:])
+            if raw.startswith("-"):
+                return current_hp - int(raw[1:])
+            return int(raw)
+        except ValueError:
+            return None
+
+    def _clamp_hp(new_hp: int, max_hp: int) -> int:
+        return max(0, min(max_hp, new_hp)) if max_hp > 0 else max(0, new_hp)
+
     def _set_hp(token: Token) -> None:
-        val = simpledialog.askinteger(
-            "Set HP", f"HP for {token.data_ref} (max {token.max_hp}):",
-            initialvalue=token.hp, parent=canvas
+        raw = simpledialog.askstring(
+            "Set HP",
+            f"HP for {token.data_ref}  (max {token.max_hp if token.max_hp > 0 else '—'}):\n"
+            "+N to add,  -N to subtract,  N to set absolute.",
+            initialvalue=str(token.hp), parent=canvas,
         )
-        if val is not None:
-            token.hp = val
-            if val == 0 and GSM.Auto_disable_zero_hp_bool.get():
+        if raw is None:
+            return
+        new_hp = _parse_hp_input(raw, token.hp)
+        if new_hp is None:
+            return
+        token.hp = _clamp_hp(new_hp, token.max_hp)
+        if token.hp == 0 and GSM.Auto_disable_zero_hp_bool.get():
+            token.active = False
+        _update_info(token)
+        _redraw_all()
+
+    def _edit_hp_selected() -> None:
+        """H hotkey: single token → per-token dialog; multiple → apply same operation to all."""
+        if not _selected["token_ids"]:
+            return
+        count = len(_selected["token_ids"])
+        primary_id = _selected["primary_id"]
+        if count == 1 and primary_id:
+            token = _token_by_id(primary_id)
+            if token:
+                _set_hp(token)
+            return
+        primary = _token_by_id(primary_id) if primary_id else None
+        name_hint = f"{primary.data_ref} +{count - 1} others" if primary else f"{count} tokens"
+        raw = simpledialog.askstring(
+            "Set HP",
+            f"HP for {name_hint}:\n+N to add,  -N to subtract,  N to set absolute.",
+            initialvalue="", parent=canvas,
+        )
+        if raw is None:
+            return
+        for tid in _selected["token_ids"]:
+            token = _token_by_id(tid)
+            if token is None:
+                continue
+            new_hp = _parse_hp_input(raw, token.hp)
+            if new_hp is None:
+                continue
+            token.hp = _clamp_hp(new_hp, token.max_hp)
+            if token.hp == 0 and GSM.Auto_disable_zero_hp_bool.get():
                 token.active = False
-            _update_info(token)
-            _redraw_all()
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        _update_info(primary)
+        _redraw_all()
 
     def _toggle_condition(token: Token, cond: Condition) -> None:
         if cond not in token.conditions and token.kind == "monster":
@@ -363,16 +667,61 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         _update_info(token)
         _redraw_all()
 
+    def _toggle_condition_selected(cond: Condition) -> None:
+        """Toggle a condition on all selected tokens, state driven by primary token."""
+        primary = _token_by_id(_selected["primary_id"])
+        adding = cond not in (primary.conditions if primary else set())
+        if adding:
+            immune = [
+                t.data_ref for tid in _selected["token_ids"]
+                if (t := _token_by_id(tid)) and t.kind == "monster"
+                and (obj := next((m for m in GSM.Monster_obj_list if m.name_str.get() == t.data_ref), None))
+                and obj.condition_immunities_vars.get(cond.value, tk.BooleanVar()).get()
+            ]
+            if immune:
+                messagebox.showwarning(
+                    "Condition Immunity",
+                    f"Immune to {cond.value}: {', '.join(immune)}.\nApplying anyway.",
+                )
+        for tid in list(_selected["token_ids"]):
+            t = _token_by_id(tid)
+            if t is None:
+                continue
+            t.conditions.add(cond) if adding else t.conditions.discard(cond)
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        _update_info(primary)
+        _redraw_all()
+
     def _toggle_active(token: Token) -> None:
         token.active = not token.active
+        _refresh_targets()
         _update_info(token)
         _redraw_all()
 
+    def _mass_save_selected() -> None:
+        """Load selected monster tokens into the Mass Saves tab and switch to it."""
+        monster_tokens = [
+            t for t in _board().tokens
+            if t.id in _selected["token_ids"] and t.kind == "monster"
+        ]
+        if not monster_tokens:
+            return
+        groups: dict[str, int] = {}
+        for t in monster_tokens:
+            groups[t.data_ref] = groups.get(t.data_ref, 0) + 1
+        if GSM.Load_mass_saves is not None:
+            GSM.Load_mass_saves(groups)
+        GSM.Notebook.select(GSM.Mass_roll_frame)
+
     def _remove_token(tid: str) -> None:
         _board().tokens = [t for t in _board().tokens if t.id != tid]
-        if _selected["token_id"] == tid:
-            _selected["token_id"] = None
-            _update_info(None)
+        _targets.pop(tid, None)
+        _selected["token_ids"].discard(tid)
+        if _selected["primary_id"] == tid:
+            _selected["primary_id"] = next(iter(_selected["token_ids"]), None)
+        _refresh_targets()
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        _update_info(primary)
         _redraw_all()
 
     # ── info panel ────────────────────────────────────────────────────────────
@@ -396,7 +745,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         else:
             roll_mod = "Normal"
             in_melee_str = "no"
-        info_var.set("\n".join([
+        lines = [
             token.data_ref,
             f"HP: {hp_str}  [{status}]",
             f"Pos: ({token.pos.col},{token.pos.row})",
@@ -405,7 +754,21 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             f"Roll mod: {roll_mod}",
             f"In melee: {in_melee_str}",
             f"HL range: {token.highlight_range_ft}ft",
-        ]))
+        ]
+        if token.kind == "monster":
+            target_id = _targets.get(token.id)
+            p_token = _token_by_id(target_id) if target_id else None
+            if p_token:
+                dist = distance_ft(token.pos, p_token.pos, board.diagonal_mode)
+                in_rng = dist <= token.attack_range_ft
+                rng_tag = "" if in_rng else " ⚠OOR"
+                lines.append(f"Target: {p_token.data_ref} ({dist:.0f}ft){rng_tag}")
+            else:
+                lines.append("Target: none")
+        extra = len(_selected["token_ids"]) - 1
+        if extra > 0:
+            lines.append(f"+{extra} also selected")
+        info_var.set("\n".join(lines))
 
     # ── add token ─────────────────────────────────────────────────────────────
 
@@ -465,12 +828,12 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             highlight_range_ft=hl_range,
         )
         _board().tokens.append(token)
+        _refresh_targets()
         _redraw_all()
 
     def _add_token_at_pos(col: int, row: int) -> None:
         """Single combined list: players (alpha) then monsters (alpha). One click to place."""
-        # Build sorted entries: players first, then monsters
-        entries: list[tuple[str, str, object]] = []  # (display, kind, obj)
+        entries: list[tuple[str, str, object]] = []
         for obj in sorted(GSM.Target_obj_list, key=lambda o: o.name_str.get()):
             entries.append((f"[P] {obj.name_str.get()}", "player", obj))
         for obj in sorted(GSM.Monster_obj_list, key=lambda o: o.name_str.get()):
@@ -487,7 +850,17 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                              selectmode="single", exportselection=False)
         for display, _, _ in entries:
             listbox.insert("end", display)
-        listbox.selection_set(0)
+
+        # Preselect the last-added entry; fall back to index 0
+        preselect = 0
+        if _last_added["display"] is not None:
+            for i, (display, _, _) in enumerate(entries):
+                if display == _last_added["display"]:
+                    preselect = i
+                    break
+        listbox.selection_set(preselect)
+        listbox.see(preselect)
+
         listbox.pack(padx=8, pady=4)
         listbox.focus_set()
 
@@ -496,7 +869,8 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             if not sel:
                 top.destroy()
                 return
-            _, kind, obj = entries[sel[0]]
+            display, kind, obj = entries[sel[0]]
+            _last_added["display"] = display
             top.destroy()
             _place_token_from_obj(kind, obj, GridPosition(col, row))
 
@@ -521,7 +895,9 @@ def BattleBoard(board_frame: tk.Frame) -> None:
 
     def _clear_board() -> None:
         _board().tokens.clear()
-        _selected["token_id"] = None
+        _targets.clear()
+        _selected["token_ids"].clear()
+        _selected["primary_id"] = None
         _update_info(None)
         _redraw_all()
 
@@ -550,36 +926,27 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             )
             if monster_obj is None:
                 continue
-            p_tokens = [t for t in board.tokens if t.kind == "player" and t.active]
-            if not p_tokens:
+
+            # Use the manually-assigned (or auto-assigned) target
+            target_id = _targets.get(m_token.id)
+            p_token = _token_by_id(target_id) if target_id else None
+            if p_token is None or not p_token.active:
+                skipped_blocked.append(m_token.data_ref)
                 continue
-            p_tokens.sort(key=lambda t: distance_ft(m_token.pos, t.pos, board.diagonal_mode))
-
-            atk_range = m_token.attack_range_ft
-            range_mode = board.range_mode
-
-            if range_mode == "block":
-                in_range = [
-                    t for t in p_tokens
-                    if distance_ft(m_token.pos, t.pos, board.diagonal_mode) <= atk_range
-                ]
-                if not in_range:
-                    skipped_blocked.append(m_token.data_ref)
-                    continue
-                p_token = in_range[0]
-                out_of_range = False
-            else:
-                p_token = p_tokens[0]
-                dist = distance_ft(m_token.pos, p_token.pos, board.diagonal_mode)
-                out_of_range = (range_mode == "warn") and (dist > atk_range)
 
             player_obj = next(
                 (p for p in GSM.Target_obj_list if p.name_str.get() == p_token.data_ref), None
             )
             if player_obj is None:
                 continue
-            pairs.append((m_token, p_token, monster_obj, player_obj, out_of_range))
 
+            dist = distance_ft(m_token.pos, p_token.pos, board.diagonal_mode)
+            if board.range_mode == "block" and dist > m_token.attack_range_ft:
+                skipped_blocked.append(m_token.data_ref)
+                continue
+            out_of_range = dist > m_token.attack_range_ft
+
+            pairs.append((m_token, p_token, monster_obj, player_obj, out_of_range))
 
         if skipped_blocked:
             names = ", ".join(skipped_blocked)
@@ -590,7 +957,6 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 messagebox.showinfo("Resolve Board", "No active monster→player pairs found on board.")
             return
 
-        # Sort: player name first, then monster name — groups same-target attacks together
         pairs.sort(key=lambda p: (p[1].data_ref, p[0].data_ref))
 
         results = []
@@ -627,7 +993,6 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         _F8B = ("Helvetica", 8, "bold")
 
         for m_token, p_token, result, total_dmg, board_mod, player_imposed, out_of_range, tohit_bonus in results:
-            # ── header row ────────────────────────────────────────────────────
             mods_str = f"board: {board_mod}"
             if player_imposed != "Normal":
                 mods_str += f" | imposes: {player_imposed}"
@@ -642,13 +1007,11 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             )
             row_idx += 1
 
-            # ── per-roll rows ─────────────────────────────────────────────────
             for r in result.rolls:
                 roll_type_tag = f" [{r.roll_type}]" if r.roll_type != "Normal" else ""
                 crit_tag = " (CRIT)" if r.is_crit else ""
                 outcome = "CRIT" if r.is_crit else ("MISS" if not r.is_hit else "HIT")
 
-                # dice display: kept die normal, dropped dice in grey
                 dice_frame = tk.Frame(outer)
                 tk.Label(dice_frame, text=f"  [{r.attack_name}]{roll_type_tag}  d20=",
                          font=_F8, anchor="w").pack(side="left")
@@ -679,7 +1042,6 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 )
                 row_idx += 1
 
-            # ── total + apply ─────────────────────────────────────────────────
             hp_str = (f"HP: {p_token.hp}/{p_token.max_hp}" if p_token.max_hp > 0
                       else f"HP: {p_token.hp}")
             total_label = f"  Total damage: {total_dmg}    ({hp_str})"
@@ -716,6 +1078,18 @@ def BattleBoard(board_frame: tk.Frame) -> None:
 
     # ── canvas-level bindings ─────────────────────────────────────────────────
 
+    def _on_canvas_click(event: tk.Event) -> None:
+        """Click on empty canvas clears multi-selection."""
+        token_tags = {"token", "token_label", "hpbar"}
+        for item in canvas.find_overlapping(event.x - 2, event.y - 2, event.x + 2, event.y + 2):
+            if set(canvas.gettags(item)) & token_tags:
+                return  # hit a token — its own handler manages selection
+        _selected["token_ids"].clear()
+        _selected["primary_id"] = None
+        _update_info(None)
+        _update_selection_visuals()
+        _redraw_highlights_only()
+
     def _on_canvas_double_click(event: tk.Event) -> None:
         """Double-click on an empty tile → ask monster or player, place there."""
         token_tags = {"token", "token_label", "hpbar"}
@@ -725,9 +1099,15 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         col, row = _nearest_cell(event.x, event.y)
         _add_token_at_pos(col, row)
 
+    canvas.bind("<Button-1>", _on_canvas_click)
     canvas.bind("<Double-Button-1>", _on_canvas_double_click)
     canvas.bind("<d>", lambda e: _toggle_active_selected())
     canvas.bind("<D>", lambda e: _toggle_active_selected())
+    canvas.bind("<h>", lambda e: _edit_hp_selected())
+    canvas.bind("<H>", lambda e: _edit_hp_selected())
+    canvas.bind("<r>", lambda e: _retarget_selected())
+    canvas.bind("<R>", lambda e: _retarget_selected())
+    canvas.bind("<Return>", lambda e: _resolve_board())
     canvas.bind("<Delete>", lambda e: _remove_selected())
     canvas.bind("<BackSpace>", lambda e: _remove_selected())
 

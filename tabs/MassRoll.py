@@ -8,152 +8,179 @@ from utilities import RollDice
 def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
     RelPosMassroll.constant_y = 25
 
-    def RollMassSaveButton(current_button_y):
-        for widget in GSM.Results_mass_save_widgets_to_clear:
-            widget.destroy()
-        GSM.Results_mass_save_widgets_to_clear.clear()
-        passes = 0
-        rolls = []
-        rolltype = GSM.Mass_save_roll_type_str.get()
-        for i in range(GSM.Mass_save_n_monsters_int.get()):
-            if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
-                roll = RollDice("d20")
-            elif rolltype == "Advantage":
-                roll = max(RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Disadvantage":
-                roll = min(RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Super Advantage":
-                roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Super Disadvantage":
-                roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-            roll_total = roll + GSM.Mass_save_mod_int.get()
-            if roll == 1 and GSM.Nat1_always_miss_bool.get():
-                pass  # nat 1 always fails with rule
-            elif (roll_total) >= (GSM.Mass_save_DC_int.get()):
-                passes += 1
-            rolls.append(roll_total)
+    def _roll_d20(rolltype: str) -> int:
+        if rolltype == "Advantage":
+            return max(RollDice("d20"), RollDice("d20"))
+        if rolltype == "Disadvantage":
+            return min(RollDice("d20"), RollDice("d20"))
+        if rolltype == "Super Advantage":
+            return max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+        if rolltype == "Super Disadvantage":
+            return min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+        return RollDice("d20")
 
-        rolls.sort(reverse=True)
+    _SAVE_ATTRS: dict[str, tuple[str, str]] = {
+        "STR": ("savingthrow_str_mod_int", "savingthrow_str_roll_type_str"),
+        "DEX": ("savingthrow_dex_mod_int", "savingthrow_dex_roll_type_str"),
+        "CON": ("savingthrow_con_mod_int", "savingthrow_con_roll_type_str"),
+        "INT": ("savingthrow_int_mod_int", "savingthrow_int_roll_type_str"),
+        "WIS": ("savingthrow_wis_mod_int", "savingthrow_wis_roll_type_str"),
+        "CHA": ("savingthrow_cha_mod_int", "savingthrow_cha_roll_type_str"),
+    }
 
-        mass_save_results_label = tk.Label(
-            GSM.Mass_roll_frame, text=(f"PASSES: {passes}     FAILS: {GSM.Mass_save_n_monsters_int.get() - passes}")
+    # ── Mass Monster Saving Throws ────────────────────────────────────────────
+
+    save_frame = tk.LabelFrame(GSM.Mass_roll_frame, text="Mass monster saving throw", font=GSM.Title_font)
+    save_frame.place(x=5, y=5, width=400, height=270)
+    save_frame.columnconfigure(1, weight=1)
+    save_frame.rowconfigure(4, weight=1)
+
+    tk.Label(save_frame, text="Save type:").grid(row=0, column=0, sticky="w", padx=4, pady=3)
+    _mass_save_type = tk.StringVar(value="CON")
+    ttk.Combobox(
+        save_frame, textvariable=_mass_save_type, values=GSM.Saving_throw_types, width=6, state="readonly"
+    ).grid(row=0, column=1, sticky="w", padx=4, pady=3)
+
+    tk.Label(save_frame, text="DC:").grid(row=1, column=0, sticky="w", padx=4, pady=3)
+    _mass_save_dc = tk.IntVar(value=13)
+    ttk.Spinbox(save_frame, textvariable=_mass_save_dc, from_=1, to=30, width=4).grid(
+        row=1, column=1, sticky="w", padx=4, pady=3
+    )
+
+    tk.Label(save_frame, text="Roll type:").grid(row=2, column=0, sticky="w", padx=4, pady=3)
+    _mass_save_rt = tk.StringVar(value="Monster default")
+    ttk.Combobox(
+        save_frame, textvariable=_mass_save_rt,
+        values=["Monster default", *GSM.Roll_types], width=14, state="readonly"
+    ).grid(row=2, column=1, sticky="w", padx=4, pady=3)
+
+    tk.Label(save_frame, text="Monsters:", font=GSM.Target_font).grid(
+        row=3, column=0, columnspan=2, sticky="w", padx=4, pady=(4, 0)
+    )
+
+    rows_container = tk.Frame(save_frame)
+    rows_container.grid(row=4, column=0, columnspan=2, sticky="nsew", padx=4)
+
+    # Each entry: (name_var, count_var, combo, row_frame, result_var)
+    _mass_save_rows: list[tuple[tk.StringVar, tk.IntVar, ttk.Combobox, tk.Frame, tk.StringVar]] = []
+
+    def _monster_names() -> list[str]:
+        return [m.name_str.get() for m in GSM.Monster_obj_list] or ["(none)"]
+
+    def _add_mass_save_row() -> None:
+        row_frame = tk.Frame(rows_container)
+        row_frame.pack(fill="x", pady=1)
+
+        name_var = tk.StringVar(value=_monster_names()[0])
+        combo = ttk.Combobox(row_frame, textvariable=name_var, values=_monster_names(), width=12, state="readonly")
+        combo.pack(side="left")
+
+        tk.Label(row_frame, text="×").pack(side="left", padx=(3, 1))
+
+        count_var = tk.IntVar(value=1)
+        ttk.Spinbox(row_frame, textvariable=count_var, from_=0, to=50, width=3).pack(side="left")
+
+        result_var = tk.StringVar()
+        row_entry = (name_var, count_var, combo, row_frame, result_var)
+        _mass_save_rows.append(row_entry)
+
+        def _remove() -> None:
+            _mass_save_rows.remove(row_entry)
+            row_frame.destroy()
+
+        tk.Button(row_frame, text="×", command=_remove, fg="red", width=1, relief="flat").pack(side="left", padx=2)
+        tk.Label(row_frame, textvariable=result_var, font=("Courier", 9), anchor="w").pack(
+            side="left", padx=(6, 0), fill="x", expand=True
         )
-        mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", current_button_y + 30))
-        GSM.Results_mass_save_widgets_to_clear.append(mass_save_results_label)
 
-        mass_save_results_label = tk.Label(GSM.Mass_roll_frame, text=(f"Results: {rolls}"))
-        mass_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
-        GSM.Results_mass_save_widgets_to_clear.append(mass_save_results_label)
+    _add_mass_save_row()
+    _add_mass_save_row()
 
-    def UndefinedMassSave():
-        mass_savingthrow_label = tk.Label(GSM.Mass_roll_frame, text="Mass undefined\nsaving throw", font=GSM.Title_font)
-        mass_savingthrow_label.place(x=RelPosMonsters.reset("x"), y=RelPosMonsters.reset("y"))
-        # Saving throw modifier
-        mass_save_mod_text_label = tk.Label(GSM.Mass_roll_frame, text="Saving throw mod:  +")
-        mass_save_mod_text_label.place(x=RelPosMassroll.same("x"), y=RelPosMassroll.increase("y", 50))
+    _total_var = tk.StringVar()
 
-        GSM.Mass_save_mod_int.set(2)
-        mass_save_mod_spinbox = ttk.Spinbox(
-            GSM.Mass_roll_frame, textvariable=GSM.Mass_save_mod_int, width=3, from_=-10, to=20
-        )
-        mass_save_mod_spinbox.place(x=RelPosMassroll.increase("x", 120), y=RelPosMassroll.increase("y", 2))
-
-        # Save DC
-        mass_save_DC_text_label = tk.Label(GSM.Mass_roll_frame, text="Saving throw DC: ")
-        mass_save_DC_text_label.place(
-            x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", RelPosMassroll.constant_y)
-        )
-
-        GSM.Mass_save_DC_int.set(13)
-        mass_save_DC_spinbox = ttk.Spinbox(
-            GSM.Mass_roll_frame, textvariable=GSM.Mass_save_DC_int, width=3, from_=5, to=30
-        )
-        mass_save_DC_spinbox.place(x=RelPosMassroll.increase("x", 120), y=RelPosMassroll.same("y"))
-        # How many monsters
-        mass_save_n_monsters_text_label = tk.Label(GSM.Mass_roll_frame, text="How many creatures: ")
-        mass_save_n_monsters_text_label.place(
-            x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", RelPosMassroll.constant_y)
-        )
-
-        GSM.Mass_save_n_monsters_int.set(6)
-        mass_save_n_monsters_spinbox = ttk.Spinbox(
-            GSM.Mass_roll_frame, textvariable=GSM.Mass_save_n_monsters_int, width=3, from_=1, to=30
-        )
-        mass_save_n_monsters_spinbox.place(x=RelPosMassroll.increase("x", 120), y=RelPosMassroll.same("y"))
-
-        # Roll type (adv/dis/normal)
-        roll_type_text_label = tk.Label(GSM.Mass_roll_frame, text="Roll type:")
-        roll_type_text_label.place(
-            x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", RelPosMassroll.constant_y)
+    def _roll_mass_saves() -> None:
+        monster_map = {m.name_str.get(): m for m in GSM.Monster_obj_list}
+        which_save = _mass_save_type.get()
+        dc = _mass_save_dc.get()
+        rt_override = _mass_save_rt.get()
+        mod_attr, rt_attr = _SAVE_ATTRS.get(which_save, _SAVE_ATTRS["CON"])
+        total_pass = total_n = 0
+        for name_var, count_var, combo, row_frame, result_var in _mass_save_rows:
+            combo["values"] = _monster_names()
+            name = name_var.get()
+            count = count_var.get()
+            mob = monster_map.get(name)
+            if mob is None or count <= 0:
+                result_var.set("")
+                continue
+            mod = getattr(mob, mod_attr).get()
+            rt = getattr(mob, rt_attr).get() if rt_override == "Monster default" else rt_override
+            passes = 0
+            rolls: list[int] = []
+            for _ in range(count):
+                roll = _roll_d20(rt)
+                total = roll + mod
+                if not (roll == 1 and GSM.Nat1_always_miss_bool.get()) and total >= dc:
+                    passes += 1
+                rolls.append(total)
+            rolls.sort(reverse=True)
+            result_var.set(f"{passes}/{count}  {rolls}")
+            total_pass += passes
+            total_n += count
+        _total_var.set(
+            f"Total: {total_pass}/{total_n}  ({total_n - total_pass} fail)" if total_n else ""
         )
 
-        GSM.Mass_save_roll_type_str.set(GSM.Roll_types[0])
-        Roll_type_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Mass_save_roll_type_str, *GSM.Roll_types)
-        Roll_type_dropdown.place(x=RelPosMassroll.increase("x", 65), y=RelPosMassroll.increase("y", -4))
+    def _load_monster_groups(groups: dict[str, int]) -> None:
+        """Populate mass save rows from a {monster_name: count} dict (called from BoardTab)."""
+        for _, _, _, row_frame, _ in list(_mass_save_rows):
+            row_frame.destroy()
+        _mass_save_rows.clear()
+        _total_var.set("")
+        names = _monster_names()
+        for name, count in groups.items():
+            _add_mass_save_row()
+            name_var, count_var, combo, _, result_var = _mass_save_rows[-1]
+            combo["values"] = names
+            if name in names:
+                name_var.set(name)
+            count_var.set(count)
+            result_var.set("")
+        if not _mass_save_rows:
+            _add_mass_save_row()
 
-        # Button to roll mass save
-        mass_save_button = tk.Button(
-            GSM.Mass_roll_frame,
-            text="Roll save",
-            state="normal",
-            command=lambda: RollMassSaveButton(int(mass_save_button.place_info()["y"])),
-            padx=9,
-            background="grey",
-        )
-        mass_save_button.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 30))
+    GSM.Load_mass_saves = _load_monster_groups
 
-    UndefinedMassSave()
+    tk.Button(GSM.Mass_roll_frame, text="+ Add row", command=_add_mass_save_row, width=8).place(x=5, y=278)
+    tk.Button(
+        GSM.Mass_roll_frame, text="Roll mass saves", command=_roll_mass_saves, padx=4, background="grey"
+    ).place(x=90, y=278)
+    tk.Label(GSM.Mass_roll_frame, textvariable=_total_var, font=("Courier", 9), anchor="w").place(x=5, y=307)
 
-    def RollQuickMobSaveButton(current_button_y: int):
+    # TODO: Mass monster skill check — add once MonsterData tracks per-skill modifiers.
+    # When implemented, add a new section mirroring Mass Monster Saving Throws above
+    # but reading skill mods from MonsterData instead of saves.
+
+    # ── Quick Monster Save ────────────────────────────────────────────────────
+
+    def RollQuickMobSaveButton(current_button_y: int) -> None:
         for widget in GSM.Results_quick_mob_save_widgets_to_clear:
             widget.destroy()
         GSM.Results_quick_mob_save_widgets_to_clear.clear()
-        rolls = []
-        rolltype = GSM.Quick_monster_save_rolltype_str.get()
 
-        # Get the monster obj from string since Tkinker can only hold strings
         monster_map = {monster.name_str.get(): monster for monster in GSM.Monster_obj_list}
-        monster_obj = monster_map.get(GSM.Quick_save_which_mob_str.get(), None)  # Retrieve attacker object
+        monster_obj = monster_map.get(GSM.Quick_save_which_mob_str.get(), None)
         which_save = GSM.Quick_save_which_save.get()
         if monster_obj is None:
             raise Exception("No monster selected for quick save throw")
 
-        if rolltype == "Monster default":  # Grab roletype from monster statblock, otherwise override with user's choice
-            if which_save == "STR":
-                rolltype = monster_obj.savingthrow_str_roll_type_str.get()
-            elif which_save == "DEX":
-                rolltype = monster_obj.savingthrow_dex_roll_type_str.get()
-            elif which_save == "CON":
-                rolltype = monster_obj.savingthrow_con_roll_type_str.get()
-            elif which_save == "INT":
-                rolltype = monster_obj.savingthrow_int_roll_type_str.get()
-            elif which_save == "WIS":
-                rolltype = monster_obj.savingthrow_wis_roll_type_str.get()
-            elif which_save == "CHA":
-                rolltype = monster_obj.savingthrow_cha_roll_type_str.get()
+        rolltype = GSM.Quick_monster_save_rolltype_str.get()
+        mod_attr, rt_attr = _SAVE_ATTRS[which_save]
+        modifier = getattr(monster_obj, mod_attr).get()
+        if rolltype == "Monster default":
+            rolltype = getattr(monster_obj, rt_attr).get()
 
-        if which_save == "STR":  # Get appropriate save modifier
-            modifier = monster_obj.savingthrow_str_mod_int.get()
-        elif which_save == "DEX":
-            modifier = monster_obj.savingthrow_dex_mod_int.get()
-        elif which_save == "CON":
-            modifier = monster_obj.savingthrow_con_mod_int.get()
-        elif which_save == "INT":
-            modifier = monster_obj.savingthrow_int_mod_int.get()
-        elif which_save == "WIS":
-            modifier = monster_obj.savingthrow_wis_mod_int.get()
-        elif which_save == "CHA":
-            modifier = monster_obj.savingthrow_cha_mod_int.get()
-        if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
-            roll = RollDice("d20")
-        elif rolltype == "Advantage":
-            roll = max(RollDice("d20"), RollDice("d20"))
-        elif rolltype == "Disadvantage":
-            roll = min(RollDice("d20"), RollDice("d20"))
-        elif rolltype == "Super Advantage":
-            roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-        elif rolltype == "Super Disadvantage":
-            roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+        roll = _roll_d20(rolltype)
         roll_total = roll + modifier
         text_colour = "black"
         if roll == 1 and GSM.Nat1_always_miss_bool.get():
@@ -164,17 +191,17 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
             text_colour = "green"
 
         quick_save_results_label = tk.Label(
-            GSM.Mass_roll_frame, text=(f"{monster_obj.name_str.get()} rolled a {roll_total}"), fg=text_colour
+            GSM.Mass_roll_frame, text=f"{monster_obj.name_str.get()} rolled a {roll_total}", fg=text_colour
         )
         quick_save_results_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", current_button_y + 30))
         GSM.Results_quick_mob_save_widgets_to_clear.append(quick_save_results_label)
 
-    def QuickMonsterSave():
+    def QuickMonsterSave() -> None:
         quick_monster_save_label = tk.Label(
             GSM.Mass_roll_frame, text="Quick monster\nsaving throw", font=GSM.Title_font
         )
-        quick_monster_save_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 100))
-        # Which monster
+        quick_monster_save_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.set("y", 340))
+
         quick_monster_save_label2 = tk.Label(GSM.Mass_roll_frame, text="Which monster: ")
         quick_monster_save_label2.place(x=RelPosMassroll.same("x"), y=RelPosMassroll.increase("y", 45))
         quick_monster_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_mob_str, *GSM.Monster_obj_list)
@@ -183,21 +210,19 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         GSM.OnTab_MassSaves_reset_widgets.append(
             [quick_monster_dropdown, GSM.RelPosMassroll.same("x"), GSM.RelPosMassroll.same("y"), "which_monster"]
         )
-        # Which save
+
         quick_monster_save_label3 = tk.Label(GSM.Mass_roll_frame, text="Which save:")
         quick_monster_save_label3.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 35))
         select_save_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, GSM.Quick_save_which_save, *GSM.Saving_throw_types)
         select_save_dropdown.place(x=RelPosMassroll.increase("x", 80), y=RelPosMassroll.increase("y", -4))
 
-        # Which rolltype (or default)
         quick_monster_rolltype_label = tk.Label(GSM.Mass_roll_frame, text="Roll type:")
         quick_monster_rolltype_label.place(x=RelPosMassroll.reset("x"), y=RelPosMassroll.increase("y", 35))
-
         quick_mob_save_rolltype_dropdown = tk.OptionMenu(
             GSM.Mass_roll_frame, GSM.Quick_monster_save_rolltype_str, *["Monster default", *GSM.Roll_types]
         )
         quick_mob_save_rolltype_dropdown.place(x=RelPosMassroll.increase("x", 70), y=RelPosMassroll.increase("y", -4))
-        # Button to roll save
+
         mob_quick_save_button = tk.Button(
             GSM.Mass_roll_frame,
             text="Roll save",
@@ -210,177 +235,33 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
 
     QuickMonsterSave()
 
-    def RollMassSkillButton():
-        for widget in GSM.Results_mass_skill_check_widgets_to_clear:
-            widget.destroy()
-        GSM.Results_mass_skill_check_widgets_to_clear.clear()
-        results = []
-        counter = 0
-        for creature in GSM.Mass_skill_check_stats_list:
-            name = creature[0].get()
-            mod = creature[1].get()
-            rolltype = creature[2].get()
-            enabled = creature[3].get()
-            passed = "Failed"
-            if not enabled:  # Creature not enabled to roll
-                continue
-            if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
-                roll = RollDice("d20")
-            elif rolltype == "Advantage":
-                roll = max(RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Disadvantage":
-                roll = min(RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Super Advantage":
-                roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Super Disadvantage":
-                roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-            roll_total = roll + mod
-            if roll == 1 and GSM.Nat1_always_miss_bool.get():
-                pass  # nat 1 always fails with rule
-            elif roll == 20:
-                passed = "Nat20"
-            elif (roll_total) >= (GSM.Mass_skill_check_dc_int.get()):
-                passed = "Passed"
-            results.append([name, roll_total, passed])
-        for checkbox in GSM.Mass_skill_enable_checkboxes_list:
-            if not checkbox.instate(["selected"]):  # Don't care about empty checkboxes
-                continue
-            checkbox_y = checkbox.winfo_y()
-            mass_skill_result_label = tk.Label(
-                GSM.Mass_roll_frame, text=f"{results[counter][1]},   {results[counter][2]}"
-            )
-            mass_skill_result_label.place(x=RelPosMassroll.set("x", 470), y=RelPosMassroll.set("y", checkbox_y))
-            GSM.Results_mass_skill_check_widgets_to_clear.append(mass_skill_result_label)
-            counter += 1
-
-    def UndefinedMassSkillCheck():
-        RelPosMassroll.checkpoint_set("x", 240)
-        mass_skill_check_label = tk.Label(GSM.Mass_roll_frame, text="Mass undefined skill check", font=GSM.Title_font)
-        mass_skill_check_label.place(
-            x=RelPosMassroll.set("x", RelPosMassroll.checkpoint_get("x")), y=RelPosMassroll.reset("y")
-        )
-        # TODO: Make multiple presets for this
-
-        # HEADERS FOR MASS SKILL CHECK
-        # Name ENTRY, modifier SLIDER, rolltype DROPDOWN, enable CHECKBOX
-        skill_name_text_label = tk.Label(GSM.Mass_roll_frame, text="Creature", font=GSM.Target_font)
-        skill_name_text_label.place(x=RelPosMassroll.increase("x", -10), y=RelPosMassroll.increase("y", 23))
-
-        skill_mod_text_label = tk.Label(GSM.Mass_roll_frame, text="Skill mod", font=GSM.Target_font)
-        skill_mod_text_label.place(x=RelPosMassroll.increase("x", 65), y=RelPosMassroll.same("y"))
-
-        skill_rolltype_text_label = tk.Label(GSM.Mass_roll_frame, text="Rolltype", font=GSM.Target_font)
-        skill_rolltype_text_label.place(x=RelPosMassroll.increase("x", 65), y=RelPosMassroll.same("y"))
-
-        skill_enable_text_label = tk.Label(GSM.Mass_roll_frame, text="Enable", font=GSM.Target_font)
-        skill_enable_text_label.place(x=RelPosMassroll.increase("x", 75), y=RelPosMassroll.same("y"))
-        for i in range(10):
-            list_of_info = []
-            # Name
-            mass_skill_name_str = tk.StringVar(value=("Creature " + str(i + 1)))
-            mass_skill_name_entry = tk.Entry(GSM.Mass_roll_frame, width=10, textvariable=mass_skill_name_str)
-            mass_skill_name_entry.place(
-                x=RelPosMassroll.set("x", RelPosMassroll.checkpoint_get("x")), y=RelPosMassroll.increase("y", 28)
-            )
-            list_of_info.append(mass_skill_name_str)
-            # Skill modifier
-            mass_skill_mod_int = tk.IntVar(value=2)
-            mass_skill_mod_spinbox = ttk.Spinbox(
-                GSM.Mass_roll_frame, width=3, textvariable=mass_skill_mod_int, from_=-5, to=20
-            )
-            mass_skill_mod_spinbox.place(x=RelPosMassroll.increase("x", 72), y=RelPosMassroll.same("y"))
-            list_of_info.append(mass_skill_mod_int)
-            # Rolltype
-            mass_skill_rolltype_str = tk.StringVar(value=GSM.Roll_types[0])
-            mass_skill_rolltype_dropdown = tk.OptionMenu(GSM.Mass_roll_frame, mass_skill_rolltype_str, *GSM.Roll_types)
-            mass_skill_rolltype_dropdown.place(x=RelPosMassroll.increase("x", 43), y=RelPosMassroll.increase("y", -4))
-            list_of_info.append(mass_skill_rolltype_str)
-
-            # Enable
-            def EnableDisableEntry(name_entry, mod_spinbox, rolltype_dropdown, enable_var):
-                """Enable or disable entries based on the checkbox state."""
-                if enable_var.get():
-                    name_entry.config(state="normal")
-                    mod_spinbox.config(state="normal")
-                    rolltype_dropdown.config(state="normal")
-                else:
-                    name_entry.config(state="disabled")
-                    mod_spinbox.config(state="disabled")
-                    rolltype_dropdown.config(state="disabled")
-
-            mass_skill_enable_bool = tk.BooleanVar(value=True) if i < 3 else tk.BooleanVar(value=False)
-            mass_skill_enable_checkbox = ttk.Checkbutton(
-                GSM.Mass_roll_frame,
-                variable=mass_skill_enable_bool,
-                onvalue=True,
-                offvalue=False,
-                command=lambda entry=mass_skill_name_entry, spinbox=mass_skill_mod_spinbox, dropdown=mass_skill_rolltype_dropdown, var=mass_skill_enable_bool: EnableDisableEntry(
-                    entry, spinbox, dropdown, var
-                ),
-            )
-            EnableDisableEntry(
-                mass_skill_name_entry, mass_skill_mod_spinbox, mass_skill_rolltype_dropdown, mass_skill_enable_bool
-            )
-            mass_skill_enable_checkbox.place(x=RelPosMassroll.increase("x", 100), y=RelPosMassroll.same("y"))
-            list_of_info.append(mass_skill_enable_bool)
-            GSM.Mass_skill_check_stats_list.append(list_of_info)
-            GSM.Mass_skill_enable_checkboxes_list.append(
-                mass_skill_enable_checkbox
-            )  # List of checkboxes so we can get their locations to append results to
-
-        mass_skill_dc_text_label = tk.Label(GSM.Mass_roll_frame, text="Skill check DC:")
-        mass_skill_dc_text_label.place(x=RelPosMassroll.increase("x", -230), y=RelPosMassroll.increase("y", 30))
-        mass_skill_dc_spinbox = ttk.Spinbox(
-            GSM.Mass_roll_frame, width=3, textvariable=GSM.Mass_skill_check_dc_int, from_=5, to=40
-        )
-        mass_skill_dc_spinbox.place(x=RelPosMassroll.increase("x", 86), y=RelPosMassroll.increase("y", 1))
-
-        mass_skill_check_button = tk.Button(
-            GSM.Mass_roll_frame,
-            text="Mass skill check",
-            state="normal",
-            command=RollMassSkillButton,
-            padx=9,
-            background="grey",
-        )
-        mass_skill_check_button.place(x=RelPosMassroll.increase("x", 50), y=RelPosMassroll.same("y"))
-
-    UndefinedMassSkillCheck()
+    # ── Party Skill Check ─────────────────────────────────────────────────────
 
     def PartySkillCheckRoll(button_pos) -> None:
         for widget in GSM.PartySkillCheckResults:
             widget.destroy()
+        GSM.PartySkillCheckResults.clear()
         results = []
-        for Player in GSM.Target_obj_list:
-            skill_mod = int((getattr(Player, f"{GSM.WhichSkillToCheck.get().lower()}_mod_int")).get())
-            rolltype = str((getattr(Player, f"{GSM.WhichSkillToCheck.get().lower()}_roll_type_str")).get())
-            if rolltype == "Normal":  # "Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"
-                roll = RollDice("d20")
-            elif rolltype == "Advantage":
-                roll = max(RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Disadvantage":
-                roll = min(RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Super Advantage":
-                roll = max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-            elif rolltype == "Super Disadvantage":
-                roll = min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+        for player in GSM.Target_obj_list:
+            skill_mod = int(getattr(player, f"{GSM.WhichSkillToCheck.get().lower()}_mod_int").get())
+            rolltype = str(getattr(player, f"{GSM.WhichSkillToCheck.get().lower()}_roll_type_str").get())
+            roll = _roll_d20(rolltype)
             roll_total = roll + skill_mod
             if roll == 1 and GSM.Nat1_always_miss_bool.get():
-                passed = "Nat1"  # nat 1 always fails with rule
+                passed = "Nat1"
             elif roll == 20:
                 passed = "Nat20"
-            elif (roll_total) >= (GSM.Mass_skill_check_dc_int.get()):
+            elif roll_total >= GSM.SkillCheckDC.get():
                 passed = "Passed"
             else:
                 passed = "Failed"
-            results.append([Player.name_str.get(), roll_total, passed])
+            results.append([player.name_str.get(), roll_total, passed])
 
         button_x = int(button_pos["x"])
         button_y = int(button_pos["y"])
         GSM.RelPosMassroll.checkpoint_set("x", button_x)
         GSM.RelPosMassroll.checkpoint_set("y", button_y + 30)
         for i, result in enumerate(results):
-            # Determine text color for nat1 or nat20
             if result[2] == "Nat1":
                 text_colour2 = "red"
                 text_colour3 = "gray"
@@ -394,23 +275,17 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
                 text_colour2 = "black"
                 text_colour3 = "black"
 
-            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[0]), fg=text_colour3)
-            results_label1.place(
-                x=GSM.RelPosMassroll.checkpoint_get("x"), y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i
-            )
-            GSM.PartySkillCheckResults.append(results_label1)
+            lbl1 = tk.Label(GSM.Mass_roll_frame, text=str(result[0]), fg=text_colour3)
+            lbl1.place(x=GSM.RelPosMassroll.checkpoint_get("x"), y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
+            GSM.PartySkillCheckResults.append(lbl1)
 
-            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[1]), fg=text_colour2)
-            results_label1.place(
-                x=GSM.RelPosMassroll.checkpoint_get("x") + 80, y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i
-            )
-            GSM.PartySkillCheckResults.append(results_label1)
+            lbl2 = tk.Label(GSM.Mass_roll_frame, text=str(result[1]), fg=text_colour2)
+            lbl2.place(x=GSM.RelPosMassroll.checkpoint_get("x") + 80, y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
+            GSM.PartySkillCheckResults.append(lbl2)
 
-            results_label1 = tk.Label(GSM.Mass_roll_frame, text=str(result[2]), fg=text_colour3)
-            results_label1.place(
-                x=GSM.RelPosMassroll.checkpoint_get("x") + 120, y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i
-            )
-            GSM.PartySkillCheckResults.append(results_label1)
+            lbl3 = tk.Label(GSM.Mass_roll_frame, text=str(result[2]), fg=text_colour3)
+            lbl3.place(x=GSM.RelPosMassroll.checkpoint_get("x") + 120, y=GSM.RelPosMassroll.checkpoint_get("y") + 20 * i)
+            GSM.PartySkillCheckResults.append(lbl3)
 
     def PartySkillCheckUI() -> None:
         RelPosMassroll.checkpoint_set("x", 580)
@@ -427,12 +302,12 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
         )
         select_skill_dropdown.place(x=RelPosMassroll.increase("x", 60), y=RelPosMassroll.increase("y", -4))
 
-        select_skill_label = tk.Label(GSM.Mass_roll_frame, text="DC:")
-        select_skill_label.place(
+        select_skill_label2 = tk.Label(GSM.Mass_roll_frame, text="DC:")
+        select_skill_label2.place(
             x=RelPosMassroll.set("x", RelPosMassroll.checkpoint_get("x")), y=RelPosMassroll.increase("y", 33)
         )
-        mass_save_mod_spinbox = ttk.Spinbox(GSM.Mass_roll_frame, textvariable=GSM.SkillCheckDC, width=3, from_=5, to=30)
-        mass_save_mod_spinbox.place(x=RelPosMassroll.increase("x", 30), y=RelPosMassroll.increase("y", 2))
+        dc_spinbox = ttk.Spinbox(GSM.Mass_roll_frame, textvariable=GSM.SkillCheckDC, width=3, from_=5, to=30)
+        dc_spinbox.place(x=RelPosMassroll.increase("x", 30), y=RelPosMassroll.increase("y", 2))
 
         rollskillcheck_button = tk.Button(
             GSM.Mass_roll_frame,
