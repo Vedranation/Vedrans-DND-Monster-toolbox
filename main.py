@@ -12,6 +12,7 @@ from tabs.Attack import Attack
 from tabs.RandomGenerator import RandomGenerator
 from tabs.BoardTab import BattleBoard
 from tabs.InitiativeTracker import InitiativeTracker
+from tabs.Search import Search
 
 # label - just text to display
 # entry - type in something
@@ -96,6 +97,7 @@ RandomGenerator(GSM.RelPosRandGen)
 Attack(GSM.RelPosROLL)
 BattleBoard(GSM.Board_frame)
 InitiativeTracker(GSM.Initiative_frame)
+Search(GSM.Search_frame)
 
 # TODO: Add a boss section, which tracks boss cooldowns, legendary actions etc
 # TODO: Add automated rolling for random encounter table. Let players import a list, saying chance of each encounter,

@@ -61,6 +61,10 @@ class GlobalsManager:
     Initiative_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Initiative_frame, text="Initiative")
 
+    # Search tab (voice + fuzzy lookup of local library / 5e.tools)
+    Search_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
+    Notebook.add(Search_frame, text="Search")
+
     Roll_types = ["Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"]
     Dmg_types = [
         "bludgeoning",
