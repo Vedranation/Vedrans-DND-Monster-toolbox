@@ -5,11 +5,12 @@ from __future__ import annotations
 import colorsys
 import hashlib
 import tkinter as tk
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import colorchooser, messagebox, simpledialog, ttk
 
-from engine.board import Board, GridPosition, Token, distance_ft, is_flanking, ranged_in_melee
+from engine.board import Board, GridPosition, Team, Token, distance_ft, is_flanking, ranged_in_melee
 from engine.conditions import Condition
 from engine.inference import compute_roll_type_modifiers, flanking_to_hit_bonus, suggest_targets
+from engine.models import PlayerData
 from GlobalStateManager import GSM
 
 _CELL = 25          # pixels per grid cell
@@ -31,6 +32,9 @@ _COLOR_TARGET_IN = "#22aa44"     # green arrow — target within attack range
 _COLOR_TARGET_OUT = "#cc6600"    # orange arrow — target out of attack range
 _OVAL_R = 10        # token oval radius in pixels
 _BAR_H = 4          # HP bar height in pixels
+_TEAM_DOT_R = 4     # team-color indicator dot radius
+# Palette cycled when adding new teams.
+_TEAM_PALETTE = ["#3a6ea5", "#a53a3a", "#3a8a4a", "#8a6a2a", "#6a3a8a", "#2a8a8a", "#a53a7a", "#555555"]
 
 
 def BattleBoard(board_frame: tk.Frame) -> None:
@@ -46,11 +50,15 @@ def BattleBoard(board_frame: tk.Frame) -> None:
 
     tk.Label(ctrl, text="Battle Board", font=GSM.Title_font).pack(anchor="w", padx=4, pady=(6, 2))
 
-    tk.Button(ctrl, text="+ Monster token", command=lambda: _add_token("monster"), width=16).pack(
-        anchor="w", padx=4, pady=2
-    )
-    tk.Button(ctrl, text="+ Player token", command=lambda: _add_token("player"), width=16).pack(
-        anchor="w", padx=4, pady=2
+    _mon_btn = tk.Button(ctrl, text="+ Monster token", command=lambda: _add_token("monster"), width=16)
+    _mon_btn.pack(anchor="w", padx=4, pady=2)
+    _ply_btn = tk.Button(ctrl, text="+ Player token", command=lambda: _add_token("player"), width=16)
+    _ply_btn.pack(anchor="w", padx=4, pady=2)
+    # Ctrl+click adds one of every roster entry. "break" stops the normal command firing.
+    _mon_btn.bind("<Control-Button-1>", lambda e: (_add_all_tokens("monster"), "break")[1])
+    _ply_btn.bind("<Control-Button-1>", lambda e: (_add_all_tokens("player"), "break")[1])
+    tk.Label(ctrl, text="(Ctrl+click: add one of each)", font=("Helvetica", 7), fg="#666").pack(
+        anchor="w", padx=4
     )
 
     ttk.Separator(ctrl, orient="horizontal").pack(fill="x", padx=4, pady=4)
@@ -73,12 +81,19 @@ def BattleBoard(board_frame: tk.Frame) -> None:
     tk.Button(ctrl, text="Resolve Board", command=lambda: _resolve_board(),
               bg="#3355cc", fg="white", width=14).pack(anchor="w", padx=4, pady=2)
 
+    tk.Button(ctrl, text="Clear deactivated", command=lambda: _clear_deactivated(),
+              width=14).pack(anchor="w", padx=4, pady=2)
+
     tk.Button(ctrl, text="Clear board", command=lambda: _clear_board(),
               fg="white", bg="#aa3333", width=14).pack(anchor="w", padx=4, pady=2)
 
     # ── canvas ────────────────────────────────────────────────────────────────
     canvas_frame = tk.Frame(board_frame)
     canvas_frame.grid(row=0, column=1, sticky="nsew", padx=_PAD, pady=_PAD)
+
+    # Team bar above the canvas — drag a token onto a box to reassign its team.
+    team_bar = tk.Frame(canvas_frame)
+    team_bar.pack(side="top", fill="x", pady=(0, 4))
 
     canvas = tk.Canvas(canvas_frame, width=_CANVAS_W, height=_CANVAS_H, bg="white", cursor="crosshair")
     canvas.pack()
@@ -93,6 +108,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
     _targets: dict[str, str | None] = {}
     _token_counter: list[int] = [0]
     _last_added: dict = {"display": None}   # remembers last pick in the add-token dialog
+    _team_boxes: list = []                  # team-bar drop-target widgets (carry ._team_name)
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -126,28 +142,144 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             return _COLOR_INACTIVE
         return _subspecies_color(token.data_ref, token.kind)
 
+    # ── teams ───────────────────────────────────────────────────────────────
+
+    def _team_color(name: str) -> str:
+        return next((t.color for t in _board().teams if t.name == name), "#888888")
+
+    def _assign_team(team_name: str, tids: list[str]) -> None:
+        for tid in tids:
+            tok = _token_by_id(tid)
+            if tok is not None:
+                tok.team = team_name
+        _refresh_targets()
+        _refresh_team_bar()
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        if primary:
+            _update_info(primary)
+        _redraw_all()
+
+    def _team_at_pointer(x_root: int, y_root: int) -> str | None:
+        """If the screen point is over a team box, return that team's name."""
+        w = canvas.winfo_containing(x_root, y_root)
+        while w is not None:
+            name = getattr(w, "_team_name", None)
+            if name is not None:
+                return name
+            w = getattr(w, "master", None)
+        return None
+
+    def _add_team() -> None:
+        name = simpledialog.askstring("Add team", "Team name:", parent=canvas)
+        if not name:
+            return
+        name = name.strip()
+        if not name or any(t.name == name for t in _board().teams):
+            return
+        color = _TEAM_PALETTE[len(_board().teams) % len(_TEAM_PALETTE)]
+        _board().teams.append(Team(name, color))
+        _refresh_team_bar()
+
+    def _rename_team(old: str) -> None:
+        new = simpledialog.askstring("Rename team", "New name:", initialvalue=old, parent=canvas)
+        if not new:
+            return
+        new = new.strip()
+        if not new or any(t.name == new for t in _board().teams):
+            return
+        for t in _board().teams:
+            if t.name == old:
+                t.name = new
+        for tok in _board().tokens:
+            if tok.team == old:
+                tok.team = new
+        _refresh_team_bar()
+        _redraw_all()
+
+    def _recolor_team(name: str) -> None:
+        current = _team_color(name)
+        chosen = colorchooser.askcolor(color=current, title=f"Color for {name}", parent=canvas)
+        if not chosen or not chosen[1]:
+            return
+        for t in _board().teams:
+            if t.name == name:
+                t.color = chosen[1]
+        _refresh_team_bar()
+        _redraw_all()
+
+    def _delete_team(name: str) -> None:
+        teams = _board().teams
+        if len(teams) <= 1:
+            messagebox.showinfo("Teams", "Can't delete the last team.", parent=canvas)
+            return
+        fallback = next(t.name for t in teams if t.name != name)
+        for tok in _board().tokens:
+            if tok.team == name:
+                tok.team = fallback
+        _board().teams = [t for t in teams if t.name != name]
+        _refresh_targets()
+        _refresh_team_bar()
+        _redraw_all()
+
+    def _team_box_menu(event: tk.Event, name: str) -> None:
+        menu = tk.Menu(canvas, tearoff=0)
+        menu.add_command(label=f"Team: {name}", state="disabled")
+        menu.add_separator()
+        menu.add_command(label="Rename…", command=lambda: _rename_team(name))
+        menu.add_command(label="Change color…", command=lambda: _recolor_team(name))
+        menu.add_command(label="Delete", command=lambda: _delete_team(name))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _refresh_team_bar() -> None:
+        for w in team_bar.winfo_children():
+            w.destroy()
+        _team_boxes.clear()
+        tk.Label(team_bar, text="Teams (drag tokens here):",
+                 font=("Helvetica", 8, "bold")).pack(side="left", padx=(2, 6))
+        counts: dict[str, int] = {}
+        for tok in _board().tokens:
+            counts[tok.team] = counts.get(tok.team, 0) + 1
+        for team in _board().teams:
+            box = tk.Frame(team_bar, bg=team.color, bd=2, relief="raised")
+            lbl = tk.Label(box, text=f"{team.name} ({counts.get(team.name, 0)})",
+                           bg=team.color, fg="white", font=("Helvetica", 8, "bold"), padx=8, pady=5)
+            lbl.pack()
+            box.pack(side="left", padx=3)
+            for w in (box, lbl):
+                w._team_name = team.name
+                w.bind("<Button-3>", lambda e, n=team.name: _team_box_menu(e, n))
+            _team_boxes.append(box)
+        tk.Button(team_bar, text="+ Team", command=_add_team).pack(side="left", padx=(8, 2))
+
     # ── targeting ─────────────────────────────────────────────────────────────
 
     def _auto_target(m_token: Token) -> str | None:
-        """Return the ID of the best player target for m_token under current board settings."""
+        """Return the ID of the best enemy-team target for m_token under current board settings."""
         board = _board()
-        p_tokens = [t for t in board.tokens if t.kind == "player" and t.active]
-        if not p_tokens:
+        enemy_tokens = [t for t in board.tokens if t.team != m_token.team and t.active]
+        if not enemy_tokens:
             return None
-        p_tokens.sort(key=lambda t: distance_ft(m_token.pos, t.pos, board.diagonal_mode))
+        enemy_tokens.sort(key=lambda t: distance_ft(m_token.pos, t.pos, board.diagonal_mode))
         if board.range_mode == "block":
-            in_range = [t for t in p_tokens
+            in_range = [t for t in enemy_tokens
                         if distance_ft(m_token.pos, t.pos, board.diagonal_mode) <= m_token.attack_range_ft]
             return in_range[0].id if in_range else None
-        return p_tokens[0].id  # warn / none: nearest regardless of range
+        return enemy_tokens[0].id  # warn / none: nearest regardless of range
 
     def _refresh_targets() -> None:
-        """Keep _targets consistent: remove stale refs, auto-assign missing entries."""
+        """Keep _targets consistent: drop refs that are gone/inactive/now-allied, auto-assign missing."""
         board = _board()
-        active_player_ids = {t.id for t in board.tokens if t.kind == "player" and t.active}
-        # Invalidate stale assignments
+        # Invalidate stale assignments (target removed, deactivated, or moved to attacker's team)
         for mid in list(_targets.keys()):
-            if _targets[mid] is not None and _targets[mid] not in active_player_ids:
+            tgt = _targets[mid]
+            if tgt is None:
+                continue
+            attacker = _token_by_id(mid)
+            target = _token_by_id(tgt)
+            if attacker is None or target is None or not target.active or target.team == attacker.team:
                 _targets[mid] = None
         # Auto-assign active monsters with no valid target
         for m_token in board.tokens:
@@ -179,7 +311,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         ]
         is_multi = len(selected_monster_tids) > 1
 
-        p_tokens = [t for t in board.tokens if t.kind == "player" and t.active]
+        p_tokens = [t for t in board.tokens if t.team != primary_token.team and t.active]
         if not p_tokens:
             return
 
@@ -292,7 +424,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             return
         board = _board()
         for target in board.tokens:
-            if target.kind == token.kind:
+            if target.team == token.team:
                 continue
             if is_flanking(token, target, board):
                 cx, cy = _cell_center(target.pos.col, target.pos.row)
@@ -346,6 +478,13 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 cx, cy, text=token.data_ref[:6], font=("Helvetica", 6), fill="black", tags="token_label"
             )
             bar_ids = _draw_hp_bar(token, cx, cy)
+            # Team-color dot at the token's top-right corner (fill stays species color).
+            ddx, ddy = cx + int(_OVAL_R * 0.8), cy - int(_OVAL_R * 0.8)
+            dot_id = canvas.create_oval(
+                ddx - _TEAM_DOT_R, ddy - _TEAM_DOT_R, ddx + _TEAM_DOT_R, ddy + _TEAM_DOT_R,
+                fill=_team_color(token.team), outline="white", width=1, tags="token",
+            )
+            bar_ids = list(bar_ids) + [dot_id]
             _token_canvas[token.id] = (oid, lid, bar_ids)
 
             for item_id in (oid, lid):
@@ -465,6 +604,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         _selected["token_ids"].clear()
         _selected["primary_id"] = None
         _refresh_targets()
+        _refresh_team_bar()
         _update_info(None)
         _redraw_all()
 
@@ -489,6 +629,14 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         if _drag["token_id"] != tid:
             return
         _drag["token_id"] = None
+
+        # Dropped onto a team box → reassign team(s) instead of moving.
+        team_name = _team_at_pointer(event.x_root, event.y_root)
+        if team_name is not None:
+            tids = list(_selected["token_ids"]) or [tid]
+            _assign_team(team_name, tids)  # redraw snaps token visuals back (positions unchanged)
+            return
+
         new_col, new_row = _nearest_cell(event.x, event.y)
         init_pos = _drag["initial_positions"].get(tid)
         if init_pos is not None:
@@ -552,6 +700,18 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             else:
                 cond_menu.add_command(label=label, command=lambda c=cond, t=token: _toggle_condition(t, c))
         menu.add_cascade(label="Conditions", menu=cond_menu)
+        menu.add_separator()
+
+        # Assign to team — applies to all selected tokens
+        team_menu = tk.Menu(menu, tearoff=0)
+        for team in _board().teams:
+            checked = (not is_multi) and token.team == team.name
+            label = f"✓ {team.name}" if checked else f"  {team.name}"
+            team_menu.add_command(
+                label=label,
+                command=lambda n=team.name: _assign_team(n, list(_selected["token_ids"])),
+            )
+        menu.add_cascade(label="Assign to team", menu=team_menu)
         menu.add_separator()
 
         # Activate / Deactivate
@@ -720,6 +880,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         if _selected["primary_id"] == tid:
             _selected["primary_id"] = next(iter(_selected["token_ids"]), None)
         _refresh_targets()
+        _refresh_team_bar()
         primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
         _update_info(primary)
         _redraw_all()
@@ -737,7 +898,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         range_str = f"{token.attack_range_ft}ft"
         if token.ignore_ranged_in_melee:
             range_str += " (xbw)"
-        enemies = [t for t in board.tokens if t.kind != token.kind and t.active]
+        enemies = [t for t in board.tokens if t.team != token.team and t.active]
         if enemies:
             nearest = min(enemies, key=lambda t: distance_ft(token.pos, t.pos, board.diagonal_mode))
             roll_mod = compute_roll_type_modifiers(token, nearest, board, GSM.Adv_mode.get())
@@ -748,6 +909,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         lines = [
             token.data_ref,
             f"HP: {hp_str}  [{status}]",
+            f"Team: {token.team}",
             f"Pos: ({token.pos.col},{token.pos.row})",
             f"Conds: {conds}",
             f"Range: {range_str}",
@@ -829,6 +991,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         )
         _board().tokens.append(token)
         _refresh_targets()
+        _refresh_team_bar()
         _redraw_all()
 
     def _add_token_at_pos(col: int, row: int) -> None:
@@ -880,6 +1043,12 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         _popup_at_mouse(top)
         top.grab_set()
 
+    def _add_all_tokens(kind: str) -> None:
+        """Ctrl+click 'Add': drop one copy of every roster entry of this kind."""
+        obj_list = GSM.Monster_obj_list if kind == "monster" else GSM.Target_obj_list
+        for obj in obj_list:
+            _place_token_from_obj(kind, obj, _find_free_cell(kind))
+
     def _find_free_cell(kind: str) -> GridPosition:
         start_col = 0 if kind == "monster" else _COLS - 1
         step = 1 if kind == "monster" else -1
@@ -898,10 +1067,52 @@ def BattleBoard(board_frame: tk.Frame) -> None:
         _targets.clear()
         _selected["token_ids"].clear()
         _selected["primary_id"] = None
+        _refresh_team_bar()
         _update_info(None)
         _redraw_all()
 
+    def _clear_deactivated() -> None:
+        """Remove every inactive token (dead/disabled), keeping active ones."""
+        removed = {t.id for t in _board().tokens if not t.active}
+        if not removed:
+            return
+        _board().tokens = [t for t in _board().tokens if t.active]
+        for tid in removed:
+            _targets.pop(tid, None)
+        _selected["token_ids"] -= removed
+        if _selected["primary_id"] in removed:
+            _selected["primary_id"] = next(iter(_selected["token_ids"]), None)
+        _refresh_targets()
+        _refresh_team_bar()
+        primary = _token_by_id(_selected["primary_id"]) if _selected["primary_id"] else None
+        _update_info(primary)
+        _redraw_all()
+
     # ── Resolve Board ─────────────────────────────────────────────────────────
+
+    def _defender_data(p_token: Token) -> PlayerData | None:
+        """Build a defense view for a target token (player or enemy-team monster).
+
+        Players use their own PlayerData. Enemy monsters are adapted into a
+        PlayerData defense view (AC/HP/conditions; no imposed roll / adamantine)
+        so the combat engine can resolve monster-vs-monster attacks unchanged.
+        """
+        if p_token.kind == "player":
+            obj = next((p for p in GSM.Target_obj_list if p.name_str.get() == p_token.data_ref), None)
+            return obj.to_data() if obj else None
+        obj = next((m for m in GSM.Monster_obj_list if m.name_str.get() == p_token.data_ref), None)
+        if obj is None:
+            return None
+        md = obj.to_data()
+        return PlayerData(
+            name=md.name,
+            ac=md.ac,
+            max_hp=md.max_hp,
+            imposed_roll_type="Normal",
+            adamantine=False,
+            passive_perception=md.passive_perception,
+            conditions=md.conditions,
+        )
 
     def _resolve_board() -> None:
         from engine.combat import CombatSettings, compute_single_attack
@@ -934,10 +1145,9 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 skipped_blocked.append(m_token.data_ref)
                 continue
 
-            player_obj = next(
-                (p for p in GSM.Target_obj_list if p.name_str.get() == p_token.data_ref), None
-            )
-            if player_obj is None:
+            # Defender may be a player OR an enemy-team monster — resolve a defense view.
+            defender_data = _defender_data(p_token)
+            if defender_data is None:
                 continue
 
             dist = distance_ft(m_token.pos, p_token.pos, board.diagonal_mode)
@@ -946,7 +1156,7 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 continue
             out_of_range = dist > m_token.attack_range_ft
 
-            pairs.append((m_token, p_token, monster_obj, player_obj, out_of_range))
+            pairs.append((m_token, p_token, monster_obj, defender_data, out_of_range))
 
         if skipped_blocked:
             names = ", ".join(skipped_blocked)
@@ -954,15 +1164,14 @@ def BattleBoard(board_frame: tk.Frame) -> None:
 
         if not pairs:
             if not skipped_blocked:
-                messagebox.showinfo("Resolve Board", "No active monster→player pairs found on board.")
+                messagebox.showinfo("Resolve Board", "No active monster→target pairs found on board.")
             return
 
         pairs.sort(key=lambda p: (p[1].data_ref, p[0].data_ref))
 
         results = []
-        for m_token, p_token, monster_obj, player_obj, out_of_range in pairs:
+        for m_token, p_token, monster_obj, player_data, out_of_range in pairs:
             monster_data = monster_obj.to_data()
-            player_data = player_obj.to_data()
             board_mod = compute_roll_type_modifiers(m_token, p_token, board, settings.adv_mode)
             tohit_bonus = flanking_to_hit_bonus(m_token, p_token, board)
             result = compute_single_attack(
@@ -1127,4 +1336,5 @@ def BattleBoard(board_frame: tk.Frame) -> None:
 
     # ── initial draw ──────────────────────────────────────────────────────────
     _sync_board_settings()
+    _refresh_team_bar()
     _redraw_all()

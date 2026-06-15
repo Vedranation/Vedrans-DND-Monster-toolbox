@@ -10,7 +10,7 @@ def suggest_targets(attacker: Token, board: Board, range_ft: int = 5) -> list[To
     """Return enemy tokens within range_ft, sorted by proximity (closest first)."""
     enemies = [
         t for t in board.tokens
-        if t.kind != attacker.kind and t.active
+        if t.team != attacker.team and t.active
         and distance_ft(attacker.pos, t.pos, board.diagonal_mode) <= range_ft
     ]
     enemies.sort(key=lambda t: distance_ft(attacker.pos, t.pos, board.diagonal_mode))

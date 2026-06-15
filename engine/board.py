@@ -21,6 +21,23 @@ class GridPosition:
         return hash((self.col, self.row))
 
 
+# Default teams reproduce the original monster-vs-player allegiance. `kind`
+# stays purely cosmetic/role (has-attacks vs has-imposed-roll, token fill);
+# allegiance is now the `team` string — different team = enemy, same = ally.
+TEAM_PLAYERS = "Players"
+TEAM_MONSTERS = "Monsters"
+
+
+@dataclass
+class Team:
+    name: str
+    color: str  # hex colour for the on-token team dot
+
+
+def default_teams() -> list[Team]:
+    return [Team(TEAM_PLAYERS, "#3a6ea5"), Team(TEAM_MONSTERS, "#a53a3a")]
+
+
 @dataclass
 class Token:
     id: str
@@ -34,6 +51,11 @@ class Token:
     highlight_range_ft: int = 5
     conditions: set[Condition] = field(default_factory=set)
     active: bool = True
+    team: str = ""  # allegiance; blank → defaulted from kind in __post_init__
+
+    def __post_init__(self) -> None:
+        if not self.team:
+            self.team = TEAM_PLAYERS if self.kind == "player" else TEAM_MONSTERS
 
 
 @dataclass
@@ -45,6 +67,7 @@ class Board:
     flank_geometry: str = "hard"     # "hard" | "soft"
     flank_benefit: str = "advantage" # "advantage" | "+2"
     range_mode: str = "warn"         # "warn" | "block"
+    teams: list[Team] = field(default_factory=default_teams)
 
 
 # ─── distance ────────────────────────────────────────────────────────────────
@@ -72,7 +95,7 @@ def tokens_in_range(attacker: Token, board: Board, range_ft: int) -> list[Token]
     for token in board.tokens:
         if token is attacker:
             continue
-        if token.kind == attacker.kind:
+        if token.team == attacker.team:
             continue
         if distance_ft(attacker.pos, token.pos, board.diagonal_mode) <= range_ft:
             result.append(token)
@@ -114,7 +137,7 @@ def is_flanking(attacker: Token, target: Token, board: Board) -> bool:
     for ally in board.tokens:
         if ally is attacker or ally is target:
             continue
-        if ally.kind != attacker.kind:
+        if ally.team != attacker.team:
             continue
         if not ally.active:
             continue
@@ -130,7 +153,7 @@ def is_flanking(attacker: Token, target: Token, board: Board) -> bool:
 def ranged_in_melee(attacker: Token, board: Board) -> bool:
     """Return True if attacker has an enemy token adjacent (within 5 ft)."""
     for token in board.tokens:
-        if token.kind == attacker.kind:
+        if token.team == attacker.team:
             continue
         if distance_ft(attacker.pos, token.pos, board.diagonal_mode) <= 5:
             return True
