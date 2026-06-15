@@ -78,6 +78,9 @@ class MonsterStats:
         self.damage_immunities_vars: dict[str, tk.BooleanVar] = {
             dt: tk.BooleanVar(value=False) for dt in GSM.Dmg_types
         }
+        self.damage_vulnerabilities_vars: dict[str, tk.BooleanVar] = {
+            dt: tk.BooleanVar(value=False) for dt in GSM.Dmg_types
+        }
         self.condition_immunities_vars: dict[str, tk.BooleanVar] = {
             c: tk.BooleanVar(value=False) for c in _ALL_CONDITIONS
         }
@@ -207,6 +210,7 @@ class MonsterStats:
             },
             damage_resistances=[dt for dt, var in self.damage_resistances_vars.items() if var.get()],
             damage_immunities=[dt for dt, var in self.damage_immunities_vars.items() if var.get()],
+            damage_vulnerabilities=[dt for dt, var in self.damage_vulnerabilities_vars.items() if var.get()],
             condition_immunities={c for c, var in self.condition_immunities_vars.items() if var.get()},
         )
 
@@ -240,6 +244,8 @@ class MonsterStats:
             var.set(dt in d.damage_resistances)
         for dt, var in self.damage_immunities_vars.items():
             var.set(dt in d.damage_immunities)
+        for dt, var in self.damage_vulnerabilities_vars.items():
+            var.set(dt in d.damage_vulnerabilities)
         for c, var in self.condition_immunities_vars.items():
             var.set(c in d.condition_immunities)
 
@@ -717,16 +723,20 @@ def CreateMonsterUI(monster_obj, new_window, RelPosMonsters) -> None:
         command=lambda: _open_dmg_popup("Damage Immunities", monster_obj.damage_immunities_vars),
     ).place(x=_C3, y=460)
     tk.Button(
+        new_window, text="Damage Vulnerabilities...",
+        command=lambda: _open_dmg_popup("Damage Vulnerabilities", monster_obj.damage_vulnerabilities_vars),
+    ).place(x=_C3, y=492)
+    tk.Button(
         new_window, text="Condition Immunities...",
         command=_open_cond_popup,
-    ).place(x=_C3, y=492)
+    ).place(x=_C3, y=524)
 
     _import_btn = tk.Button(
         new_window, text="Import 5etools JSON...",
         command=lambda: _open_import_popup(),
         background="#3366aa", fg="white",
     )
-    _import_btn.place(x=_C3, y=525)
+    _import_btn.place(x=_C3, y=557)
 
     # ── Close button (top-right) ──────────────────────────────────────────────
     # _on_close defined after attack panel so it can reference _trace_id

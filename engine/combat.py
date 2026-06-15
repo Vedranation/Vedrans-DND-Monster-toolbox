@@ -320,3 +320,62 @@ def compute_single_attack(
         save_info=(first_atk.on_hit_force_save, first_atk.on_hit_save_dc, first_atk.on_hit_save_type),
         rolls=rolls,
     )
+
+
+def damage_by_type(rolls: list[SingleRollResult]) -> dict[str, int]:
+    """Sum hit damage per damage type across roll results (insertion-ordered)."""
+    by_type: dict[str, int] = {}
+    for r in rolls:
+        if not r.is_hit:
+            continue
+        if r.dmg1:
+            by_type[r.dmg_type_1] = by_type.get(r.dmg_type_1, 0) + r.dmg1
+        if r.dmg2:
+            by_type[r.dmg_type_2] = by_type.get(r.dmg_type_2, 0) + r.dmg2
+    return by_type
+
+
+def format_damage_breakdown(rolls: list[SingleRollResult]) -> str:
+    """'16 slashing, 4 fire, 3 cold = 23' — or '23 slashing' for one type, '0' if none."""
+    by_type = damage_by_type(rolls)
+    if not by_type:
+        return "0"
+    total = sum(by_type.values())
+    parts = ", ".join(f"{v} {t}" for t, v in by_type.items())
+    return f"{parts} = {total}" if len(by_type) > 1 else parts
+
+
+def resolve_typed_damage(rolls, resistances=(), immunities=(), vulnerabilities=()) -> tuple[int, str]:
+    """Apply the target's resistances/immunities/vulnerabilities to typed damage.
+
+    Immunity zeroes that type; resistance halves it (round down); vulnerability
+    doubles it. Each type matches at most one (checked in that order — a creature
+    can't be both resistant and vulnerable to the same type in 5e).
+    Returns (total_after_adjustment, breakdown_string) with affected types
+    annotated, e.g. '10 slashing, 5 fire (resisted) = 15'.
+    """
+    resist = {t.lower() for t in resistances}
+    immune = {t.lower() for t in immunities}
+    vulnerable = {t.lower() for t in vulnerabilities}
+    by_type = damage_by_type(rolls)
+    parts: list[str] = []
+    total = 0
+    for dmg_type, value in by_type.items():
+        tl = dmg_type.lower()
+        if tl in immune:
+            parts.append(f"0 {dmg_type} (immune)")
+        elif tl in resist:
+            halved = value // 2
+            total += halved
+            parts.append(f"{halved} {dmg_type} (resisted)")
+        elif tl in vulnerable:
+            doubled = value * 2
+            total += doubled
+            parts.append(f"{doubled} {dmg_type} (vulnerable)")
+        else:
+            total += value
+            parts.append(f"{value} {dmg_type}")
+    if not parts:
+        return 0, "0"
+    body = ", ".join(parts)
+    return total, (f"{body} = {total}" if len(parts) > 1 else body)

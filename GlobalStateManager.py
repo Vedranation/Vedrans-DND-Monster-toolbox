@@ -99,6 +99,7 @@ class GlobalsManager:
     Adv_combine_bool = tk.BooleanVar(value=False)
     Adv_mode = tk.StringVar(value="RAW")  # "RAW" | "Arithmetic"
     Auto_disable_zero_hp_bool = tk.BooleanVar(value=True)
+    Ignore_resistances_bool = tk.BooleanVar(value=False)  # ignore monster damage resist/immunity
 
     Roll_type_str = tk.StringVar()
 
@@ -141,9 +142,6 @@ class GlobalsManager:
 
     # Attack globals
     Results_display_widgets_list = []
-    Roll_Treeview = None
-    Tree_item_id = 0
-    Treeview_target_id_list = []
     OneAttacker_str = tk.StringVar()
     OneDefender_str = tk.StringVar()
     OneAttack_spec_str = tk.StringVar()  # Selected attack spec name for single-attack roll

@@ -64,6 +64,7 @@ class MonsterData:
     senses: dict[str, int] = field(default_factory=dict)
     damage_resistances: list[str] = field(default_factory=list)
     damage_immunities: list[str] = field(default_factory=list)
+    damage_vulnerabilities: list[str] = field(default_factory=list)
     # Condition immunity values match Condition.value strings (e.g. "poisoned")
     condition_immunities: set[str] = field(default_factory=set)
 

@@ -10,9 +10,6 @@ class PlayerStats:
         self.name_str: str = tk.StringVar()
         self.ac_int = tk.IntVar(value=13)
         self.max_hp_int = tk.IntVar(value=10)
-        self.n_monsters_list_ints = [
-            tk.IntVar() for _ in GSM.Monster_obj_list
-        ]  # Creates a list holding how many monsters attack this target
 
         self.monster_roll_type_against_str = tk.StringVar(value="Normal")  # If dodging or is flanked
 
@@ -87,7 +84,6 @@ def ClearUI(RelPosTargets):
 
 def CreateTargetsObject(RelPosTargets) -> None:
     ClearUI(RelPosTargets)
-    column_increase = 75
     row_increase = 40
 
     for j, TargetObj in enumerate(GSM.Target_obj_list):
@@ -95,9 +91,6 @@ def CreateTargetsObject(RelPosTargets) -> None:
             pass
         else:
             TargetObj.name_str.set(f"Player {j + 1}")
-        TargetObj.n_monsters_list_ints = [
-            tk.IntVar() for _ in GSM.Monster_obj_list
-        ]  # Regenerate proper length list holding all monsters
 
         # Button to open the new window
         TargetObj._my_button = tk.Button(
@@ -116,32 +109,6 @@ def CreateTargetsObject(RelPosTargets) -> None:
         GSM.Targets_canvas.create_rectangle(
             button_x, button_y - 7, button_x + GSM._frame_width, button_y + row_increase - 7, fill=color
         )
-
-        if j == 0:  # Place headers down once
-            for k, monster in enumerate(GSM.Monster_obj_list):
-                height = 80 if k % 2 else 100
-                # Calculate the x-position for centering
-                text_width = GSM.Target_font.measure(monster.name_str.get() + ":")
-                center_x = text_width // 2
-
-                header_label = tk.Label(GSM.Targets_frame, text=f"{monster.name_str.get()}:", font=GSM.Target_font)
-                header_label.place(
-                    x=RelPosTargets.set("x", 94 + k * column_increase - center_x), y=RelPosTargets.set("y", height)
-                )
-                GSM.Target_widgets_list.append(header_label)
-
-        # Place spinboxes
-        for k, monster in enumerate(GSM.Monster_obj_list):
-            # Create a Spinbox for each monster, binding it to the corresponding IntVar
-            target_n_monster_spinbox = ttk.Spinbox(
-                GSM.Targets_frame, width=3, textvariable=TargetObj.n_monsters_list_ints[k], from_=0, to=50
-            )
-            target_n_monster_spinbox.place(
-                x=RelPosTargets.set("x", 80 + k * column_increase), y=RelPosTargets.set("y", 130 + j * row_increase)
-            )
-            GSM.Target_widgets_list.append(
-                target_n_monster_spinbox
-            )  # packs all Target Settings widgets (input and display) into one list so it can be cleared from window
 
 
 def CreatePlayerUI(TargetObj, new_window, RelPosTargets):

@@ -340,6 +340,7 @@ def parse_5etools_monster(data: dict) -> MonsterData:
 
     damage_immunities  = _parse_dmg_list(data.get("immune", []))
     damage_resistances = _parse_dmg_list(data.get("resist", []))
+    damage_vulnerabilities = _parse_dmg_list(data.get("vulnerable", []))
     condition_immunities = _parse_condition_immunities(data.get("conditionImmune", []))
 
     # Attacks
@@ -374,5 +375,6 @@ def parse_5etools_monster(data: dict) -> MonsterData:
         senses=senses,
         damage_resistances=damage_resistances,
         damage_immunities=damage_immunities,
+        damage_vulnerabilities=damage_vulnerabilities,
         condition_immunities=condition_immunities,
     )

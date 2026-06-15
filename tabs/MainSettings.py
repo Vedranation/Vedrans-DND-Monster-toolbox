@@ -107,6 +107,15 @@ def Settings(RelPosSettings) -> None:
         offvalue=False,
     ).place(x=RelPosSettings.reset("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
 
+    # Ignore monster damage resistances / immunities
+    tk.Checkbutton(
+        GSM.Settings_frame,
+        text="Ignore monster damage resistances/immunities/vulnerabilities",
+        variable=GSM.Ignore_resistances_bool,
+        onvalue=True,
+        offvalue=False,
+    ).place(x=RelPosSettings.reset("x"), y=RelPosSettings.increase("y", RelPosSettings.constant_y))
+
     # ── Preset name entry + dropdown ──────────────────────────────────────────
     _preset_name_var = tk.StringVar(value="preset1")
 
@@ -332,6 +341,7 @@ def _build_save_data() -> dict:
         "Adv_combine_bool": GSM.Adv_combine_bool.get(),
         "Adv_mode": GSM.Adv_mode.get(),
         "Auto_disable_zero_hp_bool": GSM.Auto_disable_zero_hp_bool.get(),
+        "Ignore_resistances_bool": GSM.Ignore_resistances_bool.get(),
         "Board_diagonal_mode": GSM.Board_diagonal_mode.get(),
         "Board_flank_geometry": GSM.Board_flank_geometry.get(),
         "Board_flank_benefit": GSM.Board_flank_benefit.get(),
@@ -359,6 +369,8 @@ def _apply_loaded_data(loaded_data: dict) -> None:
         GSM.Adv_mode.set(loaded_data["Adv_mode"])
     if "Auto_disable_zero_hp_bool" in loaded_data:
         GSM.Auto_disable_zero_hp_bool.set(loaded_data["Auto_disable_zero_hp_bool"])
+    if "Ignore_resistances_bool" in loaded_data:
+        GSM.Ignore_resistances_bool.set(loaded_data["Ignore_resistances_bool"])
     if "Board_diagonal_mode" in loaded_data:
         GSM.Board_diagonal_mode.set(loaded_data["Board_diagonal_mode"])
     if "Board_flank_geometry" in loaded_data:

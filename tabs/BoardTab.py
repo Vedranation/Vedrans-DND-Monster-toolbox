@@ -9,6 +9,7 @@ from tkinter import colorchooser, messagebox, simpledialog, ttk
 
 from engine.board import Board, GridPosition, Team, Token, distance_ft, is_flanking, ranged_in_melee
 from engine.conditions import Condition
+from engine.combat import resolve_typed_damage
 from engine.inference import compute_roll_type_modifiers, flanking_to_hit_bonus, suggest_targets
 from engine.models import PlayerData
 from GlobalStateManager import GSM
@@ -1114,6 +1115,21 @@ def BattleBoard(board_frame: tk.Frame) -> None:
             conditions=md.conditions,
         )
 
+    def _defender_damage_mods(p_token: Token) -> tuple[list[str], list[str], list[str]]:
+        """(resistances, immunities, vulnerabilities) for a defender token (monsters only).
+
+        Returns empty lists when the global 'ignore damage type modifiers' toggle is on.
+        """
+        if GSM.Ignore_resistances_bool.get():
+            return [], [], []
+        if p_token.kind != "monster":
+            return [], [], []
+        obj = next((m for m in GSM.Monster_obj_list if m.name_str.get() == p_token.data_ref), None)
+        if obj is None:
+            return [], [], []
+        md = obj.to_data()
+        return md.damage_resistances, md.damage_immunities, md.damage_vulnerabilities
+
     def _resolve_board() -> None:
         from engine.combat import CombatSettings, compute_single_attack
 
@@ -1251,18 +1267,22 @@ def BattleBoard(board_frame: tk.Frame) -> None:
                 )
                 row_idx += 1
 
+            # Apply the defender's resistances/immunities/vulnerabilities (monsters only).
+            resist, immune, vulnerable = _defender_damage_mods(p_token)
+            applied_dmg, dmg_breakdown = resolve_typed_damage(result.rolls, resist, immune, vulnerable)
+
             hp_str = (f"HP: {p_token.hp}/{p_token.max_hp}" if p_token.max_hp > 0
                       else f"HP: {p_token.hp}")
-            total_label = f"  Total damage: {total_dmg}    ({hp_str})"
+            total_label = f"  Total damage: {dmg_breakdown}    ({hp_str})"
             tk.Label(outer, text=total_label, font=("Helvetica", 9, "bold"), anchor="w").grid(
                 row=row_idx, column=0, columnspan=2, sticky="w", padx=4, pady=(2, 1)
             )
-            if total_dmg > 0:
+            if applied_dmg > 0:
                 var = tk.BooleanVar(value=True)
                 tk.Checkbutton(outer, text="Apply", variable=var).grid(
                     row=row_idx, column=2, padx=4, pady=1
                 )
-                apply_vars.append((var, p_token, total_dmg))
+                apply_vars.append((var, p_token, applied_dmg))
             row_idx += 1
 
             ttk.Separator(outer, orient="horizontal").grid(
