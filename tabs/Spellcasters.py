@@ -2,16 +2,12 @@ import json
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from engine.constants import SPELL_SCHOOLS as _SCHOOLS
 from persistence.import_5etools_spell import parse_5etools_spell
 from utilities import RelativePositionTracker
 from GlobalStateManager import GSM
 
 _COL_W = 165  # pixels per caster column
-
-_SCHOOLS = [
-    "", "Abjuration", "Conjuration", "Divination", "Enchantment",
-    "Evocation", "Illusion", "Necromancy", "Transmutation", "Other",
-]
 
 _spell_clipboard: dict = {"data": None}  # {level: [name, ...]} snapshot, or None
 

@@ -3,3 +3,5 @@ pillow
 pygame
 rapidfuzz            # fuzzy name matching (Search tab)
 # Search tab opens 5e.tools deep-links in the default browser — no extra deps.
+
+flask                # web server (migration Phase 1+); REST API around the engine

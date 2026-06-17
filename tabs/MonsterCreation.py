@@ -2,20 +2,16 @@ import tkinter as tk
 from tkinter import ttk
 
 from GlobalStateManager import GSM
+from engine.constants import (
+    ALL_CONDITIONS as _ALL_CONDITIONS,
+    CREATURE_SIZES as _CREATURE_SIZES,
+    CREATURE_TYPES as _CREATURE_TYPES,
+)
 from engine.models import AttackSpec, MonsterData
-
-
-_CREATURE_TYPES = [
-    "", "Aberration", "Beast", "Celestial", "Construct", "Dragon",
-    "Elemental", "Fey", "Fiend", "Giant", "Humanoid", "Monstrosity",
-    "Ooze", "Plant", "Undead",
-]
-_CREATURE_SIZES = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"]
-_ALL_CONDITIONS = [
-    "blinded", "charmed", "deafened", "frightened", "grappled",
-    "incapacitated", "invisible", "paralyzed", "petrified",
-    "poisoned", "prone", "restrained", "stunned", "unconscious",
-]
+from persistence.appstate import (
+    attack_spec_to_dict as _attack_spec_to_dict,
+    dict_to_attack_spec as _dict_to_attack_spec,
+)
 
 class MonsterStats:
     def __init__(self):
@@ -248,60 +244,6 @@ class MonsterStats:
             var.set(dt in d.damage_vulnerabilities)
         for c, var in self.condition_immunities_vars.items():
             var.set(c in d.condition_immunities)
-
-
-def _dict_to_attack_spec(d: dict) -> AttackSpec:
-    return AttackSpec(
-        name=d.get("name", "Attack"),
-        to_hit_mod=d.get("to_hit_mod", 5),
-        roll_type=d.get("roll_type", "Normal"),
-        n_attacks=d.get("n_attacks", 1),
-        dmg_n_die_1=d.get("dmg_n_die_1", 1),
-        dmg_die_type_1=d.get("dmg_die_type_1", "d6"),
-        dmg_flat_1=d.get("dmg_flat_1", 0),
-        dmg_type_1=d.get("dmg_type_1", "slashing"),
-        dmg_n_die_2=d.get("dmg_n_die_2", 0),
-        dmg_die_type_2=d.get("dmg_die_type_2", "d6"),
-        dmg_flat_2=d.get("dmg_flat_2", 0),
-        dmg_type_2=d.get("dmg_type_2", "None"),
-        crit_number=d.get("crit_number", 20),
-        brutal_critical=d.get("brutal_critical", False),
-        savage_attacker=d.get("savage_attacker", False),
-        reroll_1_on_hit=d.get("reroll_1_on_hit", False),
-        reroll_1_2_dmg=d.get("reroll_1_2_dmg", False),
-        bane=d.get("bane", False),
-        bless=d.get("bless", False),
-        on_hit_force_save=d.get("on_hit_force_save", d.get("on_hit_force_saving_throw_bool", False)),
-        on_hit_save_dc=d.get("on_hit_save_dc", 8),
-        on_hit_save_type=d.get("on_hit_save_type", "CON"),
-    )
-
-
-def _attack_spec_to_dict(atk: AttackSpec) -> dict:
-    return {
-        "name": atk.name,
-        "to_hit_mod": atk.to_hit_mod,
-        "roll_type": atk.roll_type,
-        "n_attacks": atk.n_attacks,
-        "dmg_n_die_1": atk.dmg_n_die_1,
-        "dmg_die_type_1": atk.dmg_die_type_1,
-        "dmg_flat_1": atk.dmg_flat_1,
-        "dmg_type_1": atk.dmg_type_1,
-        "dmg_n_die_2": atk.dmg_n_die_2,
-        "dmg_die_type_2": atk.dmg_die_type_2,
-        "dmg_flat_2": atk.dmg_flat_2,
-        "dmg_type_2": atk.dmg_type_2,
-        "crit_number": atk.crit_number,
-        "brutal_critical": atk.brutal_critical,
-        "savage_attacker": atk.savage_attacker,
-        "reroll_1_on_hit": atk.reroll_1_on_hit,
-        "reroll_1_2_dmg": atk.reroll_1_2_dmg,
-        "bane": atk.bane,
-        "bless": atk.bless,
-        "on_hit_force_save": atk.on_hit_force_save,
-        "on_hit_save_dc": atk.on_hit_save_dc,
-        "on_hit_save_type": atk.on_hit_save_type,
-    }
 
 
 def ClearMonsterUI(RelPosMonsters) -> None:

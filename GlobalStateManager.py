@@ -3,6 +3,12 @@ from tkinter import font as tkfont
 from tkinter import ttk
 
 from engine.board import Board
+from engine.constants import (
+    DICE_TYPES,
+    DMG_TYPES,
+    ROLL_TYPES,
+    SAVING_THROW_TYPES,
+)
 from utilities import RelativePositionTracker
 
 
@@ -65,27 +71,11 @@ class GlobalsManager:
     Search_frame = ttk.Frame(Notebook, width=_frame_width, height=_frame_height)
     Notebook.add(Search_frame, text="Search")
 
-    Roll_types = ["Normal", "Advantage", "Disadvantage", "Super Advantage", "Super Disadvantage"]
-    Dmg_types = [
-        "bludgeoning",
-        "magic bludgeoning",
-        "piercing",
-        "magic piercing",
-        "slashing",
-        "magic slashing",
-        "acid",
-        "cold",
-        "fire",
-        "force",
-        "lightning",
-        "thunder",
-        "necrotic",
-        "poison",
-        "psychic",
-        "radiant",
-    ]
-    Dice_types = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"]
-    Saving_throw_types = ["STR", "DEX", "CON", "WIS", "INT", "CHA"]
+    # Canonical lists now live in engine.constants (single source of truth).
+    Roll_types = ROLL_TYPES
+    Dmg_types = DMG_TYPES
+    Dice_types = DICE_TYPES
+    Saving_throw_types = SAVING_THROW_TYPES
 
     # Fonts
     Title_font = tkfont.Font(family="Helvetica", size=12, weight="bold")

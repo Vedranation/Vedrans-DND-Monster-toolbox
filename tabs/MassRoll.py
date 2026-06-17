@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from engine.dice import roll_die
 from GlobalStateManager import GSM
-from utilities import RollDice
 
 
 def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
@@ -10,14 +10,14 @@ def MassRoll(RelPosMassroll, RelPosMonsters) -> None:
 
     def _roll_d20(rolltype: str) -> int:
         if rolltype == "Advantage":
-            return max(RollDice("d20"), RollDice("d20"))
+            return max(roll_die("d20"), roll_die("d20"))
         if rolltype == "Disadvantage":
-            return min(RollDice("d20"), RollDice("d20"))
+            return min(roll_die("d20"), roll_die("d20"))
         if rolltype == "Super Advantage":
-            return max(RollDice("d20"), RollDice("d20"), RollDice("d20"))
+            return max(roll_die("d20"), roll_die("d20"), roll_die("d20"))
         if rolltype == "Super Disadvantage":
-            return min(RollDice("d20"), RollDice("d20"), RollDice("d20"))
-        return RollDice("d20")
+            return min(roll_die("d20"), roll_die("d20"), roll_die("d20"))
+        return roll_die("d20")
 
     _SAVE_ATTRS: dict[str, tuple[str, str]] = {
         "STR": ("savingthrow_str_mod_int", "savingthrow_str_roll_type_str"),
