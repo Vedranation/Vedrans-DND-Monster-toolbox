@@ -111,10 +111,14 @@ class TestConditions:
     def test_prone_grants_melee_adv(self):
         assert CONDITION_EFFECTS[Condition.PRONE].get("melee_vs_prone_adv") is True
 
-    def test_stunned_imposes_disadvantage_and_advantage_against(self):
-        effects = CONDITION_EFFECTS[Condition.STUNNED]
-        assert effects["attack_roll_type"] == "disadvantage"
-        assert effects["defense_roll_type"] == "advantage"
+    def test_incapacitating_conditions_grant_advantage_against_only(self):
+        # paralyzed/petrified/stunned/unconscious make the creature unable to attack
+        # (handled via incapacitated, not a roll modifier), so they no longer carry an
+        # attack_roll_type — only advantage to attackers targeting them.
+        for cond in (Condition.STUNNED, Condition.PARALYZED, Condition.PETRIFIED, Condition.UNCONSCIOUS):
+            effects = CONDITION_EFFECTS[cond]
+            assert "attack_roll_type" not in effects
+            assert effects["defense_roll_type"] == "advantage"
 
     def test_frightened_imposes_disadvantage(self):
         assert CONDITION_EFFECTS[Condition.FRIGHTENED]["attack_roll_type"] == "disadvantage"

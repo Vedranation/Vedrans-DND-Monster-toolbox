@@ -70,7 +70,8 @@ def _caster_dict(c: dict) -> dict:
     slots = {str(i): {"max": mx, "used": c["slots_used"].get(str(i), 0)}
              for i, mx in enumerate(table, start=1)}
     return {"id": c["id"], "name": c["name"], "level": c["level"],
-            "spells": c["spells"], "slots": slots, "token_id": c.get("token_id")}
+            "spells": c["spells"], "slots": slots, "token_id": c.get("token_id"),
+            "concentrating": c.get("concentrating", False)}
 
 
 def _find_caster(s, cid):
@@ -88,7 +89,8 @@ def add_caster():
     body = request.get_json(silent=True) or {}
     s._caster_seq += 1
     c = {"id": f"c{s._caster_seq}", "name": (body.get("name") or "Caster").strip(),
-         "level": int(body.get("level", 1)), "spells": {}, "slots_used": {}, "token_id": None}
+         "level": int(body.get("level", 1)), "spells": {}, "slots_used": {},
+         "token_id": None, "concentrating": False}
     s.casters.append(c)
     return jsonify(_caster_dict(c)), 201
 
@@ -121,6 +123,8 @@ def update_caster(cid: str):
         c["level"] = max(1, min(20, int(body["level"])))
     if "token_id" in body:
         c["token_id"] = body["token_id"] or None
+    if "concentrating" in body:
+        c["concentrating"] = bool(body["concentrating"])
     return jsonify(_caster_dict(c))
 
 

@@ -44,7 +44,7 @@ export async function renderMonsters(root) {
     el("button", {
       class: "btn primary",
       onclick: async () => {
-        const m = await api.post("/api/monsters", { name_str: "New Monster" });
+        const m = await api.post("/api/monsters", { name_str: "New Monster", max_hp_int: 8 });
         selectedId = m.id; renderMonsters(root); toast("Monster added");
       },
     }, "+ Add"),

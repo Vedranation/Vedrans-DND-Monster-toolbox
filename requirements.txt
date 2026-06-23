@@ -1,7 +1,7 @@
-# Python 3.10+
-pillow
-pygame
-rapidfuzz            # fuzzy name matching (Search tab)
+# Python 3.10+ — web app runtime deps.
+# Fuzzy name matching (Search tab) now uses the stdlib `difflib` (no native wheel),
+# so the codebase packages cleanly for Android (Chaquopy). rapidfuzz removed.
+# pillow/pygame were desktop-only — see legacy/pyproject.toml for that app's deps.
 # Search tab opens 5e.tools deep-links in the default browser — no extra deps.
 
-flask                # web server (migration Phase 1+); REST API around the engine
+flask                # web server; REST API around the engine

@@ -51,6 +51,7 @@ class Token:
     highlight_range_ft: int = 5
     sight_invisible_range: int = 0     # blindsight/truesight reach — sees invisible within
     conditions: set[Condition] = field(default_factory=set)
+    charmed_by: str | None = None  # token id this creature is charmed by (can't attack it)
     active: bool = True
     team: str = ""  # allegiance; blank → defaulted from kind in __post_init__
 

@@ -129,6 +129,7 @@ def token_dict(t: Token) -> dict:
         "highlight_range_ft": t.highlight_range_ft,
         "sight_invisible_range": t.sight_invisible_range,
         "conditions": sorted(c.value for c in t.conditions),
+        "charmed_by": t.charmed_by,
         "active": t.active, "team": t.team,
     }
 
@@ -190,6 +191,7 @@ def token_from_dict(d: dict) -> Token:
         highlight_range_ft=d.get("highlight_range_ft", 5),
         sight_invisible_range=d.get("sight_invisible_range", 0),
         conditions=conditions_from_values(d.get("conditions", [])),
+        charmed_by=d.get("charmed_by"),
         active=d.get("active", True), team=d.get("team", ""),
     )
 

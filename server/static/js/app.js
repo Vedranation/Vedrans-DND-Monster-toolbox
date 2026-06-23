@@ -7,7 +7,7 @@ import { renderPlayers, selectByName as selectPlayerByName } from "./screens/pla
 import { renderMonsters, selectByName as selectMonsterByName } from "./screens/monsters.js";
 import { renderBoard } from "./screens/board.js";
 import { renderAttack, presetMatchup } from "./screens/attack.js";
-import { renderSkills, presetMassSaves } from "./screens/skills.js";
+import { renderSkills, presetMassSaves, presetQuickSave } from "./screens/skills.js";
 import { renderSearch } from "./screens/search.js";
 import { renderRandom } from "./screens/random.js";
 import { renderInitiative } from "./screens/initiative.js";
@@ -87,6 +87,7 @@ window.addEventListener("navigate", (e) => {
   if (tab === "spellcasters" && e.detail.selectSpellName) presetSpell(e.detail.selectSpellName);
   if (tab === "dice" && e.detail.dice) presetDice(e.detail.dice.count, e.detail.dice.die, e.detail.dice.modifier);
   if (tab === "skills" && e.detail.massSaves) presetMassSaves(e.detail.massSaves);
+  if (tab === "skills" && e.detail.quickSave) presetQuickSave(e.detail.quickSave);
   current = tab;
   renderNav();
   renderScreen();

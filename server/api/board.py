@@ -79,6 +79,11 @@ def patch_token(tid: str):
         t.team = str(body["team"])
     if "conditions" in body:
         t.conditions = app_state.conditions_from_values(body["conditions"])
+        # A charmer reference is meaningless without the charmed condition.
+        if not any(c.value == "charmed" for c in t.conditions):
+            t.charmed_by = None
+    if "charmed_by" in body:
+        t.charmed_by = body["charmed_by"] or None
     return jsonify(app_state.token_dict(t))
 
 
@@ -167,8 +172,10 @@ def _player_data(s, name):
 
 
 def _auto_target(board, m_token):
-    """Nearest active enemy-team token, honoring block range mode (mirrors the desktop)."""
-    enemies = [t for t in board.tokens if t.team != m_token.team and t.active]
+    """Nearest active enemy-team token, honoring block range mode (mirrors the desktop).
+    In block mode a charmed creature's charmer is excluded from auto-targeting."""
+    enemies = [t for t in board.tokens if t.team != m_token.team and t.active
+               and not _charm_blocks(m_token, t, board)]
     if not enemies:
         return None
     enemies.sort(key=lambda t: distance_ft(m_token.pos, t.pos, board.diagonal_mode))
@@ -184,13 +191,38 @@ def _resolve_target(s, m_token):
     over_id = s.target_overrides.get(m_token.id)
     if over_id:
         ot = app_state.token_by_id(s, over_id)
-        if ot and ot.active and ot.team != m_token.team:
+        if ot and ot.active and ot.team != m_token.team and not _charm_blocks(m_token, ot, s.board):
             return ot
     return _auto_target(s.board, m_token)
 
 
 # Conditions that make a creature helpless → attacks from within 5 ft auto-crit (5e).
 _HELPLESS = {"paralyzed", "unconscious"}
+
+
+def _token_conds(t) -> set:
+    return {c.value for c in t.conditions}
+
+
+def _can_attack(t) -> bool:
+    """Incapacitated creatures (incl. paralyzed/petrified/stunned/unconscious, which
+    auto-add incapacitated) can't attack at all."""
+    return "incapacitated" not in _token_conds(t)
+
+
+def _charmer_id(t):
+    """Token id this creature is charmed by (only while the charmed condition holds)."""
+    return t.charmed_by if "charmed" in _token_conds(t) else None
+
+
+def _charm_blocks(attacker, target, board) -> bool:
+    """A charmed creature can't target its charmer. Gated by range mode: in 'block'
+    the charmer is removed from valid targets; in 'warn' it's allowed but flagged."""
+    return _charmer_id(attacker) == target.id and board.range_mode == "block"
+
+
+def _charm_warns(attacker, target, board) -> bool:
+    return _charmer_id(attacker) == target.id and board.range_mode == "warn"
 
 
 def _auto_crit(attacker, target, board) -> bool:
@@ -229,7 +261,7 @@ def targets():
     b = s.board
     lines = []
     for mt in b.tokens:
-        if not mt.active or mt.kind != "monster":
+        if not mt.active or mt.kind != "monster" or not _can_attack(mt):
             continue
         tgt = _resolve_target(s, mt)
         if tgt is None:
@@ -273,6 +305,10 @@ def _token_panel(s, t) -> dict:
         "auto_crit": (t.kind == "monster" and _auto_crit(t, tgt, b)),
         "is_helpless": bool(_HELPLESS & {c.value for c in t.conditions}),
         "sees_invisible": sees_invis,
+        "can_attack": _can_attack(t),
+        "charmer_name": (lambda ct: ct.data_ref if ct else None)(
+            app_state.token_by_id(s, _charmer_id(t))) if _charmer_id(t) else None,
+        "charm_warn": bool(tgt and _charm_warns(t, tgt, b)),
         "ac": None, "speeds": {}, "senses": {}, "attacks": [],
         "resistances": [], "immunities": [], "vulnerabilities": [], "condition_immunities": [],
         "skills": [], "languages": [],
@@ -331,9 +367,14 @@ def resolve():
     """Resolve every active monster's attack against its auto-target."""
     s = app_state.STATE
     b = s.board
+    # Token ids whose linked caster is currently concentrating (→ damage needs a save).
+    conc_tokens = {c["token_id"] for c in s.casters if c.get("concentrating") and c.get("token_id")}
     pairs, skipped = [], []
     for mt in b.tokens:
         if not mt.active or mt.kind != "monster":
+            continue
+        if not _can_attack(mt):
+            skipped.append(f"{mt.data_ref} (incapacitated)")
             continue
         am = _monster_data(s, mt.data_ref)
         tgt = _resolve_target(s, mt)
@@ -358,6 +399,8 @@ def resolve():
             "attacker_id": mt.id, "attacker": am.name,
             "defender_id": tgt.id, "defender": ddata.name,
             "roll_mod": board_mod, "tohit_bonus": tohit_bonus, "auto_crit": force_crit,
+            "charm_warning": _charm_warns(mt, tgt, b),
+            "defender_concentrating": (tgt.id in conc_tokens and applied > 0),
             "out_of_range": dist > mt.attack_range_ft,
             "rolls": [asdict(r) for r in result.rolls],
             "breakdown": breakdown,
@@ -407,11 +450,14 @@ def retarget():
            if (t := app_state.token_by_id(s, tid)) is not None and t.kind == "monster" and t.active]
     is_multi = len(sel) > 1
 
-    enemies = [t for t in b.tokens if t.team != primary.team and t.active]
+    all_enemies = [t for t in b.tokens if t.team != primary.team and t.active]
+    # In block mode a charmed primary can't cycle onto its charmer.
+    enemies = [t for t in all_enemies if not _charm_blocks(primary, t, b)]
     if not enemies:
         for t in (sel or [primary]):
             s.target_overrides.pop(t.id, None)
-        return jsonify({"target_id": None, "blocked": False})
+        # Empty only because charm removed the lone option → that's a block.
+        return jsonify({"target_id": None, "blocked": bool(all_enemies)})
 
     if is_multi:
         avg = GridPosition(round(sum(t.pos.col for t in sel) / len(sel)),
@@ -434,6 +480,8 @@ def retarget():
         for t in sel:
             if b.range_mode == "block" and \
                distance_ft(t.pos, chosen.pos, b.diagonal_mode) > t.attack_range_ft:
+                continue
+            if _charm_blocks(t, chosen, b):   # can't assign a charmed creature to its charmer
                 continue
             s.target_overrides[t.id] = chosen.id
     else:

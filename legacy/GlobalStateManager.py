@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import ttk
@@ -16,7 +17,10 @@ class GlobalsManager:
     # GUI globals
     Root = tk.Tk()
     Root.title("Vedran's D&D monster toolbox")
-    Root.iconbitmap("Gearhands-corrupted-soldier.ico")
+    try:
+        Root.iconbitmap(os.path.join(os.path.dirname(__file__), "Gearhands-corrupted-soldier.ico"))
+    except Exception:
+        pass  # icon is cosmetic; missing/unsupported on some platforms shouldn't crash startup
     Root.geometry("850x645")
     Notebook = ttk.Notebook(Root)
     Notebook.place(x=10, y=10)

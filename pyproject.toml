@@ -1,0 +1,33 @@
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+exclude = [
+    ".venv",
+    "legacy",  # shelved Tkinter desktop app — frozen, has its own pyproject
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "UP",   # pyupgrade (modernise syntax for target Python version)
+    "W",    # pycodestyle warnings
+]
+ignore = [
+    "E501",   # line too long — black handles this
+    "E741",   # ambiguous variable name (l, O, I) — legacy UI code uses these
+    "UP007",  # Use X | Y for union — we prefer readability in UI code for now
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+exclude = '''
+/(
+    \.venv
+  | legacy
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

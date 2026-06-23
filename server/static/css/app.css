@@ -154,6 +154,8 @@ textarea.json {
 /* selection action bar (touch-friendly equivalents of the R/T/D/H/Del shortcuts) */
 .sel-bar { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: .4rem 0; }
 .sel-bar .btn:disabled { opacity: .45; cursor: default; }
+.sel-bar .btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.sel-count { display: inline-block; min-width: 84px; }  /* fixed width so buttons don't shift */
 .btn-row.vert { flex-direction: column; align-items: stretch; }
 /* Fixed height + nowrap so showing/clearing the info text never shifts the board. */
 .board-info { height: 1.4em; line-height: 1.4em; font-size: 13px; margin: .2rem 0;
@@ -197,6 +199,7 @@ textarea.json {
 .caster-spell { display: flex; align-items: center; gap: .4rem; margin: .15rem 0; font-size: 13px; }
 .caster-spell span { flex: 1; }
 .caster-highlight { outline: 2px solid var(--accent); outline-offset: 2px; }
+.flash-highlight { outline: 2px solid var(--accent); outline-offset: 2px; }
 .lib-search { margin-bottom: .4rem; }
 
 /* dice tab */

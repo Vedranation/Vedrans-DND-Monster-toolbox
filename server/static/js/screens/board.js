@@ -127,6 +127,18 @@ function draw() {
       ctx.fillText("!", mx, my + 0.5);
       ctx.textBaseline = "alphabetic";
     }
+    // concentration marker — purple "C" disc at the bottom-left (linked caster concentrating)
+    const linkedCaster = _casterByToken.get(t.id);
+    if (linkedCaster && linkedCaster.concentrating) {
+      const cmx = cx - R * 0.8, cmy = cy + R * 0.8, cmr = Math.max(4, CELL * 0.17);
+      ctx.beginPath(); ctx.arc(cmx, cmy, cmr, 0, Math.PI * 2);
+      ctx.fillStyle = "#7e57c2"; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = "#fff"; ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.round(cmr * 1.4)}px sans-serif`;
+      ctx.textBaseline = "middle";
+      ctx.fillText("C", cmx, cmy + 0.5);
+      ctx.textBaseline = "alphabetic";
+    }
   }
   // box-select rectangle (on top of everything)
   if (marquee.active && marquee.moved) {
@@ -157,6 +169,7 @@ function cellAt(px, py) {
 // ── data helpers ───────────────────────────────────────────────────────────
 let _bar = null;
 let _selBar = null;            // touch-friendly action bar (mirrors the R/T/D/H/Del shortcuts)
+let _multiSelect = false;      // toggle: tapping tokens adds to selection (like holding Ctrl)
 
 // Rebuild the selection action bar to reflect the current selection. These buttons
 // give touch users (no keyboard) the same actions as the hotkeys/context menu.
@@ -164,17 +177,32 @@ function renderSelBar() {
   if (!_selBar) return;
   const ids = [...selected];
   const primary = ids.length ? tk(ids[ids.length - 1]) : null;
-  const monsterIds = ids.filter((id) => { const t = tk(id); return t && t.kind === "monster"; });
+  const monsterTokens = ids.map((id) => tk(id)).filter((t) => t && t.kind === "monster");
+  const monsterIds = monsterTokens.map((t) => t.id);
   const none = ids.length === 0;
+  // Send-to-Attack needs exactly two tokens with at least one monster.
+  const pair = ids.length === 2 ? [tk(ids[0]), tk(ids[1])] : null;
+  const canAttack = pair && pair[0] && pair[1] && (pair[0].kind === "monster" || pair[1].kind === "monster");
+  // Go-to-spells needs a single token with a linked caster.
+  const caster = ids.length === 1 ? _casterByToken.get(ids[0]) : null;
   _selBar.replaceChildren(
-    el("span", { class: "muted", text: none ? "Nothing selected" : `${ids.length} selected` }),
-    el("button", { class: "btn neutral", disabled: none, onclick: () => setHpDialog(ids) }, "Set HP"),
+    el("button", { class: "btn neutral" + (_multiSelect ? " active" : ""),
+      title: "Tap tokens to add to the selection (like holding Ctrl)",
+      onclick: () => { _multiSelect = !_multiSelect; renderSelBar(); } }, _multiSelect ? "Multi ✓" : "Multi-select"),
+    el("span", { class: "muted sel-count", text: `${ids.length} selected` }),
+    el("button", { class: "btn primary", disabled: none, onclick: () => setHpDialog(ids) }, "Set HP"),
     el("button", { class: "btn neutral", disabled: none, onclick: () => conditionsDialog(ids, primary) }, "Conditions"),
-    el("button", { class: "btn neutral", disabled: none,
-      onclick: () => patchAll(ids, { active: !(primary && primary.active) }) },
-      primary && !primary.active ? "Activate" : "Deactivate"),
     el("button", { class: "btn neutral", disabled: !monsterIds.length,
       onclick: () => retarget(monsterIds, primary && primary.id) }, "Cycle target"),
+    el("button", { class: "btn neutral", disabled: !canAttack,
+      onclick: () => sendToAttack(pair[0], pair[1]) }, "To Attack"),
+    el("button", { class: "btn neutral", disabled: !monsterTokens.length,
+      onclick: () => sendToMassSaves(monsterTokens) }, "Mass save"),
+    el("button", { class: "btn neutral", disabled: !caster,
+      onclick: () => window.dispatchEvent(new CustomEvent("navigate", { detail: { tab: "spellcasters", selectCasterId: caster.id } })) }, "Go to spells"),
+    el("button", { class: "btn danger", disabled: none,
+      onclick: () => patchAll(ids, { active: !(primary && primary.active) }) },
+      primary && !primary.active ? "Activate" : "Deactivate"),
     el("button", { class: "btn danger", disabled: none, onclick: () => removeTokens(ids) }, "Remove"),
   );
 }
@@ -256,6 +284,10 @@ function renderPanel() {
   if (d.auto_crit) body.append(el("div", { class: "insp-warn", text: "⚡ Hits auto-crit (target helpless, ≤5 ft)" }));
   if (d.is_helpless) body.append(el("div", { class: "insp-warn", text: "⚡ Helpless — attackers within 5 ft auto-crit" }));
   if (d.sees_invisible) body.append(el("div", { class: "insp-note", text: "👁 Sees invisible (target in blindsight/truesight)" }));
+  if (d.can_attack === false) body.append(el("div", { class: "insp-warn", text: "🚫 Incapacitated — can't attack" }));
+  if (d.charmer_name) body.append(el("div", { class: "insp-note", text:
+    d.charm_warn ? `💗 Charmed by ${d.charmer_name} — targeting charmer (⚠ warn)`
+                 : `💗 Charmed by ${d.charmer_name} — won't target charmer` }));
 
   // conditions
   const conds = el("span");
@@ -358,14 +390,11 @@ async function fetchOverlays() {
 
 function updateInfo(d, token) {
   if (!_infoEl) return;
-  if (!d || !token) { _infoEl.textContent = ""; return; }
-  const parts = [`${token.data_ref}`, `HP ${token.hp}/${token.max_hp}`, `roll: ${d.roll_mod}`];
-  if (token.kind === "monster") {
-    const tgt = d.target_id ? tk(d.target_id) : null;
-    parts.push(`target: ${tgt ? tgt.data_ref : "none"}${tgt && !d.target_in_range ? " ⚠ out of range" : ""}`);
-  }
-  if (d.in_melee) parts.push("in melee");
-  _infoEl.textContent = parts.join("  ·  ");
+  // Only the target + out-of-range note lives here now; everything else (name, HP,
+  // roll type, conditions…) is in the Token info panel.
+  if (!d || !token || token.kind !== "monster") { _infoEl.textContent = ""; return; }
+  const tgt = d.target_id ? tk(d.target_id) : null;
+  _infoEl.textContent = `target: ${tgt ? tgt.data_ref : "none"}${tgt && !d.target_in_range ? " ⚠ out of range" : ""}`;
 }
 
 // ── pointer interactions ─────────────────────────────────────────────────────
@@ -380,6 +409,7 @@ function localXY(e) {
 
 function onPointerDown(e) {
   if (e.button === 2) return;  // right-click handled by contextmenu
+  const multi = e.ctrlKey || e.shiftKey || _multiSelect;  // Multi-select button == holding Ctrl
   const [x, y] = localXY(e);
   const t = tokenAt(x, y);
   if (!t) {
@@ -387,12 +417,12 @@ function onPointerDown(e) {
     // stays a plain click) on pointerup, so a drag can rubber-band tokens.
     drag.active = false;
     marquee.active = true;
-    marquee.additive = e.ctrlKey || e.shiftKey;
+    marquee.additive = multi;
     marquee.moved = false;
     marquee.x0 = marquee.x1 = x; marquee.y0 = marquee.y1 = y;
     return;
   }
-  if (e.ctrlKey || e.shiftKey) {
+  if (multi) {
     selected.has(t.id) ? selected.delete(t.id) : selected.add(t.id);
   } else if (!selected.has(t.id)) {
     selected.clear(); selected.add(t.id);
@@ -627,18 +657,59 @@ function setHpDialog(ids) {
   }
 }
 
+// Conditions that imply "incapacitated" (can't attack). The UI auto-adds/removes
+// incapacitated with them, but it stays independently toggleable for overrides.
+const INCAP_PARENTS = ["paralyzed", "petrified", "stunned", "unconscious"];
+
 function conditionsDialog(ids, primary) {
-  const grid = el("div", { class: "check-grid" });
-  const primaryConds = new Set(primary.conditions);
-  for (const cond of store.constants.conditions) {
-    const cb = el("input", { type: "checkbox" });
-    if (primaryConds.has(cond)) cb.checked = true;
-    cb.addEventListener("change", () => toggleCondition(ids, cond, cb.checked));
-    grid.append(el("label", { class: "toggle" }, [cb, cond]));
+  const others = board.tokens.filter((t) => !ids.includes(t.id));
+  const wrap = el("div");
+
+  function render() {
+    const cur = new Set((tk(primary.id) || primary).conditions);
+    const grid = el("div", { class: "check-grid" });
+    for (const cond of store.constants.conditions) {
+      if (cond === "charmed") continue;          // charmed has its own row (needs a charmer)
+      const cb = el("input", { type: "checkbox" });
+      if (cur.has(cond)) cb.checked = true;
+      cb.addEventListener("change", async () => { await toggleCondition(ids, cond, cb.checked); render(); });
+      grid.append(el("label", { class: "toggle" }, [cb, cond]));
+    }
+
+    // charmed + charmer picker
+    const charmCb = el("input", { type: "checkbox" });
+    if (cur.has("charmed")) charmCb.checked = true;
+    const charmerSel = el("select", {}, [
+      el("option", { value: "" }, "— charmer —"),
+      ...others.map((t) => el("option", { value: t.id }, `${t.data_ref} (${t.team})`)),
+    ]);
+    const pc = (tk(primary.id) || primary).charmed_by;
+    if (pc) charmerSel.value = pc;
+    charmerSel.disabled = !charmCb.checked || !others.length;
+    charmCb.addEventListener("change", async () => {
+      if (charmCb.checked) {
+        if (!charmerSel.value && others.length) charmerSel.value = others[0].id;
+        if (!charmerSel.value) { toast("No other token to be the charmer.", true); charmCb.checked = false; return; }
+        await setCharm(ids, charmerSel.value);
+      } else {
+        await clearCharm(ids);
+      }
+      render();
+    });
+    charmerSel.addEventListener("change", async () => {
+      if (charmCb.checked && charmerSel.value) await setCharm(ids, charmerSel.value);
+    });
+    grid.append(el("label", { class: "toggle" }, [charmCb, "charmed"]));
+
+    wrap.replaceChildren(
+      el("p", { class: "muted", text: "Applies to all selected. Paralyzed/petrified/stunned/unconscious auto-add incapacitated (can't attack)." }),
+      grid,
+      el("div", { class: "field" }, [el("label", { text: "Charmer" }), charmerSel]),
+    );
   }
-  modal("Conditions", el("div", {}, [
-    el("p", { class: "muted", text: "Toggling applies to all selected tokens." }), grid,
-  ]), { onClose: reload });
+
+  render();
+  modal("Conditions", wrap, { onClose: reload });
 }
 
 async function toggleCondition(ids, cond, add) {
@@ -646,8 +717,33 @@ async function toggleCondition(ids, cond, add) {
     const t = tk(id);
     const set = new Set(t.conditions);
     add ? set.add(cond) : set.delete(cond);
+    // Parent incapacitating conditions auto-link "incapacitated".
+    if (INCAP_PARENTS.includes(cond)) {
+      if (add) set.add("incapacitated");
+      else if (!INCAP_PARENTS.some((p) => set.has(p))) set.delete("incapacitated");
+    }
     t.conditions = [...set];  // optimistic
     return api.patch(`/api/board/tokens/${id}`, { conditions: t.conditions });
+  });
+  try { await Promise.all(calls); } catch (err) { toast(err.message, true); }
+}
+
+async function setCharm(ids, charmerId) {
+  const calls = ids.map((id) => {
+    const t = tk(id);
+    const set = new Set(t.conditions); set.add("charmed");
+    t.conditions = [...set]; t.charmed_by = charmerId;  // optimistic
+    return api.patch(`/api/board/tokens/${id}`, { conditions: t.conditions, charmed_by: charmerId });
+  });
+  try { await Promise.all(calls); } catch (err) { toast(err.message, true); }
+}
+
+async function clearCharm(ids) {
+  const calls = ids.map((id) => {
+    const t = tk(id);
+    const set = new Set(t.conditions); set.delete("charmed");
+    t.conditions = [...set]; t.charmed_by = null;  // optimistic
+    return api.patch(`/api/board/tokens/${id}`, { conditions: t.conditions, charmed_by: null });
   });
   try { await Promise.all(calls); } catch (err) { toast(err.message, true); }
 }
@@ -763,11 +859,15 @@ async function doResolve() {
     if (p.tohit_bonus) mods.push(`+${p.tohit_bonus} flank`);
     let hdr = `${p.attacker} → ${p.defender}  [${mods.join(", ")}]`;
     if (p.auto_crit) hdr += "  ⚡ AUTO-CRIT";
+    if (p.charm_warning) hdr += "  💗 ATTACKING CHARMER";
     if (p.out_of_range) hdr += "  ⚠ OUT OF RANGE";
     const card = el("div", { class: "attack-card" }, [
       el("div", { class: "swing-head", text: hdr }),
       renderSwings(p.rolls),
     ]);
+    if (p.defender_concentrating) {
+      card.append(el("div", { class: "insp-note", text: `💜 ${p.defender} needs a concentration saving throw` }));
+    }
     const cb = el("input", { type: "checkbox" });
     if (p.applied > 0) { cb.checked = true; applies.push({ cb, token_id: p.defender_id, amount: p.applied }); }
     card.append(el("label", { class: "toggle" }, [
@@ -852,7 +952,7 @@ export async function renderBoard(root) {
     window.addEventListener("keydown", onBoardKey);
     _dragBound = true;
   }
-  root.append(el("p", { class: "muted", text: "Tap/click to select · Ctrl-click multi · drag empty space to box-select (Ctrl/Shift adds) · drag token to move · tap a team name to assign the selection · use the action bar (or right-click / R T D H Del) for token actions · double-tap empty cell to add." }));
+  root.append(el("p", { class: "muted", text: "Tap/click to select · Ctrl-click (or the Multi-select button) for multi · drag empty space to box-select · drag token to move · tap a team name to assign the selection · use the action bar (or right-click / R T D H Del) for token actions · double-tap empty cell to add." }));
 
   fetchOverlays();   // initial target lines (+ highlights once something is selected)
 }

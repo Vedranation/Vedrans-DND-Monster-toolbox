@@ -30,7 +30,7 @@ export async function renderPlayers(root) {
   listCol.append(el("button", {
     class: "btn primary add-row",
     onclick: async () => {
-      const p = await api.post("/api/players", { name_str: "New Player" });
+      const p = await api.post("/api/players", { name_str: "New Player", max_hp_int: 8 });
       selectedId = p.id;
       renderPlayers(root);
       toast("Player added");

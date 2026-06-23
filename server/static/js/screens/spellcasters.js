@@ -204,17 +204,36 @@ function casterCard(root, c) {
     await api.patch(`/api/casters/${c.id}`, { token_id: tokenSel.value === "" ? null : tokenSel.value });
     reloadCasters(root);
   });
-  const linked = c.token_id != null && _tokens.some((t) => String(t.id) === String(c.token_id));
+  const linkedTok = _tokens.find((t) => String(t.id) === String(c.token_id));
   const goToken = el("button", {
-    class: "btn neutral", disabled: !linked,
+    class: "btn neutral", disabled: !linkedTok,
     onclick: () => window.dispatchEvent(new CustomEvent("navigate", { detail: { tab: "board", selectTokenId: c.token_id } })),
   }, "Go to token");
+
+  // Concentration: toggle drives the on-token marker (only shown when linked).
+  const concCb = el("input", { type: "checkbox" });
+  if (c.concentrating) concCb.checked = true;
+  concCb.addEventListener("change", async () => {
+    await api.patch(`/api/casters/${c.id}`, { concentrating: concCb.checked }); reloadCasters(root);
+  });
+  // Concentration save → linked monster uses its CON save (incl. adv/dis); otherwise
+  // a flat d20+2 (no statblock) sent to the Dice tab. DC 10 either way.
+  const concSave = el("button", { class: "btn neutral", onclick: () => {
+    if (linkedTok && linkedTok.kind === "monster") {
+      window.dispatchEvent(new CustomEvent("navigate", { detail: {
+        tab: "skills", quickSave: { monsterName: linkedTok.data_ref, save: "CON", dc: 10 } } }));
+    } else {
+      window.dispatchEvent(new CustomEvent("navigate", { detail: {
+        tab: "dice", dice: { count: 1, die: "d20", modifier: 2 } } }));
+    }
+  } }, "Concentration save");
 
   card.append(
     el("div", { class: "field caster-field" }, [el("label", { text: "Name" }), name]),
     el("div", { class: "field caster-field" }, [el("label", { text: "Level" }), level]),
     el("div", { class: "field caster-field" }, [el("label", { text: "Token" }), tokenSel]),
-    el("div", { class: "btn-row" }, [goToken]),
+    el("div", { class: "field caster-field" }, [el("label", { text: "Concentrating" }), concCb]),
+    el("div", { class: "btn-row" }, [goToken, concSave]),
   );
 
   // slot grid

@@ -21,10 +21,22 @@ const skillSel = (skills, value) => {
 };
 const sign = (n) => (n >= 0 ? "+" : "") + n;
 
+// Briefly outline a panel to draw attention when navigated to from another tab.
+function flash(panel) {
+  setTimeout(() => {
+    panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    panel.classList.add("flash-highlight");
+    setTimeout(() => panel.classList.remove("flash-highlight"), 2000);
+  }, 0);
+}
+
 let _presetMassSaves = null;   // [{name, count}] from the board's "Mass saving throw…"
+let _presetQuickSave = null;   // {monsterName, save, dc} from a caster's "Concentration save"
 
 // Preload the mass-save panel with grouped monster tokens, then navigate to "skills".
 export function presetMassSaves(groups) { _presetMassSaves = groups; }
+// Preload the quick monster save (e.g. concentration: a monster + CON + DC), then navigate.
+export function presetQuickSave(opts) { _presetQuickSave = opts; }
 
 export async function renderSkills(root) {
   await store.refreshState();
@@ -46,7 +58,7 @@ export async function renderSkills(root) {
 // ── mass monster saving throws ─────────────────────────────────────────────
 function massSavesPanel(C, monsters) {
   const panel = el("div", { class: "panel" }, el("h3", { text: "Mass monster saving throws" }));
-  const save = sel(C.saving_throw_types, "STR");
+  const save = sel(C.saving_throw_types, "DEX");
   const dc = numInput(15);
   const rt = sel(["Monster default", ...C.roll_types], "Monster default");
   panel.append(field("Save", save), field("DC", dc), field("Roll type", rt));
@@ -73,6 +85,7 @@ function massSavesPanel(C, monsters) {
         const mm = monsters.find((x) => x.name_str === g.name);
         if (mm) addRow(mm.id, g.count);
       }
+      flash(panel);   // arrived from the board → draw attention to this panel
     }
     if (!rows.length) { addRow(); addRow(); }   // no preset (or none matched) → defaults
   } else {
@@ -112,10 +125,22 @@ function quickSavePanel(C, monsters) {
   const panel = el("div", { class: "panel" }, el("h3", { text: "Quick monster save" }));
   if (!monsters.length) { panel.append(el("div", { class: "placeholder", text: "No monsters yet." })); return panel; }
   const m = monSel(monsters);
-  const save = sel(C.saving_throw_types, "STR");
+  const save = sel(C.saving_throw_types, "DEX");
   const rt = sel(["Monster default", ...C.roll_types], "Monster default");
+  const dc = el("input", { type: "number", placeholder: "—" }); dc.style.maxWidth = "64px";
   const res = el("div", { class: "roll-results" });
+
+  // Concentration-save preset (from a caster card): select monster by name, set CON + DC.
+  if (_presetQuickSave) {
+    const p = _presetQuickSave; _presetQuickSave = null;
+    if (p.monsterName) { const mm = monsters.find((x) => x.name_str === p.monsterName); if (mm) m.value = mm.id; }
+    if (p.save) save.value = p.save;
+    if (p.dc != null) dc.value = p.dc;
+    flash(panel);
+  }
+
   panel.append(field("Monster", m), field("Save", save), field("Roll type", rt),
+    field("DC (optional)", dc),
     el("div", { class: "btn-row" }, [el("button", { class: "btn primary", onclick: roll }, "Roll save")]), res);
 
   async function roll() {
@@ -123,9 +148,15 @@ function quickSavePanel(C, monsters) {
     try { d = await api.post("/api/rolls/quick-save", { monster_id: m.value, save: save.value, roll_type: rt.value }); }
     catch (err) { toast(err.message, true); return; }
     const color = d.is_nat1 ? "#cc3333" : d.is_nat20 ? "#228822" : "var(--txt)";
-    res.replaceChildren(el("div", { class: "swing-total", style: `color:${color}; font-size:17px` }, [
+    const line = el("div", { class: "swing-total", style: `color:${color}; font-size:17px` }, [
       d20Span(d.d20s, d.d20), ` ${sign(d.modifier)} = ${d.total}`,
-    ]));
+    ]);
+    res.replaceChildren(line);
+    const dcVal = dc.value === "" ? null : +dc.value;
+    if (dcVal != null) {
+      const pass = d.total >= dcVal;
+      line.append(el("span", { style: `color:${pass ? "#33aa55" : "#cc3333"}`, text: `  ${pass ? "PASS" : "FAIL"} (DC ${dcVal})` }));
+    }
   }
   return panel;
 }
