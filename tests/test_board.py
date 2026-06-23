@@ -349,15 +349,32 @@ class TestComputeRollTypeModifiers:
         board = Board(tokens=[attacker, target])
         assert compute_roll_type_modifiers(attacker, target, board) == "Disadvantage"
 
-    def test_two_adv_sources_return_spaced_string(self):
-        # flanking + stunned target both give advantage → "Super Advantage" (with space)
+    def test_two_adv_sources_dont_stack_without_adv_combine(self):
+        # flanking + stunned target both give advantage. Default (adv_combine off) →
+        # just "Advantage" (5e RAW: advantage doesn't stack). adv_combine on → Super.
         attacker = _monster("orc1", 4, 5)
         target = _player("hero", 5, 5)
         target.conditions.add(Condition.STUNNED)
         ally = _monster("orc2", 6, 5)
         board = Board(tokens=[attacker, target, ally], flank_benefit="advantage")
-        result = compute_roll_type_modifiers(attacker, target, board)
-        assert result == "Super Advantage"
+        assert compute_roll_type_modifiers(attacker, target, board) == "Advantage"
+        assert compute_roll_type_modifiers(attacker, target, board, "RAW", True) == "Super Advantage"
+        # Arithmetic mode mirrors the same gating.
+        assert compute_roll_type_modifiers(attacker, target, board, "Arithmetic", False) == "Advantage"
+        assert compute_roll_type_modifiers(attacker, target, board, "Arithmetic", True) == "Super Advantage"
+
+    def test_blindsight_ignores_invisible_target(self):
+        # Attacker normally has disadvantage vs an invisible target; blindsight within
+        # range negates the invisibility entirely.
+        target = _player("ghost", 5, 5)
+        target.conditions.add(Condition.INVISIBLE)
+        blind = _monster("watcher", 5, 6, sight_invisible_range=30)
+        seer_board = Board(tokens=[blind, target])
+        assert compute_roll_type_modifiers(blind, target, seer_board) == "Normal"
+        # Out of sight range → invisibility applies again (disadvantage).
+        far = _monster("watcher", 5, 20, sight_invisible_range=30)
+        far_board = Board(tokens=[far, target])
+        assert compute_roll_type_modifiers(far, target, far_board) == "Disadvantage"
 
 
 class TestFlankingToHitBonus:

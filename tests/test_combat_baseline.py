@@ -155,13 +155,15 @@ class TestRollToHit:
         assert value == expected
         assert all_dice == [expected]
 
+    # all_dice is returned in NATURAL roll order (not sorted) so the UI shows the
+    # real sequence; only `value` (the kept die) is the max/min.
     def test_advantage_takes_max_of_two(self):
         dice.seed(42)
         r1, r2 = dice.roll_die("d20"), dice.roll_die("d20")
         dice.seed(42)
         value, all_dice = roll_to_hit("Advantage")
         assert value == max(r1, r2)
-        assert all_dice == sorted([r1, r2], reverse=True)
+        assert all_dice == [r1, r2]
 
     def test_disadvantage_takes_min_of_two(self):
         dice.seed(42)
@@ -169,7 +171,7 @@ class TestRollToHit:
         dice.seed(42)
         value, all_dice = roll_to_hit("Disadvantage")
         assert value == min(r1, r2)
-        assert all_dice == sorted([r1, r2])
+        assert all_dice == [r1, r2]
 
     def test_super_advantage_takes_max_of_three(self):
         dice.seed(77)
@@ -177,7 +179,7 @@ class TestRollToHit:
         dice.seed(77)
         value, all_dice = roll_to_hit("Super Advantage")
         assert value == max(r1, r2, r3)
-        assert all_dice == sorted([r1, r2, r3], reverse=True)
+        assert all_dice == [r1, r2, r3]
 
     def test_super_disadvantage_takes_min_of_three(self):
         dice.seed(77)
@@ -185,7 +187,7 @@ class TestRollToHit:
         dice.seed(77)
         value, all_dice = roll_to_hit("Super Disadvantage")
         assert value == min(r1, r2, r3)
-        assert all_dice == sorted([r1, r2, r3])
+        assert all_dice == [r1, r2, r3]
 
 
 # ─── nat 1 ───────────────────────────────────────────────────────────────────

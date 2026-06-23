@@ -20,18 +20,33 @@ def create_app() -> Flask:
     app = Flask(__name__)
 
     from server.api.attack import bp as attack_bp
+    from server.api.board import bp as board_bp
     from server.api.core import bp as core_bp
     from server.api.monsters import bp as monsters_bp
     from server.api.players import bp as players_bp
+    from server.api.initiative import bp as initiative_bp
     from server.api.presets import bp as presets_bp
+    from server.api.rolls import bp as rolls_bp
+    from server.api.search import bp as search_bp
     from server.api.settings import bp as settings_bp
+    from server.api.spells import bp as spells_bp
 
-    for bp in (core_bp, monsters_bp, players_bp, attack_bp, settings_bp, presets_bp):
+    for bp in (core_bp, monsters_bp, players_bp, attack_bp, settings_bp, presets_bp,
+               board_bp, rolls_bp, search_bp, initiative_bp, spells_bp):
         app.register_blueprint(bp)
 
     @app.errorhandler(HTTPException)
     def _json_errors(exc: HTTPException):
         return jsonify({"error": exc.name, "message": exc.description}), exc.code
+
+    @app.get("/")
+    def index():
+        # Serves the web app shell (server/static/index.html).
+        return app.send_static_file("index.html")
+
+    @app.get("/favicon.ico")
+    def favicon():
+        return "", 204
 
     return app
 

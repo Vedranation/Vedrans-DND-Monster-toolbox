@@ -1,0 +1,232 @@
+:root {
+  --bg: #1e1f24; --panel: #2a2c33; --panel2: #33363f; --line: #3d404a;
+  --txt: #e8e8ea; --muted: #9aa0aa; --accent: #6f7bd6; --accent2: #554488;
+  --good: #2e8b57; --bad: #b04444; --on-accent: #ffffff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font: 14px/1.4 system-ui, sans-serif;
+  background: var(--bg); color: var(--txt);
+}
+
+/* topbar + nav */
+#topbar {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: .4rem .8rem; position: sticky; top: 0; z-index: 10;
+  flex-wrap: wrap;
+}
+.brand { font-weight: 700; color: var(--accent); white-space: nowrap; }
+#nav { display: flex; flex-wrap: wrap; gap: .25rem; }
+#nav button {
+  background: transparent; color: var(--muted); border: 0; cursor: pointer;
+  padding: .35rem .6rem; border-radius: 6px; font-size: 13px;
+}
+#nav button:hover { background: var(--panel2); color: var(--txt); }
+#nav button.active { background: var(--accent); color: #fff; }
+
+/* content */
+#content { padding: 1rem; }
+.loading, .placeholder { color: var(--muted); }
+.placeholder { padding: 2rem; text-align: center; }
+h2 { margin: 0 0 .8rem; }
+
+/* layout: list + editor */
+.split { display: grid; grid-template-columns: 220px 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .5rem; }
+.list .row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .4rem .5rem; border-radius: 6px; cursor: pointer;
+}
+.list .row:hover { background: var(--panel2); }
+.list .row.selected { background: var(--accent); color: #fff; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem; }
+
+/* forms */
+.field { display: flex; align-items: center; gap: .5rem; margin: .35rem 0; }
+.field label { flex: 0 0 150px; color: var(--muted); }
+/* Global control theming so no input/select/textarea ever falls back to white. */
+input[type=text], input[type=number], select, textarea {
+  background: var(--panel2); color: var(--txt); border: 1px solid var(--line);
+  border-radius: 5px; padding: .25rem .4rem; font: inherit;
+}
+.field input[type=text], .field input[type=number], .field select,
+.skill-row input, .skill-row select {
+  padding: .3rem .4rem; min-width: 60px;
+}
+.field input[type=text] { min-width: 200px; }
+/* Compact caster name/level fields so they don't overflow narrow caster cards. */
+.caster-field label { flex: 0 0 100px; }
+.caster-field input[type=text] { min-width: 0; width: 160px; }
+.caster-field input[type=number] { min-width: 0; width: 64px; }
+/* Open-dropdown options: match the app theme; selected option uses the accent. */
+select option { background: var(--panel); color: var(--txt); }
+select option:checked { background: var(--accent); color: var(--on-accent); }
+fieldset { border: 1px solid var(--line); border-radius: 8px; margin: .8rem 0; padding: .6rem .8rem; }
+legend { color: var(--accent); padding: 0 .4rem; }
+.skill-row { display: grid; grid-template-columns: 120px 70px 1fr; gap: .5rem; align-items: center; margin: .25rem 0; }
+
+/* buttons */
+button.btn { border: 0; border-radius: 6px; padding: .4rem .8rem; cursor: pointer; font-size: 13px; color: #fff; }
+.btn.primary { background: var(--good); }
+.btn.danger { background: var(--bad); }
+.btn.neutral { background: var(--panel2); color: var(--txt); border: 1px solid var(--line); }
+.btn-row { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+.add-row { margin-bottom: .5rem; }
+
+/* toggles */
+.toggle { display: flex; align-items: center; gap: .5rem; margin: .3rem 0; }
+.toggle input { width: 16px; height: 16px; }
+.toggle.disabled { opacity: .45; }
+
+/* monster editor bits */
+.subhead { color: var(--muted); font-size: 12px; margin: .5rem 0 .2rem; }
+.mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .4rem .7rem; margin: .3rem 0; }
+.mini { display: flex; flex-direction: column; gap: .15rem; }
+.mini label { color: var(--muted); font-size: 11px; }
+.mini input, .mini select {
+  background: var(--panel); color: var(--txt); border: 1px solid var(--line);
+  border-radius: 5px; padding: .25rem;
+}
+.attack-card { border: 1px solid var(--line); border-radius: 8px; padding: .6rem; margin: .5rem 0; background: var(--panel2); }
+.flag-row { display: flex; flex-wrap: wrap; gap: .1rem .9rem; margin: .5rem 0; }
+.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .1rem .6rem; margin: .3rem 0; }
+details { margin: .35rem 0; }
+summary { cursor: pointer; color: var(--accent); }
+.muted { color: var(--muted); }
+.status-line { color: var(--bad); min-height: 1.2em; margin: .4rem 0; }
+
+/* modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  max-width: 720px; width: 100%; max-height: 90vh; overflow: auto; padding: 1rem;
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+.modal-head h3 { margin: 0; }
+.icon-btn { background: transparent; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; }
+textarea.json {
+  width: 100%; min-height: 240px; background: var(--panel2); color: var(--txt);
+  border: 1px solid var(--line); border-radius: 6px; padding: .5rem;
+  font-family: ui-monospace, monospace; font-size: 12px;
+}
+
+/* board */
+/* Board + inspector side by side; the panel drops below when there isn't room
+   (so on a laptop where the board fills the width, you just scroll down to it). */
+.board-layout { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; margin-top: .6rem; }
+.board-wrap { display: flex; justify-content: center; overflow: auto; flex: 0 1 auto; }
+
+/* inspector panel */
+.token-panel { flex: 1 1 280px; min-width: 260px; max-width: 440px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.panel-head { display: flex; align-items: center; gap: .5rem; padding: .5rem .7rem; border-bottom: 1px solid var(--line); }
+.panel-head .caret { background: transparent; border: 0; color: var(--txt); cursor: pointer; font-size: 14px; padding: 0 .2rem; }
+.panel-title { font-weight: 700; flex: 1; }
+.panel-head .auto-show { margin: 0; font-size: 12px; color: var(--muted); }
+.panel-body { padding: .6rem .7rem; font-size: 13px; }
+.insp-name { margin-bottom: .4rem; }
+.insp-name .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .4rem; vertical-align: middle; }
+.insp-row { display: grid; grid-template-columns: 92px 1fr; gap: .4rem; margin: .15rem 0; align-items: baseline; }
+.insp-label { color: var(--muted); }
+.insp-warn { color: #cc7700; font-weight: 700; margin: .3rem 0; }
+.insp-note { color: var(--accent); font-weight: 700; margin: .3rem 0; }
+.insp-attacks { display: flex; flex-direction: column; gap: .15rem; }
+.insp-attack { font-size: 13px; }
+.cond-chip { display: inline-block; background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 0 .35rem; margin: 0 .2rem .2rem 0; font-size: 12px; }
+.board-canvas {
+  display: block; background: #fff; border: 1px solid var(--line); border-radius: 8px;
+  touch-action: none; cursor: pointer;
+}
+.team-bar { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: .6rem 0; }
+.team-box {
+  color: #fff; font-size: 12px; font-weight: 700; padding: .35rem .7rem;
+  border-radius: 6px; border: 2px solid rgba(255,255,255,.25); cursor: pointer;
+  text-shadow: 0 1px 1px rgba(0,0,0,.4);
+}
+/* selection action bar (touch-friendly equivalents of the R/T/D/H/Del shortcuts) */
+.sel-bar { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: .4rem 0; }
+.sel-bar .btn:disabled { opacity: .45; cursor: default; }
+.btn-row.vert { flex-direction: column; align-items: stretch; }
+/* Fixed height + nowrap so showing/clearing the info text never shifts the board. */
+.board-info { height: 1.4em; line-height: 1.4em; font-size: 13px; margin: .2rem 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* combat swings (board Resolve modal + Attack tab). Three-column grid: two equal
+   flexible side columns with the outcome pinned in a fixed centre column, so the
+   HIT/MISS marker stays at the same x on every row regardless of damage length.
+   Damage right-aligned, dice left-aligned. Hard max-width keeps it off wide screens. */
+.swing-head { font-weight: 700; margin-bottom: .3rem; }
+.swing {
+  display: grid; grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+  gap: 1.2rem; align-items: baseline; font-size: 12px; padding: 1px 0;
+}
+.swing-dice b { color: var(--txt); }              /* kept die */
+.die-dropped { color: var(--muted); }             /* dropped die (adv/disadv) */
+.swing-outcome { font-weight: 700; text-align: center; }
+.swing-dmg { text-align: right; }
+.swing-total { font-weight: 700; margin-top: .3rem; }
+.attack-log { display: flex; flex-direction: column; gap: .4rem; max-height: 60vh; overflow: auto; max-width: 900px; }
+.attack-card { max-width: 900px; }                /* hard cap so swings don't span huge screens */
+
+/* skills / saves */
+.skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; align-items: start; }
+.mass-row { display: flex; gap: .4rem; align-items: center; margin: .3rem 0; }
+.roll-results { margin-top: .6rem; font-size: 13px; display: flex; flex-direction: column; gap: .15rem; }
+.skillcheck-row { display: grid; grid-template-columns: 1fr 48px 70px; gap: .5rem; }
+
+/* initiative */
+.init-table { display: flex; flex-direction: column; gap: 2px; max-width: 560px; margin-top: .6rem; }
+.init-row { display: grid; grid-template-columns: 64px 1fr 70px 24px 28px; gap: .5rem; align-items: center;
+  padding: .25rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.init-row.current { border-color: var(--accent); background: var(--panel2); }
+.init-row.inactive { opacity: .5; }
+
+/* casters */
+.slot-grid { display: flex; flex-wrap: wrap; gap: .3rem; margin: .3rem 0; }
+.slot-pip { background: var(--panel2); color: var(--txt); border: 1px solid var(--line);
+  border-radius: 5px; padding: .2rem .5rem; cursor: pointer; font-size: 12px; }
+.slot-pip:hover { border-color: var(--accent); }
+.caster-spell { display: flex; align-items: center; gap: .4rem; margin: .15rem 0; font-size: 13px; }
+.caster-spell span { flex: 1; }
+.caster-highlight { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lib-search { margin-bottom: .4rem; }
+
+/* dice tab */
+.dice-log { display: flex; flex-direction: column; gap: .25rem; max-width: 460px; margin-top: .4rem; }
+.dice-row {
+  display: grid; grid-template-columns: 90px 1fr auto; gap: .6rem; align-items: baseline;
+  padding: .35rem .5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
+}
+.dice-expr { font-weight: 700; }
+.dice-total { font-weight: 700; font-size: 18px; text-align: right; }
+
+/* context menu */
+.ctx-menu {
+  position: fixed; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: .25rem; min-width: 160px; z-index: 200;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+}
+.ctx-header { color: var(--muted); font-size: 11px; padding: .25rem .5rem; }
+.ctx-sep { height: 1px; background: var(--line); margin: .25rem 0; }
+.ctx-item {
+  display: block; width: 100%; text-align: left; background: transparent; color: var(--txt);
+  border: 0; padding: .35rem .6rem; border-radius: 5px; cursor: pointer; font-size: 13px;
+}
+.ctx-item:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
+.ctx-item:disabled { color: var(--muted); cursor: default; }
+
+/* toast */
+.toast {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+  padding: .5rem .9rem; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+.toast.bad { border-color: var(--bad); }

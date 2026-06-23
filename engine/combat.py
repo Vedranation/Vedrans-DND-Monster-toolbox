@@ -36,7 +36,7 @@ class SingleRollResult:
     dmg_type_1: str
     dmg_type_2: str
     roll_type: str = "Normal"
-    all_d20s: list[int] = field(default_factory=list)  # kept first, dropped after
+    all_d20s: list[int] = field(default_factory=list)  # in roll order; d20 above is the kept one
     save_info: tuple[bool, int, str] = field(default_factory=lambda: (False, 0, ""))
 
 
@@ -116,21 +116,22 @@ def combine_roll_types(
 def roll_to_hit(final_rolltype: str) -> tuple[int, list[int]]:
     """Roll d20(s) for the given roll type.
 
-    Returns (kept_value, all_dice) where all_dice has the kept die first
-    and any dropped dice after (highest→lowest for adv, lowest→highest for disadv).
+    Returns (kept_value, all_dice) where all_dice is in the order the dice were
+    rolled (NOT sorted) so the display reflects the real sequence; kept_value is
+    the max for advantage, the min for disadvantage.
     """
     if final_rolltype == "Advantage":
-        d1, d2 = dice.roll_die("d20"), dice.roll_die("d20")
-        return max(d1, d2), sorted([d1, d2], reverse=True)
+        ds = [dice.roll_die("d20"), dice.roll_die("d20")]
+        return max(ds), ds
     if final_rolltype == "Disadvantage":
-        d1, d2 = dice.roll_die("d20"), dice.roll_die("d20")
-        return min(d1, d2), sorted([d1, d2])
+        ds = [dice.roll_die("d20"), dice.roll_die("d20")]
+        return min(ds), ds
     if final_rolltype == "Super Advantage":
-        d1, d2, d3 = dice.roll_die("d20"), dice.roll_die("d20"), dice.roll_die("d20")
-        return max(d1, d2, d3), sorted([d1, d2, d3], reverse=True)
+        ds = [dice.roll_die("d20"), dice.roll_die("d20"), dice.roll_die("d20")]
+        return max(ds), ds
     if final_rolltype == "Super Disadvantage":
-        d1, d2, d3 = dice.roll_die("d20"), dice.roll_die("d20"), dice.roll_die("d20")
-        return min(d1, d2, d3), sorted([d1, d2, d3])
+        ds = [dice.roll_die("d20"), dice.roll_die("d20"), dice.roll_die("d20")]
+        return min(ds), ds
     d = dice.roll_die("d20")
     return d, [d]
 
@@ -207,12 +208,17 @@ def compute_single_attack(
     settings: CombatSettings,
     board_tohit_bonus: int = 0,
     board_roll_type_mod: str = "Normal",
+    force_crit_on_hit: bool = False,
 ) -> AttackResult:
     """Resolve all attacks in one multiattack sequence against a single target.
 
     Iterates monster.attacks; each AttackSpec's n_attacks controls how many
     times that attack type is repeated. Mixed specs model heterogeneous
     multiattacks (e.g. 2 claws + 1 bite).
+
+    `force_crit_on_hit`: any landed hit becomes a critical hit (5e rule: attacks
+    from within 5 ft of a paralyzed/unconscious creature auto-crit). A miss is
+    still a miss; adamantine still downgrades the bonus crit damage.
     """
     hits: list[str | int] = []
     dmgs1: list[int] = []
@@ -268,21 +274,22 @@ def compute_single_attack(
 
             elif settings.meets_it_beats_it:
                 is_hit = final_tohit >= target.ac
+                crit = is_hit and force_crit_on_hit
                 if is_hit:
                     dmg1, dmg2 = compute_damage(
                         atk.dmg_n_die_1, atk.dmg_die_type_1, atk.dmg_flat_1,
                         atk.dmg_n_die_2, atk.dmg_die_type_2, atk.dmg_flat_2,
                         atk.reroll_1_2_dmg, atk.brutal_critical, atk.savage_attacker,
-                        settings, crit=False,
+                        settings, crit=crit and crit_extra_dmg,
                     )
-                    hits.append(final_tohit)
+                    hits.append(f"crit{roll}" if crit else final_tohit)
                     dmgs1.append(dmg1)
                     dmgs2.append(dmg2)
                 else:
                     dmg1, dmg2 = 0, 0
                 rolls.append(SingleRollResult(
                     attack_name=atk.name, d20=roll, total=final_tohit,
-                    is_crit=False, is_hit=is_hit, dmg1=dmg1, dmg2=dmg2,
+                    is_crit=crit, is_hit=is_hit, dmg1=dmg1, dmg2=dmg2,
                     dmg_type_1=atk.dmg_type_1, dmg_type_2=atk.dmg_type_2,
                     roll_type=final_rolltype, all_d20s=all_d20s,
                     save_info=(atk.on_hit_force_save, atk.on_hit_save_dc, atk.on_hit_save_type),
@@ -290,21 +297,22 @@ def compute_single_attack(
 
             else:
                 is_hit = final_tohit > target.ac
+                crit = is_hit and force_crit_on_hit
                 if is_hit:
                     dmg1, dmg2 = compute_damage(
                         atk.dmg_n_die_1, atk.dmg_die_type_1, atk.dmg_flat_1,
                         atk.dmg_n_die_2, atk.dmg_die_type_2, atk.dmg_flat_2,
                         atk.reroll_1_2_dmg, atk.brutal_critical, atk.savage_attacker,
-                        settings, crit=False,
+                        settings, crit=crit and crit_extra_dmg,
                     )
-                    hits.append(final_tohit)
+                    hits.append(f"crit{roll}" if crit else final_tohit)
                     dmgs1.append(dmg1)
                     dmgs2.append(dmg2)
                 else:
                     dmg1, dmg2 = 0, 0
                 rolls.append(SingleRollResult(
                     attack_name=atk.name, d20=roll, total=final_tohit,
-                    is_crit=False, is_hit=is_hit, dmg1=dmg1, dmg2=dmg2,
+                    is_crit=crit, is_hit=is_hit, dmg1=dmg1, dmg2=dmg2,
                     dmg_type_1=atk.dmg_type_1, dmg_type_2=atk.dmg_type_2,
                     roll_type=final_rolltype, all_d20s=all_d20s,
                     save_info=(atk.on_hit_force_save, atk.on_hit_save_dc, atk.on_hit_save_type),
@@ -345,37 +353,41 @@ def format_damage_breakdown(rolls: list[SingleRollResult]) -> str:
     return f"{parts} = {total}" if len(by_type) > 1 else parts
 
 
-def resolve_typed_damage(rolls, resistances=(), immunities=(), vulnerabilities=()) -> tuple[int, str]:
-    """Apply the target's resistances/immunities/vulnerabilities to typed damage.
+def typed_damage_parts(rolls, resistances=(), immunities=(), vulnerabilities=()) -> list[dict]:
+    """Per-type adjusted damage with status.
 
     Immunity zeroes that type; resistance halves it (round down); vulnerability
-    doubles it. Each type matches at most one (checked in that order — a creature
-    can't be both resistant and vulnerable to the same type in 5e).
-    Returns (total_after_adjustment, breakdown_string) with affected types
-    annotated, e.g. '10 slashing, 5 fire (resisted) = 15'.
+    doubles it (checked in that order — a creature can't be both resistant and
+    vulnerable to the same type in 5e). Returns
+    [{"type": str, "amount": int, "status": "" | "resisted" | "immune" | "vulnerable"}].
     """
     resist = {t.lower() for t in resistances}
     immune = {t.lower() for t in immunities}
     vulnerable = {t.lower() for t in vulnerabilities}
-    by_type = damage_by_type(rolls)
-    parts: list[str] = []
-    total = 0
-    for dmg_type, value in by_type.items():
+    out: list[dict] = []
+    for dmg_type, value in damage_by_type(rolls).items():
         tl = dmg_type.lower()
         if tl in immune:
-            parts.append(f"0 {dmg_type} (immune)")
+            out.append({"type": dmg_type, "amount": 0, "status": "immune"})
         elif tl in resist:
-            halved = value // 2
-            total += halved
-            parts.append(f"{halved} {dmg_type} (resisted)")
+            out.append({"type": dmg_type, "amount": value // 2, "status": "resisted"})
         elif tl in vulnerable:
-            doubled = value * 2
-            total += doubled
-            parts.append(f"{doubled} {dmg_type} (vulnerable)")
+            out.append({"type": dmg_type, "amount": value * 2, "status": "vulnerable"})
         else:
-            total += value
-            parts.append(f"{value} {dmg_type}")
+            out.append({"type": dmg_type, "amount": value, "status": ""})
+    return out
+
+
+def resolve_typed_damage(rolls, resistances=(), immunities=(), vulnerabilities=()) -> tuple[int, str]:
+    """(total_after_adjustment, breakdown_string), e.g. '10 slashing, 5 fire (resisted) = 15'."""
+    parts = typed_damage_parts(rolls, resistances, immunities, vulnerabilities)
     if not parts:
         return 0, "0"
-    body = ", ".join(parts)
+    total = sum(p["amount"] for p in parts)
+
+    def _fmt(p):
+        s = f"{p['amount']} {p['type']}"
+        return s + (f" ({p['status']})" if p["status"] else "")
+
+    body = ", ".join(_fmt(p) for p in parts)
     return total, (f"{body} = {total}" if len(parts) > 1 else body)

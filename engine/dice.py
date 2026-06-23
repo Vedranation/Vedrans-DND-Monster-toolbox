@@ -23,3 +23,8 @@ def roll_die(die_type: str) -> int:
 
 def max_die(die_type: str) -> int:
     return _DIE_MAX[die_type]
+
+
+def choice(seq):
+    """Pick a random element using the seedable engine RNG."""
+    return _rng.choice(seq)

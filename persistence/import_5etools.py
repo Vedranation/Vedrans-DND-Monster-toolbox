@@ -85,17 +85,35 @@ def _parse_senses(senses_list: list) -> dict[str, int]:
     return result
 
 
-def _parse_dmg_list(items: list) -> list[str]:
-    """Convert 5etools immune/resist list to our damage type strings."""
-    result: list[str] = []
-    for item in items:
-        if not isinstance(item, str):
-            continue  # skip complex conditional objects
+def _extract_dmg_types(item, result: list[str]) -> None:
+    """Collect known damage-type strings from a 5etools resist/immune/vulnerable entry.
+
+    Entries are either plain strings ("necrotic") or conditional objects like
+    {"resist": ["bludgeoning","piercing","slashing"], "note": "from nonmagical attacks"}.
+    We map physical types to our plain (= nonmagical) types — no creature resists
+    magical physical, so there's nothing to disambiguate.
+    """
+    if isinstance(item, str):
         il = item.lower()
-        # "bludgeoning, piercing, and slashing from nonmagical attacks" → extract all
         for dt in sorted(_KNOWN_DMG_TYPES, key=len, reverse=True):
             if dt in il and dt not in result:
                 result.append(dt)
+    elif isinstance(item, list):
+        for sub in item:
+            _extract_dmg_types(sub, result)
+    elif isinstance(item, dict):
+        # 5etools nests the actual list under the matching key (+ "special" free text).
+        for key in ("resist", "immune", "vulnerable", "special"):
+            if key in item:
+                _extract_dmg_types(item[key], result)
+
+
+def _parse_dmg_list(items: list) -> list[str]:
+    """Convert a 5etools immune/resist/vulnerable list to our damage type strings,
+    including conditional 'from nonmagical attacks' objects."""
+    result: list[str] = []
+    for item in items:
+        _extract_dmg_types(item, result)
     return result
 
 
@@ -132,6 +150,22 @@ def _parse_saving_throws(data: dict) -> dict[str, tuple[int, str]]:
     return result
 
 
+def _parse_skills(data: dict) -> dict[str, tuple[int, str]]:
+    """5etools 'skill': {'perception': '+17'} → {'perception': (17, 'Normal')}."""
+    result: dict[str, tuple[int, str]] = {}
+    for name, mod in (data.get("skill", {}) or {}).items():
+        if not isinstance(name, str) or not isinstance(mod, (str, int)):
+            continue
+        result[name.strip().lower()] = (_parse_signed_int(str(mod)), "Normal")
+    return result
+
+
+def _parse_languages(data: dict) -> list[str]:
+    """Keep plain language strings, drop non-string entries."""
+    return [lang.strip() for lang in (data.get("languages", []) or [])
+            if isinstance(lang, str) and lang.strip()]
+
+
 # ── Damage roll parsing ───────────────────────────────────────────────────────
 
 def _parse_damage_roll(dmg_str: str) -> tuple[int, str, int]:
@@ -152,13 +186,23 @@ def _parse_damage_roll(dmg_str: str) -> tuple[int, str, int]:
 
 
 def _dmg_type_after(text: str, pos: int) -> str:
-    """Return first recognised damage type within 90 chars after pos."""
+    """Return the recognised damage type NEAREST after pos (within 90 chars).
+
+    Must pick the closest type, not the longest match: e.g. "…2d8+9) Slashing
+    damage plus 11 (2d10) Lightning damage" would otherwise tag the slashing roll
+    as 'lightning' just because that word is longer. We also stop at the next
+    {@damage ...} so a part never borrows the following part's type.
+    """
     window = text[pos: pos + 90].lower()
-    for dt in sorted(_KNOWN_DMG_TYPES, key=len, reverse=True):
+    nxt = window.find("{@damage")
+    if nxt != -1:
+        window = window[:nxt]
+    best_type, best_idx = "bludgeoning", None
+    for dt in _KNOWN_DMG_TYPES:
         idx = window.find(dt)
-        if idx != -1:
-            return dt
-    return "bludgeoning"
+        if idx != -1 and (best_idx is None or idx < best_idx):
+            best_idx, best_type = idx, dt
+    return best_type
 
 
 # ── Attack range detection ────────────────────────────────────────────────────
@@ -335,6 +379,8 @@ def parse_5etools_monster(data: dict) -> MonsterData:
     }
 
     saving_throws = _parse_saving_throws(data)
+    skills = _parse_skills(data)
+    languages = _parse_languages(data)
     senses = _parse_senses(data.get("senses", []))
     passive_perception = data.get("passive", 10)
 
@@ -367,6 +413,8 @@ def parse_5etools_monster(data: dict) -> MonsterData:
         highlight_range_ft=highlight_range_ft,
         attacks=attacks,
         saving_throws=saving_throws,
+        skills=skills,
+        languages=languages,
         speeds=speeds,
         passive_perception=passive_perception,
         initiative_mod=initiative_mod,

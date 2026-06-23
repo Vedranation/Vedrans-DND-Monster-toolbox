@@ -21,6 +21,8 @@ def get_constants():
         "creature_sizes": constants.CREATURE_SIZES,
         "conditions": constants.ALL_CONDITIONS,
         "spell_schools": constants.SPELL_SCHOOLS,
+        "skills": constants.SKILLS,
+        "all_skills": constants.ALL_SKILLS,
     })
 
 

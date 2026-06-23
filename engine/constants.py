@@ -54,3 +54,14 @@ SPELL_SCHOOLS = [
     "", "Abjuration", "Conjuration", "Divination", "Enchantment",
     "Evocation", "Illusion", "Necromancy", "Transmutation", "Other",
 ]
+
+# Player skills tracked for party skill checks (keys match PlayerData.skills).
+SKILLS = ["perception", "investigation", "arcana", "insight", "stealth"]
+
+# Full 5e skill list (for monster skill checks, which can use any skill).
+ALL_SKILLS = [
+    "acrobatics", "animal handling", "arcana", "athletics", "deception",
+    "history", "insight", "intimidation", "investigation", "medicine",
+    "nature", "perception", "performance", "persuasion", "religion",
+    "sleight of hand", "stealth", "survival",
+]

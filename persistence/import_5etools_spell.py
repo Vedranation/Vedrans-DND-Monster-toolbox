@@ -135,6 +135,27 @@ def _parse_duration(duration_list: list) -> tuple[str, bool]:
     return dtype.capitalize(), concentration
 
 
+def _extract_dice(data: dict) -> tuple[int, str]:
+    """Find the spell's first damage dice expression (e.g. Fireball → (8, 'd6')).
+
+    Scans the raw {@damage NdX} / {@dice NdX} tags in the entries. Returns
+    (count, die) or (0, '') if none — lets the UI offer a one-click roll.
+    """
+    def _walk(entry):
+        if isinstance(entry, str):
+            return entry
+        if isinstance(entry, dict):
+            parts = [_walk(e) for e in entry.get("entries", entry.get("items", []))]
+            return " ".join(p for p in parts if p)
+        return ""
+
+    blob = " ".join(filter(None, (_walk(e) for e in data.get("entries", []))))
+    m = re.search(r'\{@(?:damage|dice)\s+(\d+)d(\d+)', blob)
+    if m:
+        return int(m.group(1)), f"d{m.group(2)}"
+    return 0, ""
+
+
 # ── main entry point ──────────────────────────────────────────────────────────
 
 def parse_5etools_spell(data: dict) -> dict:
@@ -184,6 +205,8 @@ def parse_5etools_spell(data: dict) -> dict:
             desc_parts.append(text)
     description = "\n\n".join(desc_parts)
 
+    dice_count, dice_type = _extract_dice(data)
+
     return {
         "name": name,
         "level": level,
@@ -198,4 +221,6 @@ def parse_5etools_spell(data: dict) -> dict:
         "material_cost": material_cost_gp,
         "material_consumed": material_consumed,
         "description": description,
+        "dice_count": dice_count,
+        "dice_type": dice_type,
     }

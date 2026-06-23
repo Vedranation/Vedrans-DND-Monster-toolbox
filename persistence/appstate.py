@@ -96,6 +96,8 @@ def serialize_monster(m: MonsterData) -> dict:
         "damage_immunities": list(m.damage_immunities),
         "damage_vulnerabilities": list(m.damage_vulnerabilities),
         "condition_immunities": list(m.condition_immunities),
+        "skills": {k: [v[0], v[1]] for k, v in m.skills.items()},
+        "languages": list(m.languages),
         "savingthrow_str_mod_int": st.get("STR", (0, "Normal"))[0],
         "savingthrow_str_roll_type_str": st.get("STR", (0, "Normal"))[1],
         "savingthrow_dex_mod_int": st.get("DEX", (0, "Normal"))[0],
@@ -179,6 +181,8 @@ def deserialize_monster(d: dict) -> MonsterData:
         damage_immunities=d.get("damage_immunities", []),
         damage_vulnerabilities=d.get("damage_vulnerabilities", []),
         condition_immunities=set(d.get("condition_immunities", [])),
+        skills={k: (v[0], v[1]) for k, v in d.get("skills", {}).items()},
+        languages=list(d.get("languages", [])),
     )
 
 

@@ -49,6 +49,7 @@ class Token:
     attack_range_ft: int = 5           # 5 = melee; > 5 = ranged
     ignore_ranged_in_melee: bool = False
     highlight_range_ft: int = 5
+    sight_invisible_range: int = 0     # blindsight/truesight reach — sees invisible within
     conditions: set[Condition] = field(default_factory=set)
     active: bool = True
     team: str = ""  # allegiance; blank → defaulted from kind in __post_init__

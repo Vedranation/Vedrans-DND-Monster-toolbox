@@ -52,6 +52,9 @@ class MonsterData:
     attacks: list[AttackSpec] = field(default_factory=lambda: [AttackSpec()])
     # keys: "STR","DEX","CON","INT","WIS","CHA"  values: (modifier, roll_type)
     saving_throws: dict[str, tuple[int, str]] = field(default_factory=dict)
+    # skill name (e.g. "perception", "sleight of hand") → (modifier, roll_type)
+    skills: dict[str, tuple[int, str]] = field(default_factory=dict)
+    languages: list[str] = field(default_factory=list)
     # keys: "walk","fly","climb","burrow","swim"  values: speed in ft
     speeds: dict[str, int] = field(default_factory=dict)
     passive_perception: int = 10

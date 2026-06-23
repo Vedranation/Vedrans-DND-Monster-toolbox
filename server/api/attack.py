@@ -6,7 +6,7 @@ from dataclasses import asdict, replace
 
 from flask import Blueprint, abort, jsonify, request
 
-from engine.combat import CombatSettings, compute_single_attack, format_damage_breakdown
+from engine.combat import compute_single_attack, format_damage_breakdown, typed_damage_parts
 from engine.models import PlayerData
 from server import state as app_state
 
@@ -45,7 +45,7 @@ def roll_attack():
               for i in indices if 0 <= i < len(monster.attacks)]
 
     if not chosen:
-        return jsonify({"rolls": [], "breakdown": "0", "total": 0})
+        return jsonify({"rolls": [], "breakdown": "0", "breakdown_parts": [], "total": 0})
 
     single = replace(monster, attacks=chosen)
     defender = _defender_data(s, body.get("defender_id"))
@@ -58,5 +58,6 @@ def roll_attack():
         "override_roll_type": override,
         "rolls": [asdict(r) for r in result.rolls],
         "breakdown": format_damage_breakdown(result.rolls),
+        "breakdown_parts": typed_damage_parts(result.rolls),  # raw (no resistances on this screen)
         "total": total,
     })
