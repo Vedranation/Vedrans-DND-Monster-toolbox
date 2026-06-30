@@ -35,6 +35,38 @@ export function modal(title, body, { onClose } = {}) {
   return { close };
 }
 
+// WebView-safe replacement for window.prompt() (Android WebView blocks the native
+// one, so + Team / Rename silently did nothing). Calls onSubmit(trimmedValue) on OK.
+export function promptDialog(title, { value = "", placeholder = "", okLabel = "OK", onSubmit } = {}) {
+  const input = el("input", { type: "text", value, placeholder });
+  input.style.width = "100%";
+  const submit = () => { const v = input.value.trim(); dlg.close(); if (v && onSubmit) onSubmit(v); };
+  const body = el("div", {}, [
+    input,
+    el("div", { class: "btn-row" }, [
+      el("button", { class: "btn primary", onclick: submit }, okLabel),
+      el("button", { class: "btn neutral", onclick: () => dlg.close() }, "Cancel"),
+    ]),
+  ]);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  const dlg = modal(title, body);
+  setTimeout(() => { input.focus(); input.select(); }, 0);
+  return dlg;
+}
+
+// WebView-safe replacement for window.confirm(). Calls onConfirm() if the user accepts.
+export function confirmDialog(title, message, { okLabel = "OK", danger = false, onConfirm } = {}) {
+  const body = el("div", {}, [
+    el("p", { text: message }),
+    el("div", { class: "btn-row" }, [
+      el("button", { class: "btn " + (danger ? "danger" : "primary"), onclick: () => { dlg.close(); if (onConfirm) onConfirm(); } }, okLabel),
+      el("button", { class: "btn neutral", onclick: () => dlg.close() }, "Cancel"),
+    ]),
+  ]);
+  const dlg = modal(title, body);
+  return dlg;
+}
+
 // Right-click / long-press context menu. items: {label,onClick,disabled} | {separator}.
 export function popupMenu(x, y, items) {
   closeMenus();

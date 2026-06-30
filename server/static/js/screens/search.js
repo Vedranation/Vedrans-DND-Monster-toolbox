@@ -7,7 +7,7 @@ import { el, toast } from "../dom.js";
 let _debounce = null;
 
 export async function renderSearch(root) {
-  root.replaceChildren(el("h2", { text: "Search" }));
+  root.replaceChildren();
 
   const input = el("input", { type: "text", placeholder: "Spell, monster, item, or feat…" });
   input.style.minWidth = "340px";

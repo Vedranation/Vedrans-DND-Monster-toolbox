@@ -268,7 +268,16 @@ def targets():
             continue
         dist = distance_ft(mt.pos, tgt.pos, b.diagonal_mode)
         lines.append({"from_id": mt.id, "to_id": tgt.id, "in_range": dist <= mt.attack_range_ft})
-    return jsonify({"lines": lines})
+    # Attack-range overlays for tokens with "show range" on. Cell distance honors the
+    # board's diagonal rule (standard = square; 5-10-5 = shorter diagonal reach).
+    ranges = []
+    for t in b.tokens:
+        if not t.active or not t.show_range:
+            continue
+        cells = [[c, r] for r in range(b.height) for c in range(b.width)
+                 if distance_ft(t.pos, GridPosition(c, r), b.diagonal_mode) <= t.attack_range_ft]
+        ranges.append({"token_id": t.id, "cells": cells, "color": t.color or ""})
+    return jsonify({"lines": lines, "ranges": ranges})
 
 
 def _attack_dict(atk) -> dict:
@@ -341,17 +350,14 @@ def inference(tid: str):
     t = app_state.token_by_id(s, tid)
     if t is None:
         abort(404)
-    range_cells = [
-        [c, r]
-        for r in range(b.height) for c in range(b.width)
-        if distance_ft(t.pos, GridPosition(c, r), b.diagonal_mode) <= t.highlight_range_ft
-    ]
+    # Attack-range highlighting is now driven by the per-token "show range" flag (see
+    # /targets → ranges), not by selection, so no per-select range_cells here.
     flanked = [e.id for e in b.tokens
                if e.team != t.team and e.active and is_flanking(t, e, b)]
     tgt = _resolve_target(s, t) if t.kind == "monster" else None
     roll_mod = compute_roll_type_modifiers(t, tgt, b, s.combat.adv_mode, s.combat.adv_combine) if tgt else "Normal"
     return jsonify({
-        "range_cells": range_cells,
+        "range_cells": [],
         "flanked_ids": flanked,
         "target_id": tgt.id if tgt else None,
         "target_in_range": (tgt is not None and

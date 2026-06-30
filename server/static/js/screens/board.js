@@ -3,7 +3,7 @@
 
 import { api } from "../api.js";
 import { store } from "../store.js";
-import { el, modal, popupMenu, toast } from "../dom.js";
+import { el, modal, popupMenu, toast, promptDialog } from "../dom.js";
 import { renderSwings, breakdownInline, dmgColor } from "../swings.js";
 
 const CELL = 32;        // fixed grid cell size in px (autosize reverted; revisit later)
@@ -13,6 +13,7 @@ const selected = new Set();
 let canvas, ctx;
 let _dragBound = false;
 let _lines = [];                 // target lines [{from_id,to_id,in_range}]
+let _ranges = [];                // attack-range overlays [{token_id, cells, color}] for show_range tokens
 let _infl = null;                // selected-token inference {rangeCells, flanked:Set}
 let _infoEl = null;              // DOM info line for the selected token
 let _lpTimer = null;             // long-press timer (touch → context menu)
@@ -28,19 +29,24 @@ const drag = { active: false, moved: false, startCol: 0, startRow: 0, origins: n
 const marquee = { active: false, additive: false, moved: false, x0: 0, y0: 0, x1: 0, y1: 0 };
 
 // ── colors ───────────────────────────────────────────────────────────────────
-function hash01(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return (h % 1000) / 1000;
-}
-function speciesColor(name, kind, active) {
-  if (!active) return "#888";
-  const seed = hash01(name);
-  const hue = kind === "monster" ? ((seed * 60 - 30) + 360) % 360 : 210 + (seed * 60 - 30);
-  return `hsl(${hue}, 58%, 58%)`;
+// Defaults when a token has no explicit color: players blue, monsters yellow.
+export const MONSTER_DEFAULT_COLOR = "#d6a52e";
+export const PLAYER_DEFAULT_COLOR = "#5b96d6";
+function kindDefaultColor(kind) { return kind === "monster" ? MONSTER_DEFAULT_COLOR : PLAYER_DEFAULT_COLOR; }
+// A token's chosen hex color (dimmed when inactive), else the kind default.
+function tokenColor(t) {
+  if (!t.active) return "#888";
+  return t.color || kindDefaultColor(t.kind);
 }
 function teamColor(name) {
   return (board.teams.find((t) => t.name === name) || {}).color || "#888";
+}
+// "#rrggbb" → "rgba(r,g,b,a)" for translucent range fills.
+function hexToRgba(hex, a) {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex || "");
+  if (!m) return `rgba(255,214,82,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
 // ── render ─────────────────────────────────────────────────────────────────
@@ -72,10 +78,10 @@ function draw() {
   const W = board.width * CELL, H = board.height * CELL;
   const R = tokenRadius(), DOT = Math.max(3, CELL * 0.15);
   ctx.clearRect(0, 0, W, H);
-  // range highlight (selected token's reach)
-  if (_infl && _infl.rangeCells.length) {
-    ctx.fillStyle = "rgba(255,214,82,.16)";
-    for (const [c, r] of _infl.rangeCells) ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+  // attack-range overlays for tokens with "show range" on (tinted by token color)
+  for (const rg of _ranges) {
+    ctx.fillStyle = hexToRgba(rg.color, 0.16);
+    for (const [c, r] of rg.cells) ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
   }
   // grid
   ctx.strokeStyle = "#cfd2da";
@@ -86,8 +92,6 @@ function draw() {
   for (let r = 0; r <= board.height; r++) {
     ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke();
   }
-  // target lines (under tokens)
-  for (const ln of _lines) drawTargetLine(ln);
   // tokens
   const flanked = _infl ? _infl.flanked : new Set();
   for (const t of board.tokens) {
@@ -98,7 +102,7 @@ function draw() {
       ctx.strokeStyle = "#33cc55"; ctx.lineWidth = 2; ctx.stroke();
     }
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.fillStyle = speciesColor(t.data_ref, t.kind, t.active); ctx.fill();
+    ctx.fillStyle = tokenColor(t); ctx.fill();
     ctx.lineWidth = isSel ? 3 : 1;
     ctx.strokeStyle = isSel ? "#ff6600" : "#111"; ctx.stroke();
     // team dot
@@ -140,6 +144,8 @@ function draw() {
       ctx.textBaseline = "alphabetic";
     }
   }
+  // target lines drawn ON TOP of tokens so it's clear who targets whom in a melee scrum
+  for (const ln of _lines) drawTargetLine(ln);
   // box-select rectangle (on top of everything)
   if (marquee.active && marquee.moved) {
     const x = Math.min(marquee.x0, marquee.x1), y = Math.min(marquee.y0, marquee.y1);
@@ -318,11 +324,12 @@ function renderPanel() {
     body.append(el("div", { class: "subhead", text: "Attacks" }), wrap);
   }
 
-  // ranges (attack + non-zero movement + non-zero senses)
-  const ranges = [`Attack ${d.attack_range_ft} ft`];
+  // ranges (attack range is monster-only; players don't attack) + movement + senses
+  const ranges = [];
+  if (d.kind === "monster") ranges.push(`Attack ${d.attack_range_ft} ft`);
   for (const [k, v] of Object.entries(d.speeds || {})) ranges.push(`${_cap(k)} ${v} ft`);
   for (const [k, v] of Object.entries(d.senses || {})) ranges.push(`${_cap(k)} ${v} ft`);
-  body.append(infoRow("Ranges", el("span", { text: ranges.join(" · ") })));
+  if (ranges.length) body.append(infoRow("Ranges", el("span", { text: ranges.join(" · ") })));
 
   // resistances / immunities / vulnerabilities (monster)
   if (d.kind === "monster") {
@@ -366,7 +373,8 @@ async function loadCasterLinks() {
 function tk(id) { return board.tokens.find((t) => t.id === id); }
 
 async function fetchOverlays() {
-  try { _lines = (await api.get("/api/board/targets")).lines; } catch { _lines = []; }
+  try { const d = await api.get("/api/board/targets"); _lines = d.lines; _ranges = d.ranges || []; }
+  catch { _lines = []; _ranges = []; }
   const ids = [...selected];
   if (ids.length === 1) {
     try {
@@ -811,20 +819,21 @@ function renderTeamBar(barEl) {
   barEl.append(el("button", { class: "btn neutral", onclick: addTeam }, "+ Team"));
 }
 
-async function addTeam() {
-  const name = prompt("New team name:");
-  if (!name) return;
-  try { board = await api.post("/api/board/teams", { name: name.trim() }); paint(); }
-  catch (err) { toast(err.message, true); }
+function addTeam() {
+  promptDialog("New team", { placeholder: "Team name", okLabel: "Add", onSubmit: async (name) => {
+    try { board = await api.post("/api/board/teams", { name }); paint(); }
+    catch (err) { toast(err.message, true); }
+  } });
 }
 
 function teamMenu(e, tm) {
   popupMenu(e.clientX, e.clientY, [
     { header: `Team: ${tm.name}` },
-    { label: "Rename…", onClick: async () => {
-        const n = prompt("New name:", tm.name); if (!n) return;
-        try { board = await api.patch(`/api/board/teams/${encodeURIComponent(tm.name)}`, { new_name: n.trim() }); paint(); }
-        catch (err) { toast(err.message, true); }
+    { label: "Rename…", onClick: () => {
+        promptDialog("Rename team", { value: tm.name, okLabel: "Rename", onSubmit: async (n) => {
+          try { board = await api.patch(`/api/board/teams/${encodeURIComponent(tm.name)}`, { new_name: n }); paint(); }
+          catch (err) { toast(err.message, true); }
+        } });
       } },
     { label: "Change color…", onClick: () => recolor(tm) },
     { label: "Delete", onClick: async () => {
@@ -901,13 +910,14 @@ export async function renderBoard(root) {
     if (board.tokens.some((t) => t.id === _presetTokenId)) selected.add(_presetTokenId);
     _presetTokenId = null;
   }
-  root.replaceChildren(el("h2", { text: "Battle Board" }));
+  root.replaceChildren();
 
   root.append(el("div", { class: "btn-row" }, [
     el("button", { class: "btn primary", onclick: () => openAddDialog() }, "Add token"),
     el("button", { class: "btn neutral", onclick: async () => { await api.post("/api/board/clear-deactivated"); reload(); } }, "Clear deactivated"),
     el("button", { class: "btn danger", onclick: async () => { await api.post("/api/board/clear"); selected.clear(); reload(); } }, "Clear board"),
     el("button", { class: "btn primary", onclick: doResolve }, "Resolve board"),
+    el("button", { class: "btn neutral", onclick: showBoardHelp }, "Help"),
   ]));
 
   const bar = el("div", { class: "team-bar" });
@@ -952,7 +962,20 @@ export async function renderBoard(root) {
     window.addEventListener("keydown", onBoardKey);
     _dragBound = true;
   }
-  root.append(el("p", { class: "muted", text: "Tap/click to select · Ctrl-click (or the Multi-select button) for multi · drag empty space to box-select · drag token to move · tap a team name to assign the selection · use the action bar (or right-click / R T D H Del) for token actions · double-tap empty cell to add." }));
 
   fetchOverlays();   // initial target lines (+ highlights once something is selected)
+}
+
+// Board usage tips — shown from the "Help" button (was a permanent line at the bottom).
+const BOARD_HELP = [
+  "Tap/click a token to select it.",
+  "Ctrl-click (or the Multi-select button) to select several.",
+  "Drag empty space to box-select; drag a token to move it.",
+  "Tap a team name to assign the current selection to it.",
+  "Use the action bar (or right-click / keys R T D H Del) for token actions.",
+  "Double-tap an empty cell to add a token there.",
+];
+function showBoardHelp() {
+  modal("Battle board — help", el("div", {},
+    BOARD_HELP.map((line) => el("p", { class: "muted", text: line }))));
 }

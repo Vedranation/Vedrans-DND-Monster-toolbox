@@ -23,7 +23,7 @@ export async function renderDice(root) {
   const p = _preset || { count: 1, die: "d20", modifier: 0 };
   _preset = null;
 
-  root.replaceChildren(el("h2", { text: "Dice" }));
+  root.replaceChildren();
 
   const count = el("input", { type: "number", value: p.count, min: 1, max: 100, onfocus: (e) => e.target.select() });
   count.style.maxWidth = "80px";

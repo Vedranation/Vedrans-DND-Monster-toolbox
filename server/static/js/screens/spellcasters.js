@@ -25,7 +25,7 @@ export async function renderSpellcasters(root) {
     if (i >= 0) { _selIdx = i; _filter = "All"; }
     _presetSpellName = null;
   }
-  root.replaceChildren(el("h2", { text: "Spellcasters" }));
+  root.replaceChildren();
   root.append(librarySection(root), castersSection(root));
   if (_presetCasterId) {
     const card = root.querySelector(`[data-caster="${_presetCasterId}"]`);

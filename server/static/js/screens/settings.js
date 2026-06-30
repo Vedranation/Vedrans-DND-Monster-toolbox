@@ -3,7 +3,7 @@
 
 import { api } from "../api.js";
 import { store } from "../store.js";
-import { el, toast } from "../dom.js";
+import { el, toast, confirmDialog } from "../dom.js";
 
 const BOOL_FIELDS = [
   ["meets_it_beats_it", "Attack roll = AC counts as a hit (meets it, beats it)"],
@@ -45,7 +45,6 @@ export async function renderSettings(root) {
 
   function draw() {
     root.replaceChildren();
-    root.append(el("h2", { text: "Settings" }));
     const panel = el("div", { class: "panel" });
 
     const rules = el("fieldset", {}, el("legend", { text: "Combat rules" }));
@@ -115,10 +114,7 @@ export async function renderSettings(root) {
     toast(`Loaded "${name}"`);
   }
 
-  async function savePreset(name) {
-    name = (name || "").trim();
-    if (!name) { toast("Enter a preset name.", true); return; }
-    if (presets.includes(name) && !confirm(`Overwrite preset "${name}"?`)) return;
+  async function doSave(name) {
     try { await api.post("/api/presets", { name }); }
     catch (err) { toast(err.message, true); return; }
     presets = (await api.get("/api/presets")).presets;
@@ -126,13 +122,24 @@ export async function renderSettings(root) {
     toast(`Saved "${name}"`);
   }
 
-  async function deletePreset(name) {
-    if (!confirm(`Delete preset "${name}"?`)) return;
-    try { await api.del(`/api/presets/${encodeURIComponent(name)}`); }
-    catch (err) { toast(err.message, true); return; }
-    presets = (await api.get("/api/presets")).presets;
-    draw();
-    toast(`Deleted "${name}"`);
+  function savePreset(name) {
+    name = (name || "").trim();
+    if (!name) { toast("Enter a preset name.", true); return; }
+    if (presets.includes(name)) {
+      confirmDialog("Overwrite preset", `Overwrite preset "${name}"?`, { okLabel: "Overwrite", onConfirm: () => doSave(name) });
+    } else {
+      doSave(name);
+    }
+  }
+
+  function deletePreset(name) {
+    confirmDialog("Delete preset", `Delete preset "${name}"?`, { okLabel: "Delete", danger: true, onConfirm: async () => {
+      try { await api.del(`/api/presets/${encodeURIComponent(name)}`); }
+      catch (err) { toast(err.message, true); return; }
+      presets = (await api.get("/api/presets")).presets;
+      draw();
+      toast(`Deleted "${name}"`);
+    } });
   }
 
   draw();

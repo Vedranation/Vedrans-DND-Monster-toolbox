@@ -18,7 +18,9 @@ def main() -> None:
     host = os.environ.get("DND_HOST", "0.0.0.0")
     port = int(os.environ.get("DND_PORT", "8000"))
     debug = os.environ.get("DND_DEBUG", "1") != "0"
-    app.run(host=host, port=port, debug=debug)
+    # threaded=True so concurrent asset/API requests from the WebView don't block;
+    # reloader stays off when debug is off (required when embedded in Android).
+    app.run(host=host, port=port, debug=debug, threaded=True, use_reloader=debug)
 
 
 if __name__ == "__main__":

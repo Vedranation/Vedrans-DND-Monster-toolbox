@@ -10,14 +10,27 @@ body {
 }
 
 /* topbar + nav */
+/* safe-area insets keep the bar (and its buttons) clear of the device status bar /
+   notch / rounded corners — esp. in Android landscape where the system clock/battery
+   overlay sits along the top edge. Needs <meta viewport viewport-fit=cover>. */
 #topbar {
-  display: flex; align-items: center; gap: 1rem;
+  display: flex; align-items: center; justify-content: center;
   background: var(--panel); border-bottom: 1px solid var(--line);
-  padding: .4rem .8rem; position: sticky; top: 0; z-index: 10;
-  flex-wrap: wrap;
+  padding: .4rem .8rem;
+  padding-top: calc(.4rem + env(safe-area-inset-top));
+  padding-left: calc(.8rem + env(safe-area-inset-left));
+  padding-right: calc(.8rem + env(safe-area-inset-right));
+  position: sticky; top: 0; z-index: 10;
 }
-.brand { font-weight: 700; color: var(--accent); white-space: nowrap; }
-#nav { display: flex; flex-wrap: wrap; gap: .25rem; }
+#nav { display: flex; flex-wrap: wrap; gap: .25rem; justify-content: center; }
+
+/* footer credit on every page */
+#appfoot {
+  color: var(--muted); font-size: 12px; text-align: center;
+  padding: 1rem .8rem; margin-top: 1rem;
+}
+#appfoot a { color: var(--muted); text-decoration: underline; }
+#appfoot a:hover { color: var(--accent); }
 #nav button {
   background: transparent; color: var(--muted); border: 0; cursor: pointer;
   padding: .35rem .6rem; border-radius: 6px; font-size: 13px;

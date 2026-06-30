@@ -44,7 +44,7 @@ export async function renderSkills(root) {
   const monsters = store.state.monsters;
   const players = store.state.players;
 
-  root.replaceChildren(el("h2", { text: "Skills / Saves" }));
+  root.replaceChildren();
   const grid = el("div", { class: "skills-grid" });
 
   grid.append(

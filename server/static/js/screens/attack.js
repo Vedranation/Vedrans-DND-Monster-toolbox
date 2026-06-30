@@ -20,7 +20,7 @@ export async function renderAttack(root) {
   const monsters = store.state.monsters;
   const players = store.state.players;
 
-  root.replaceChildren(el("h2", { text: "Attack" }));
+  root.replaceChildren();
   if (!monsters.length) {
     root.append(el("p", { class: "placeholder", text: "Create a monster first — only monsters have attacks." }));
     return;

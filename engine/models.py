@@ -45,9 +45,11 @@ class MonsterData:
     name: str = "Monster"
     ac: int = 13
     max_hp: int = 0
+    color: str = ""              # board token color (hex, e.g. "#cc3333"); "" → auto
     attack_range_ft: int = 5           # 5 = melee; > 5 = ranged
     ignore_ranged_in_melee: bool = False  # crossbow expert etc.
-    highlight_range_ft: int = 5        # board range-highlight radius
+    highlight_range_ft: int = 5        # legacy; superseded by show_range (kept for presets)
+    show_range: bool = False           # show this token's attack range on the board
     # Each entry is one attack type; n_attacks on the spec controls repetitions.
     attacks: list[AttackSpec] = field(default_factory=lambda: [AttackSpec()])
     # keys: "STR","DEX","CON","INT","WIS","CHA"  values: (modifier, roll_type)
@@ -77,9 +79,11 @@ class PlayerData:
     name: str = "Player"
     ac: int = 13
     max_hp: int = 0
+    color: str = ""              # board token color (hex); "" → auto
     attack_range_ft: int = 5
     ignore_ranged_in_melee: bool = False
     highlight_range_ft: int = 5
+    show_range: bool = False           # show this token's attack range on the board
     imposed_roll_type: str = "Normal"
     adamantine: bool = False
     # keys: "perception","investigation","arcana","insight","stealth"  values: (modifier, roll_type)

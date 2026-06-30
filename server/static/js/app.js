@@ -44,7 +44,18 @@ const SCREENS = {
   settings: renderSettings,
 };
 
-let current = "players";
+// Remember the active tab so a page reload (e.g. Android rotating the WebView)
+// returns here instead of resetting to Players.
+function loadCurrent() {
+  try { const t = localStorage.getItem("dnd.tab"); if (t && TABS.some((x) => x.id === t)) return t; } catch {}
+  return "players";
+}
+let current = loadCurrent();
+
+function setCurrent(tab) {
+  current = tab;
+  try { localStorage.setItem("dnd.tab", tab); } catch {}
+}
 
 function renderNav() {
   const nav = document.getElementById("nav");
@@ -52,13 +63,15 @@ function renderNav() {
   for (const tab of TABS) {
     nav.append(el("button", {
       class: tab.id === current ? "active" : "",
-      onclick: () => { current = tab.id; renderNav(); renderScreen(); },
+      onclick: () => { setCurrent(tab.id); renderNav(); renderScreen(); },
     }, tab.label));
   }
 }
 
 async function renderScreen() {
   const content = document.getElementById("content");
+  // Let the outgoing screen commit anything pending (e.g. monster/player autosave).
+  window.dispatchEvent(new CustomEvent("screen-leaving"));
   clear(content);
   const render = SCREENS[current];
   if (!render) {
@@ -88,7 +101,7 @@ window.addEventListener("navigate", (e) => {
   if (tab === "dice" && e.detail.dice) presetDice(e.detail.dice.count, e.detail.dice.die, e.detail.dice.modifier);
   if (tab === "skills" && e.detail.massSaves) presetMassSaves(e.detail.massSaves);
   if (tab === "skills" && e.detail.quickSave) presetQuickSave(e.detail.quickSave);
-  current = tab;
+  setCurrent(tab);
   renderNav();
   renderScreen();
 });

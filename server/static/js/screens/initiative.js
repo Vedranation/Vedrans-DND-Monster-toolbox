@@ -7,7 +7,7 @@ let _turn = 0;  // index of the current combatant in the sorted list
 
 export async function renderInitiative(root) {
   let entries = (await api.get("/api/initiative")).entries;
-  root.replaceChildren(el("h2", { text: "Initiative" }));
+  root.replaceChildren();
 
   const nameIn = el("input", { type: "text", placeholder: "Name" });
   const initIn = el("input", { type: "number", value: 10, onfocus: (e) => e.target.select() });

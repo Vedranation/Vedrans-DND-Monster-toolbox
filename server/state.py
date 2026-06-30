@@ -130,6 +130,8 @@ def token_dict(t: Token) -> dict:
         "sight_invisible_range": t.sight_invisible_range,
         "conditions": sorted(c.value for c in t.conditions),
         "charmed_by": t.charmed_by,
+        "color": t.color,
+        "show_range": t.show_range,
         "active": t.active, "team": t.team,
     }
 
@@ -171,7 +173,14 @@ def add_board_token(state: AppState, kind: str, ref_id: str, col=None, row=None)
         ignore_ranged_in_melee=data.ignore_ranged_in_melee,
         highlight_range_ft=data.highlight_range_ft,
         sight_invisible_range=max(senses.get("blindsight", 0), senses.get("truesight", 0)),
+        color=getattr(data, "color", "") or "",
+        show_range=getattr(data, "show_range", False),
     )
+    # The token's default team (Players/Monsters from kind) may have been deleted —
+    # fall back to an existing team (the last one) so it never lands on a phantom team.
+    team_names = [tm.name for tm in state.board.teams]
+    if team_names and tok.team not in team_names:
+        tok.team = team_names[-1]
     state.board.tokens.append(tok)
     return tok
 
@@ -190,6 +199,8 @@ def token_from_dict(d: dict) -> Token:
         ignore_ranged_in_melee=d.get("ignore_ranged_in_melee", False),
         highlight_range_ft=d.get("highlight_range_ft", 5),
         sight_invisible_range=d.get("sight_invisible_range", 0),
+        color=d.get("color", ""),
+        show_range=d.get("show_range", False),
         conditions=conditions_from_values(d.get("conditions", [])),
         charmed_by=d.get("charmed_by"),
         active=d.get("active", True), team=d.get("team", ""),

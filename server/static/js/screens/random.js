@@ -4,7 +4,7 @@ import { api } from "../api.js";
 import { el, toast } from "../dom.js";
 
 export async function renderRandom(root) {
-  root.replaceChildren(el("h2", { text: "Random Generator" }));
+  root.replaceChildren();
   const result = el("div", { class: "panel", text: "Roll a fumble to see what happens." });
   root.append(
     el("div", { class: "btn-row" }, [

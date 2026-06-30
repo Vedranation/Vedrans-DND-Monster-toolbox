@@ -4,14 +4,35 @@
 import { api } from "../api.js";
 import { store } from "../store.js";
 import { el, modal, toast } from "../dom.js";
-import { textField, numField, checkField, selectField } from "../forms.js";
+import { textField, numField, checkField, selectField, stepSelect, colorField } from "../forms.js";
 
+const MONSTER_DEFAULT_COLOR = "#d6a52e";  // yellow (board default for monster tokens)
 const SAVES = ["STR", "DEX", "CON", "WIS", "INT", "CHA"];  // matches constants ordering
 const SPEEDS = [["walk", "Walk"], ["fly", "Fly"], ["climb", "Climb"], ["burrow", "Burrow"], ["swim", "Swim"]];
 const SENSES = [["darkvision", "Darkvision"], ["blindsight", "Blindsight"],
                 ["tremorsense", "Tremorsense"], ["truesight", "Truesight"]];
 
 let selectedId = null;
+
+// ── autosave ───────────────────────────────────────────────────────────────────
+// The editor edits a working copy; there's no Save button. We commit to the server
+// on field blur (the inputs' "change" event, debounced) and immediately whenever the
+// user leaves the editor (selecting another monster, switching tab, +Add / Import).
+let _pending = null;     // { m, refs } currently being edited
+let _saveTimer = null;
+
+function autosaveNow() {
+  if (!_pending) return Promise.resolve();
+  clearTimeout(_saveTimer);
+  const { m, refs } = _pending;
+  collect(m, refs);
+  return api.put(`/api/monsters/${m.id}`, m).catch((err) => toast(err.message, true));
+}
+function autosaveSoon() { clearTimeout(_saveTimer); _saveTimer = setTimeout(autosaveNow, 250); }
+
+// Commit on leaving the Monsters tab or backgrounding the app.
+window.addEventListener("screen-leaving", () => { autosaveNow(); _pending = null; });
+window.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") autosaveNow(); });
 
 // Pre-select a monster by name (used by the board's double-click-to-edit).
 export function selectByName(name) {
@@ -35,7 +56,7 @@ export async function renderMonsters(root) {
   const monsters = store.state.monsters;
   if (!monsters.some((m) => m.id === selectedId)) selectedId = monsters[0]?.id ?? null;
 
-  root.replaceChildren(el("h2", { text: "Monsters" }));
+  root.replaceChildren();
   const split = el("div", { class: "split" });
 
   // ── list ──
@@ -44,17 +65,18 @@ export async function renderMonsters(root) {
     el("button", {
       class: "btn primary",
       onclick: async () => {
+        await autosaveNow();
         const m = await api.post("/api/monsters", { name_str: "New Monster", max_hp_int: 8 });
         selectedId = m.id; renderMonsters(root); toast("Monster added");
       },
     }, "+ Add"),
-    el("button", { class: "btn neutral", onclick: () => openImport(root) }, "Import 5etools"),
+    el("button", { class: "btn neutral", onclick: async () => { await autosaveNow(); openImport(root); } }, "Import 5etools"),
   ]));
   const list = el("div", { class: "list" });
   for (const m of monsters) {
     list.append(el("div", {
       class: "row" + (m.id === selectedId ? " selected" : ""),
-      onclick: () => { selectedId = m.id; renderMonsters(root); },
+      onclick: async () => { await autosaveNow(); selectedId = m.id; renderMonsters(root); },
     }, m.name_str || "(unnamed)"));
   }
   if (!monsters.length) list.append(el("div", { class: "placeholder", text: "No monsters yet." }));
@@ -83,13 +105,19 @@ function renderEditor(container, m, root) {
   const [nameF, name] = textField("Name", m.name_str); refs.name = name;
   const [acF, ac] = numField("AC", m.ac_int); refs.ac = ac;
   const [hpF, hp] = numField("Max HP", m.max_hp_int); refs.hp = hp;
-  const [rngF, rng] = numField("Attack range (ft)", m.attack_range_ft); refs.rng = rng;
-  const [hlF, hl] = numField("Highlight range (ft)", m.highlight_range_ft); refs.hl = hl;
+  // Attack range (min 5 ft) + a "show on board" toggle that draws its reach.
+  const rng = stepSelect(m.attack_range_ft, { min: 5, max: 300 }); refs.rng = rng;
+  const showRange = el("input", { type: "checkbox" }); if (m.show_attack_range_bool) showRange.checked = true;
+  refs.showRange = showRange;
+  const rngF = el("div", { class: "field" }, [el("label", { text: "Attack range (ft)" }),
+    el("span", { style: "display:flex; gap:.6rem; align-items:center;" },
+      [rng, el("label", { class: "toggle" }, [showRange, "show on board"])])]);
   const [ignF, ign] = checkField("Ignore ranged-in-melee penalty", m.ignore_ranged_in_melee); refs.ign = ign;
   const [ppF, pp] = numField("Passive perception", m.passiveperception_int); refs.pp = pp;
   const [initF, init] = numField("Initiative mod", m.initiative_mod); refs.init = init;
+  const [colorF, colorRead] = colorField("Token color", m.color_str || MONSTER_DEFAULT_COLOR); refs.color = colorRead;
   panel.append(el("fieldset", {}, [el("legend", { text: "Combat" }),
-    nameF, acF, hpF, rngF, hlF, ignF, ppF, initF]));
+    nameF, acF, hpF, colorF, rngF, ignF, ppF, initF]));
 
   // ── attacks (multi-attack sequence) ──
   const atkFs = el("fieldset", {}, el("legend", { text: "Attacks" }));
@@ -101,13 +129,14 @@ function renderEditor(container, m, root) {
       m.attacks.splice(i, 1);
       if (!m.attacks.length) m.attacks.push(newAttack());
       renderEditor(container, m, root);
+      autosaveNow();                    // structural change → commit now
     }, m.attacks.length > 1);
     refs.attacks.push(read);
     atkList.append(node);
   });
   atkFs.append(atkList, el("button", {
     class: "btn neutral", onclick: () => {
-      collect(m, refs); m.attacks.push(newAttack()); renderEditor(container, m, root);
+      collect(m, refs); m.attacks.push(newAttack()); renderEditor(container, m, root); autosaveNow();
     },
   }, "+ Add attack"));
   panel.append(atkFs);
@@ -130,7 +159,7 @@ function renderEditor(container, m, root) {
   infoFs.append(typeF, sizeF);
   const speedGrid = el("div", { class: "mini-grid" });
   for (const [key, label] of SPEEDS) {
-    const inp = el("input", { type: "number", value: m[`${{walk:"walking",fly:"flying",climb:"climbing",burrow:"burrowing",swim:"swimming"}[key]}_speed_int`] ?? 0 });
+    const inp = stepSelect(m[`${{walk:"walking",fly:"flying",climb:"climbing",burrow:"burrowing",swim:"swimming"}[key]}_speed_int`] ?? 0);
     refs.speeds[key] = inp;
     speedGrid.append(el("div", { class: "mini" }, [el("label", { text: label }), inp]));
   }
@@ -152,18 +181,22 @@ function renderEditor(container, m, root) {
   refs.mods.cond = checkGroup(modFs, "Condition immunities", C.conditions, m.condition_immunities);
   panel.append(modFs);
 
-  // ── actions ──
+  // ── actions ── (no Save button — edits autosave on blur / when you leave)
   panel.append(el("div", { class: "btn-row" }, [
-    el("button", { class: "btn primary", onclick: () => save(m, refs, root) }, "Save"),
+    el("span", { class: "muted", text: "Changes save automatically." }),
     el("button", {
       class: "btn danger",
       onclick: async () => {
+        _pending = null;  // don't autosave a monster we're deleting
         await api.del(`/api/monsters/${m.id}`); selectedId = null; renderMonsters(root); toast("Monster deleted");
       },
     }, "Delete"),
   ]));
 
   container.append(panel);
+  // Register this editor for autosave: commit on any field blur (change), debounced.
+  _pending = { m, refs };
+  panel.addEventListener("change", autosaveSoon);
 }
 
 // ── attack card ──────────────────────────────────────────────────────────────
@@ -256,8 +289,9 @@ function collect(m, refs) {
   m.name_str = refs.name.value;
   m.ac_int = +refs.ac.value;
   m.max_hp_int = +refs.hp.value;
+  m.color_str = refs.color();
   m.attack_range_ft = +refs.rng.value;
-  m.highlight_range_ft = +refs.hl.value;
+  m.show_attack_range_bool = refs.showRange.checked;
   m.ignore_ranged_in_melee = refs.ign.checked;
   m.passiveperception_int = +refs.pp.value;
   m.initiative_mod = +refs.init.value;
@@ -275,17 +309,6 @@ function collect(m, refs) {
   m.damage_immunities = refs.mods.immune();
   m.damage_vulnerabilities = refs.mods.vuln();
   m.condition_immunities = refs.mods.cond();
-}
-
-async function save(m, refs, root) {
-  collect(m, refs);
-  try {
-    await api.put(`/api/monsters/${m.id}`, m);
-    toast("Saved");
-    renderMonsters(root);
-  } catch (err) {
-    toast(err.message, true);
-  }
 }
 
 // ── 5etools import ─────────────────────────────────────────────────────────────

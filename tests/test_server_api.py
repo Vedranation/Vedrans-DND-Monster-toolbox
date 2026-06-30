@@ -507,3 +507,43 @@ def test_board_clear_deactivated(client):
     client.patch(f"/api/board/tokens/{a['id']}", json={"active": False})
     b = client.post("/api/board/clear-deactivated").get_json()
     assert len(b["tokens"]) == 1
+
+
+def test_monster_color_flows_to_token(client):
+    mid = client.post("/api/monsters", json={"name_str": "Imp", "color_str": "#cc3333"}).get_json()["id"]
+    assert client.get(f"/api/monsters/{mid}").get_json()["color_str"] == "#cc3333"
+    tok = client.post("/api/board/tokens", json={"kind": "monster", "ref_id": mid}).get_json()
+    assert tok["color"] == "#cc3333"   # token inherits the roster color
+
+
+def test_player_color_roundtrips(client):
+    pid = client.post("/api/players", json={"name_str": "Bard", "color_str": "#3366cc"}).get_json()["id"]
+    assert client.get(f"/api/players/{pid}").get_json()["color_str"] == "#3366cc"
+
+
+def test_show_range_overlay_respects_diagonal_mode(client):
+    # show_attack_range off → no overlay
+    plain = client.post("/api/monsters", json={"name_str": "Grunt", "attack_range_ft": 10}).get_json()["id"]
+    client.post("/api/board/tokens", json={"kind": "monster", "ref_id": plain, "col": 1, "row": 1})
+    assert client.get("/api/board/targets").get_json()["ranges"] == []
+
+    # show_attack_range on → overlay cells appear, honoring the diagonal rule
+    mid = client.post("/api/monsters", json={
+        "name_str": "Archer", "attack_range_ft": 10, "show_attack_range_bool": True}).get_json()["id"]
+    client.post("/api/board/tokens", json={"kind": "monster", "ref_id": mid, "col": 5, "row": 5})
+    client.put("/api/settings", json={"board_diagonal_mode": "standard"})
+    std = next(r for r in client.get("/api/board/targets").get_json()["ranges"] if r["color"] or True)
+    assert len(std["cells"]) == 25                      # 10 ft = 2 Chebyshev cells → 5x5 block
+    client.put("/api/settings", json={"board_diagonal_mode": "5-10-5"})
+    alt = client.get("/api/board/targets").get_json()["ranges"][0]
+    assert len(alt["cells"]) < 25                        # diagonals cost more → fewer cells
+
+
+def test_new_token_falls_back_to_existing_team(client):
+    # Deleting the default "Monsters" team must not strand new monster tokens on a
+    # phantom team — they should land on an existing team instead.
+    mid = client.post("/api/monsters", json={"name_str": "Orc", "max_hp_int": 5}).get_json()["id"]
+    teams = [t["name"] for t in client.delete("/api/board/teams/Monsters").get_json()["teams"]]
+    assert "Monsters" not in teams
+    tok = client.post("/api/board/tokens", json={"kind": "monster", "ref_id": mid}).get_json()
+    assert tok["team"] in teams   # not the deleted "Monsters"
